@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<phpunit bootstrap="../public_html/vendor/autoload.php" colors="true">
-  <testsuites><testsuite name="Institutional client portal"><file>PortalTest.php</file></testsuite></testsuites>
-  <php><env name="APP_ENV" value="test"/><env name="APP_SECRET" value="institutional-portal-test-secret-not-for-production-2026"/><env name="APP_DEBUG" value="0"/></php>
-</phpunit>

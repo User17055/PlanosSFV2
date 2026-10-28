@@ -1,8 +1,0 @@
-#!/usr/bin/env php
-<?php
-declare(strict_types=1);
-require __DIR__.'/vendor/autoload.php';
-require_once __DIR__.'/src/helpers.php';
-date_default_timezone_set('America/Sao_Paulo');
-$kernel = new LuzPropria\LuzPanel\Kernel(getenv('APP_ENV') ?: 'prod', filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOL));
-exit((new Symfony\Bundle\FrameworkBundle\Console\Application($kernel))->run());

@@ -1,8 +1,0 @@
-{% extends 'portal/layout.twig' %}
-{% block title %}Escolha o pet{% endblock %}
-{% block body_class %}pagina-contratacao{% endblock %}
-{% block content %}<div class="contratacao-hero com-foto"><span class="eyebrow">CUIDADO COM NOME E SOBRENOME</span><h1>Para quem será esse plano?</h1><p>Escolha um dos seus pets para conferir a proposta.</p>
-<div class="contratacao-hero-foto"><img src="{{asset('imgs/banner-cao-4.png')}}" alt=""></div></div>
-<ol class="journey" aria-label="Etapas da contratação"><li class="current" aria-current="step"><span>1</span> Escolha do pet</li><li><span>2</span> Contrato e assinatura</li><li><span>3</span> Pagamento e ativação</li></ol>
-<div class="portal-columns contratacao"><section class="panel contratacao-form"><form method="post" action="{{path('portal_subscribe',{'code':offer.code})}}" class="portal-form"><input type="hidden" name="_token" value="{{csrf}}"><fieldset class="pet-choices"><legend>Seus pets</legend>{% for pet in account.pets %}<label class="pet-choice"><input type="radio" name="pet_id" value="{{pet.id}}" required><span class="pet-initial">{{pet.name|slice(0,1)|upper}}</span><span><strong>{{pet.name}}</strong><small>{{pet.species=='cat'?'Gato':'Cão'}}{{pet.breed?' · '~pet.breed:''}}</small></span></label>{% else %}<p>Cadastre seu pet antes de continuar.</p>{% endfor %}</fieldset>
-{% if account.pets %}<button class="button button-primary" data-busy="Preparando proposta...">Conferir o contrato</button>{% endif %}<a class="button button-secondary" href="{{path('portal_pet')}}">Cadastrar outro pet</a></form></section>{% include 'portal/_offer.twig' %}</div>{% endblock %}

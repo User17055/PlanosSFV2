@@ -1,7 +1,0 @@
-<?php
-// Copy to configuracao_privada/portal.php, alongside (outside) public_html.
-return [
-    'url' => 'https://sf.lisontech.com.br/api/site/v1',
-    'key' => '', // Same private SITE_API_KEY configured in management; generate at least 32 random characters.
-    'payment_hosts' => 'app.vindi.com.br,sandbox-app.vindi.com.br',
-];

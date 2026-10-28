@@ -1,9 +1,0 @@
-A ficha em `/clientes/{id}` abre um resumo do atendimento, com contagens de pets e contratos ativos e até três próximos passos para documentação, assinatura ou ativação. Cadastro, pets, contratos, propostas e financeiro possuem seções próprias. Os dados já digitados permanecem no formulário ao mudar de aba, pois a navegação mantém os elementos da página.
-
-Nos pets, a ação principal consulta a contratação existente, continua uma proposta válida ou prepara uma nova proposta com tutor e pet selecionados. Contratos encerrados e propostas antigas ficam no histórico. A cobertura e a disponibilidade dos benefícios podem ser consultadas dentro de cada contrato; o estado ativo, isoladamente, não substitui as verificações de carência, saldo e situação financeira.
-
-As abas são uma melhoria progressiva: sem JavaScript, as seções e os formulários permanecem acessíveis pelos links da página. O script `public/assets/customer-profile.js` preserva os endereços antigos com `#tutor`, `#pets`, `#novo-pet`, `#pet-ID` e `#assinatura-ID`, abre o histórico quando necessário e acompanha a navegação Voltar/Avançar do navegador. Erros de validação têm prioridade para mostrar a seção do formulário correspondente. O movimento com GSAP é breve e respeita a preferência de redução de movimento.
-
-O financeiro é exibido somente para administração, gestão e financeiro, com as faturas já limitadas às unidades autorizadas pelo controlador. Vendas e recepção continuam vendo a situação operacional necessária ao atendimento, sem receber a tabela financeira. O aviso de bloqueio financeiro fica visível em todas as abas.
-
-O cancelamento exige a confirmação já existente, com motivo e autorização no servidor. Uma falha de validação reabre a mesma confirmação e mantém o motivo digitado. Quando o cancelamento é concluído a partir da ficha, o retorno aponta para o contrato no histórico. A navegação das abas não envia solicitações de gravação ou de cancelamento.
