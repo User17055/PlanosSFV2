@@ -71,7 +71,7 @@ class SigningEvidenceTest extends TestCase
         $this->assertSame('177.10.20.30',$evidence['ip']);
         $this->assertSame(51234,$evidence['ip_port']);
         $this->assertStringContainsString('Android 14',$evidence['user_agent']);
-        $this->assertSame(['screen'=>'412x915','platform'=>'Android','mobile'=>true,'timezone'=>'America/Sao_Paulo'],$evidence['device']);
+        $this->assertSameIgnoringKeyOrder(['screen'=>'412x915','platform'=>'Android','mobile'=>true,'timezone'=>'America/Sao_Paulo'],$evidence['device']);
         $this->postJson(route('proposals.regenerate-contract',$proposal))->assertOk()->assertJsonPath('ready',true);
         $this->postJson(route('proposals.regenerate-contract',$proposal))->assertOk();
         Notification::assertSentOnDemandTimes(ContractCopy::class,1);

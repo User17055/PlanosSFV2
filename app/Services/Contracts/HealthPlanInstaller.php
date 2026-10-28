@@ -3,6 +3,7 @@
 namespace App\Services\Contracts;
 
 use App\Models\{Product, ProductVersion};
+use App\Services\Domain\Fingerprint;
 use Illuminate\Support\Facades\DB;
 
 class HealthPlanInstaller
@@ -18,7 +19,7 @@ class HealthPlanInstaller
             app(ContractTemplate::class)->validate($text);
             $product=Product::firstOrCreate(['code'=>$code],['name'=>$name,'category'=>'health_plan']);
             $same=$product->versions()->where('contract_template',$text)->whereNotNull('published_at')->first();
-            if ($same && $same->contract_layout===$layout) return $same;
+            if ($same && Fingerprint::sha256($same->contract_layout)===Fingerprint::sha256($layout)) return $same;
             $version=$product->versions()->whereNull('published_at')->where('is_demo',false)->latest('version')->first();
             $attributes=['name'=>'Plano '.$name,'price_cents'=>$price,'billing_cycle'=>'monthly','duration_months'=>12,'renewal_policy'=>'automatic','species'=>['dog','cat'],'contract_template'=>$text,'contract_layout'=>$layout,'is_demo'=>false,'status'=>'draft','description'=>'Contrato original do Plano '.$name.' com preenchimento automático dos dados do tutor e do pet.'];
             if ($version) { $version->update($attributes); $version->benefitRules()->delete(); }

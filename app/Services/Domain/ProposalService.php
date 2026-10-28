@@ -242,6 +242,6 @@ class ProposalService
     private function snapshotFingerprint(array $snapshot): string
     {
         // Normalize Carbon/date values to the same JSON representation as persisted snapshots.
-        return hash('sha256', json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        return Fingerprint::sha256($snapshot);
     }
 }

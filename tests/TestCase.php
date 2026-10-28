@@ -15,6 +15,17 @@ abstract class TestCase extends BaseTestCase
         return 'data:image/png;base64,'.base64_encode($png);
     }
 
+    /** MySQL's JSON columns return object keys in their own order: compare the content strictly, not the order. */
+    protected function assertSameIgnoringKeyOrder(mixed $expected, mixed $actual, string $message = ''): void
+    {
+        $sort=function($value) use (&$sort) {
+            if (!is_array($value)) return $value;
+            if (!array_is_list($value)) ksort($value,SORT_STRING);
+            return array_map($sort,$value);
+        };
+        $this->assertSame($sort($expected),$sort($actual),$message);
+    }
+
     /** A face photo as the tablet camera capture submits it. */
     protected function selfieData(): string
     {
