@@ -42,6 +42,20 @@ class HealthPlanImportTest extends TestCase
         $this->get(route('catalog.template-pdf',$versions[0]))->assertOk()->assertHeader('Content-Type','application/pdf');
     }
 
+    public function test_plans_no_longer_offer_feed_or_franpet_product_discounts(): void
+    {
+        foreach(app(HealthPlanInstaller::class)->installAll() as $version) {
+            $this->assertSame(0,$version->benefitRules()->whereIn('code',['DESC_RACAO','DESC_PRODUTOS'])->count());
+            $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',$version->contract_template);
+            $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',json_encode($version->contract_layout,JSON_UNESCAPED_UNICODE));
+        }
+        foreach(json_decode(file_get_contents(resource_path('contracts/word/index.json')),true) as $entry) {
+            $zip=new \ZipArchive; $zip->open(resource_path('contracts/word/'.$entry['docx_sha256'].'.docx'));
+            $text=strip_tags($zip->getFromName('word/document.xml')); $zip->close();
+            $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',$text);
+        }
+    }
+
     public function test_personalized_source_contract_escapes_input_and_keeps_the_signing_record_separate(): void
     {
         $version=app(HealthPlanInstaller::class)->installOne('prime');

@@ -48,8 +48,6 @@ class HealthPlanInstaller
                 $add('CIRURGIAS','Cirurgias relacionadas no contrato',null,90,'contract_year',$surgery,true);
                 foreach([['DESC_UTI','UTI',$slug==='prime'?20:10],['DESC_BIOQ','Bioquímicos do rotor relacionados no contrato',$slug==='prime'?50:30],['DESC_CELULAS','Terapia com células tronco',$slug==='prime'?30:10],['DESC_ULTRA_ELETRO','Ultrassom e eletro',$slug==='prime'?20:10],['DESC_RAIOX','Raio-x',$slug==='prime'?50:30]] as [$c,$n,$d]) $discount($c,$n,$d,0,true);
             }
-            $discount('DESC_RACAO','Até 20% em ração, conforme contrato',20,30,true);
-            $discount('DESC_PRODUTOS','Até 20% em produtos Franpet, conforme contrato',20,30,true);
             foreach($rules as $rule) $version->benefitRules()->create($rule);
             return $version->fresh();
         });
