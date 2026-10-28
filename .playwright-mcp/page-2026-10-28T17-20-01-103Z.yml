@@ -1,0 +1,55 @@
+- generic [ref=f4e1]:
+  - banner [ref=f4e2]:
+    - link "São Francisco — serviços veterinários PLANOS E PACOTES" [ref=f4e3] [cursor=pointer]:
+      - /url: http://127.0.0.1:8765/planos
+      - img "São Francisco — serviços veterinários" [ref=f4e4]
+      - generic [ref=f4e5]: PLANOS E PACOTES
+    - navigation [ref=f4e6]:
+      - generic [ref=f4e7]: Demonstração
+      - link "Área do tutor" [ref=f4e9] [cursor=pointer]:
+        - /url: http://127.0.0.1:8765/entrar
+  - main [ref=f4e12]:
+    - generic [ref=f4e13]:
+      - generic [ref=f4e14]:
+        - generic [ref=f4e15]: BEM-VINDO À SÃO FRANCISCO
+        - heading "Aqui, o cuidado tem um lugar." [level=1] [ref=f4e16]: Aqui, o cuidadotem um lugar.
+        - paragraph [ref=f4e17]: Uma vida com mais carinho, saúde e tranquilidade para você e seu melhor amigo.
+        - generic [ref=f4e18]:
+          - img "Mascote e logotipo oficial São Francisco" [ref=f4e20]
+          - generic [ref=f4e21]: Saúde protegida
+          - generic [ref=f4e24]: Cuidado de perto
+          - generic [ref=f4e27]: Ao seu lado, em cada fase.
+      - generic [ref=f4e28]:
+        - generic [ref=f4e29]: SEU ESPAÇO DE CUIDADO
+        - heading "Que bom ter você por aqui." [level=2] [ref=f4e30]
+        - paragraph [ref=f4e31]: Acesse sua conta para continuar.
+        - generic [ref=f4e32]:
+          - generic [ref=f4e33]:
+            - text: E-mail
+            - textbox "E-mail" [active] [ref=f4e34]:
+              - /placeholder: seu@email.com
+          - generic [ref=f4e35]:
+            - text: Senha
+            - generic [ref=f4e36]:
+              - textbox "Senha Mostrar senha" [ref=f4e37]:
+                - /placeholder: Digite sua senha
+              - button "Mostrar senha" [ref=f4e38] [cursor=pointer]: Mostrar
+          - generic [ref=f4e39] [cursor=pointer]:
+            - checkbox "Continuar conectado neste dispositivo" [ref=f4e40]
+            - generic [ref=f4e41]: Continuar conectado neste dispositivo
+          - button "Entrar no meu espaço" [ref=f4e42] [cursor=pointer]
+        - generic [ref=f4e45]:
+          - text: É sua primeira visita?
+          - link "Criar minha conta" [ref=f4e46] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/cadastro
+        - group [ref=f4e47]:
+          - generic "Contas de demonstração" [ref=f4e48] [cursor=pointer]
+        - generic [ref=f4e51]: Acesso protegido aos seus dados e contratos.
+  - contentinfo [ref=f4e54]:
+    - link "São Francisco O cuidado que acompanha a vida." [ref=f4e55] [cursor=pointer]:
+      - /url: http://127.0.0.1:8765/planos
+      - img "São Francisco" [ref=f4e56]
+      - generic [ref=f4e57]: O cuidado que acompanha a vida.
+    - generic [ref=f4e58]: © 2026 · Ambiente demonstrativoValores e condições sujeitos à aprovação.
+    - generic [ref=f4e59]: Seus dados com cuidado.
+  - status

@@ -1,0 +1,13 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule ^(?:src|vendor|config|views|var)(?:/|$) - [F,L,NC]
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^(?:composer\.(?:json|lock)|bower\.json|console|README\.md)$ - [F,L,NC]
+RewriteRule \.(?:log|sqlite|bak|tar|zip)$ - [F,L,NC]
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^revista/?$ index.php [L]
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]

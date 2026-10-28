@@ -1,0 +1,338 @@
+.main-header .logo {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.6em;
+    background-color: #222D32;
+}
+
+.page-login {
+    padding-top: 100px;
+    padding-bottom: 40px;
+}
+
+.page-login .btn {
+    outline: 0;
+    border: none;
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    box-shadow: inset 2px -3px rgba(0, 0, 0, 0.15);
+}
+
+.page-login .btn:focus {
+    outline: 0;
+    -webkit-outline: 0;
+    -moz-outline: 0;
+}
+
+.page-login .form-signin {
+    max-width: 330px;
+    padding: 15px;
+    margin: 0 auto;
+    margin-top: 50px;
+    margin-bottom: 10px;
+}
+
+.page-login .form-signin .form-signin-heading {
+    margin-bottom: 35px;
+}
+
+.page-login .form-signin .form-control {
+    position: relative;
+    font-size: 16px;
+    height: auto;
+    padding: 10px;
+    margin: 10px 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.page-login .form-signin .form-control:focus {
+    z-index: 2;
+}
+
+.page-login .form-signin-heading {
+    color: #569900;
+    text-align: center;
+    text-shadow: 0 2px 2px rgba(115, 125, 132, 0.5);
+}
+
+.page-login .form-signin .form-control {
+    position: relative;
+    font-size: 16px;
+    height: auto;
+    padding: 10px;
+    margin: 10px 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.page-login .form-signin .form-control:focus {
+    z-index: 2;
+}
+
+.page-login .form-signin-heading {
+    color: #569900;
+    text-align: center;
+    text-shadow: 0 2px 2px rgba(115, 125, 132, 0.5);
+}
+
+.page-login .btn-luz {
+    color: #FFFFFF;
+    background-color: #569900;
+    border-color: #569900;
+}
+
+.page-login .btn-luz:hover,
+.page-login .btn-luz:focus,
+.page-login .btn-luz:active,
+.page-login .btn-luz.active,
+.page-login .open .dropdown-toggle.btn-luz {
+    color: #FFFFFF;
+    background-color: #538412;
+    border-color: #569900;
+}
+
+.cell-actions {
+    min-width: 60px;
+}
+
+.badge.badge-right-top {
+    position: absolute;
+    z-index: 10;
+    top: -6px;
+    right: -6px;
+}
+
+.btn-move-v {
+    cursor: ns-resize;
+}
+
+/*----------------------------
+    The file upload form
+-----------------------------*/
+
+#uploads {
+    margin: 0;
+    padding: 0;
+}
+
+#uploads > li {
+    float: left;
+    list-style: none outside none;
+    padding-bottom: 2em;
+    padding-right: 2em;
+    min-height: 125px;
+    width: 210px;
+}
+
+#upload {
+    background-color: #6D777E;
+    padding: 10px;
+}
+
+#uploads.galeria .lib-panel {
+    background-color: #6E777D;
+    line-height: 160px;
+    height: 165px;
+    width: 165px;
+    position: relative;
+}
+
+#uploads.galeria .lib-panel {
+    background-color: #569900;
+}
+
+#uploads .lib-panel .btn-actions {
+    position: absolute;
+    width: 165px;
+    height: 165px;
+    bottom: 0px;
+    right: 0px;
+    padding-left: 25px;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: none;
+}
+
+#uploads .lib-panel:hover .btn-actions {
+    display: block;
+}
+
+form.btn-group + form.btn-group {
+    margin-left: -5px;
+}
+
+#uploads .lib-panel .image {
+    line-height: 160px;
+}
+
+#drop {}
+
+#drop a {
+    background-color: #569900;
+    border-radius: 2px;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 94px;
+    line-height: 124px;
+    margin: auto;
+    padding: 12px 26px;
+}
+
+#drop a:hover {
+    background-color: #3F7000;
+}
+
+#drop input {
+    display: none;
+}
+
+#upload ul {
+    list-style: none;
+    margin: 0 -30px;
+    border-top: 1px solid #2b2e31;
+    border-bottom: 1px solid #3d4043;
+}
+
+#upload ul li {
+    background-color: #333639;
+    background-image: -webkit-linear-gradient(top, #333639, #303335);
+    background-image: -moz-linear-gradient(top, #333639, #303335);
+    background-image: linear-gradient(top, #333639, #303335);
+    border-top: 1px solid #3d4043;
+    border-bottom: 1px solid #2b2e31;
+    padding: 15px;
+    height: 52px;
+    position: relative;
+}
+
+#upload ul li input {
+    display: none;
+}
+
+#upload ul li p {
+    width: 144px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: #EEE;
+    font-size: 16px;
+    font-weight: bold;
+    position: absolute;
+    top: 20px;
+    left: 100px;
+}
+
+#upload ul li i {
+    font-weight: normal;
+    font-style: normal;
+    color: #7f7f7f;
+    display: block;
+}
+
+#upload ul li canvas {
+    top: 15px;
+    left: 32px;
+    position: absolute;
+}
+
+#upload ul li span {
+    width: 15px;
+    height: 12px;
+    background: url('../img/icons.png') no-repeat;
+    position: absolute;
+    top: 34px;
+    right: 33px;
+    cursor: pointer;
+}
+
+#upload ul li.working span {
+    height: 16px;
+    background-position: 0 -12px;
+}
+
+#upload ul li.error p {
+    color: red;
+}
+
+
+/***** Galeria *****/
+
+#uploads .lib-panel {
+    position: relative;
+}
+
+#uploads .lib-panel .loading {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #569900;
+    width: 0%;
+    height: 100%;
+}
+
+#uploads .lib-panel .icon-default {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    color: #E0E000;
+}
+
+#uploads .lib-panel img {
+    max-height: 165px;
+    max-width: 165px;
+    background-color: transparent;
+}
+
+#uploads .col-md-2 > .lib-panel,
+#uploads .lib-panel .row {
+    -webkit-box-shadow: 0px 0px 12px 0px rgba(50, 50, 50, 0.4);
+    -moz-box-shadow: 0px 0px 12px 0px rgba(50, 50, 50, 0.4);
+    box-shadow: 0px 0px 12px 0px rgba(50, 50, 50, 0.4);
+}
+
+#uploads .lib-panel .row,
+#uploads .lib-panel .col-md-6 {
+    padding: 0;
+    background-color: #FFFFFF;
+}
+
+#uploads .lib-panel .lib-row {
+    padding: 0 20px 0 20px;
+}
+
+#uploads .lib-panel .lib-row.lib-header {
+    background-color: #FFFFFF;
+    font-size: 20px;
+    padding: 10px 20px 0 20px;
+}
+
+#uploads .lib-panel .lib-row.lib-header .lib-header-seperator {
+    height: 2px;
+    width: 26px;
+    background-color: #d9d9d9;
+    margin: 7px 0 7px 0;
+}
+
+#uploads .lib-panel .lib-row.lib-desc {
+    display: block;
+    font-size: 13px;
+    height: 110px;
+    overflow: hidden;
+    position: relative;
+}
+
+#uploads .lib-panel .lib-row.lib-desc a {
+    position: absolute;
+    width: 100%;
+    bottom: 10px;
+    left: 20px;
+}
+
+#uploads .lib-panel > .btn {
+    bottom: 4px;
+    position: absolute;
+    right: -10px;
+}

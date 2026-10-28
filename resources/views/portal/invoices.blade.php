@@ -1,0 +1,11 @@
+<ul class="portal-invoice-list">
+@foreach($invoices as $invoice)
+@php $overdue=!in_array($invoice->status,['paid','cancelled','refunded']) && $invoice->due_at->isPast() && $invoice->paid_cents<$invoice->amount_cents; @endphp
+<li class="{{ $overdue?'is-overdue':'' }}">
+<div class="portal-invoice-main"><strong>{{ $money($invoice->amount_cents) }}</strong><small>{{ data_get($invoice,'subscription.pet.name') }} · {{ data_get($invoice,'subscription.productVersion.name') }}</small>@if($invoice->paid_cents>0 && $invoice->paid_cents<$invoice->amount_cents)<small>Falta {{ $money($invoice->outstanding_cents) }}</small>@endif</div>
+<div class="portal-invoice-due"><small>{{ $invoice->status==='paid'?'Venceu em':($overdue?'Venceu em':'Vence em') }}</small>{{ $date($invoice->due_at) }}</div>
+<div class="portal-invoice-status">@include('components.status',['status'=>$overdue?'overdue':$invoice->status])</div>
+<div class="portal-invoice-action">@if($invoice->payment_url && !$invoice->subscription->isTerminal() && !in_array($invoice->status,['paid','cancelled','refunded','disputed']))<a class="button {{ $overdue?'button-primary':'button-secondary' }} button-small" href="{{ $invoice->payment_url }}" target="_blank" rel="noopener">Pagar fatura @include('components.icon',['name'=>'external'])</a>@elseif($invoice->status==='paid')<span class="text-green">@include('components.icon',['name'=>'check']) Pago{{ $invoice->paid_at?' em '.$date($invoice->paid_at):'' }}</span>@elseif($invoice->is_initial && !in_array($invoice->status,['cancelled','refunded','disputed']) && app(\App\Services\Integrations\VindiCheckoutService::class)->available($invoice->subscription))<form method="POST" action="{{ route('subscriptions.checkout',$invoice->subscription) }}">@csrf<button class="button button-primary button-small" data-submit-label="Preparando pagamento...">Pagar agora</button></form>@elseif(!in_array($invoice->status,['cancelled','refunded']))<span class="fine-print">Fale com a unidade para pagar</span>@endif</div>
+</li>
+@endforeach
+</ul>

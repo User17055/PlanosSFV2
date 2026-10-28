@@ -1,0 +1,20 @@
+
+@font-face {
+  font-family: 'BebasNeueRegular';
+  src: url('BebasNeueRegular.eot?#iefix') format('embedded-opentype'),  
+  url('BebasNeueRegular.otf')  format('opentype'),
+	     url('BebasNeueRegular.woff') format('woff'), 
+	     url('BebasNeueRegular.ttf')  format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'BebasNeueBold';
+  src: url('BebasNeueBold.eot?#iefix') format('embedded-opentype'),  
+  url('BebasNeueBold.otf')  format('opentype'),
+	     url('BebasNeueBold.woff') format('woff'), 
+	     url('BebasNeueBold.ttf')  format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}

@@ -1,0 +1,6 @@
+<section class="portfolio-insights" id="carteira" aria-label="Carteira de pets e previsão mensal">
+<article class="metric-card"><span class="portfolio-label">Cães com plano ativo</span><strong class="metric-value">{{ $number($insights['species']['dog']) }}</strong></article>
+<article class="metric-card"><span class="portfolio-label">Gatos com plano ativo</span><strong class="metric-value">{{ $number($insights['species']['cat']) }}</strong></article>
+<article class="metric-card portfolio-leader"><span class="portfolio-label">{{ ['health_plan'=>'Plano mais vendido','package'=>'Pacote mais vendido','all'=>'Produto mais vendido'][$filters['category']] }}</span><strong>{{ $insights['best_sellers']?implode(' · ',$insights['best_sellers']):'Sem vendas' }}</strong>@if($insights['best_sales'])<small>{{ $insights['best_sales'] }} venda(s){{ count($insights['best_sellers'])>1?' por produto · empate':'' }}</small>@endif</article>
+<article class="metric-card"><span class="portfolio-label">Previsão de {{ $insights['month_label'] }}</span><strong class="metric-value" title="Faturas emitidas com vencimento no mês, incluindo as já pagas">{{ $money($insights['month_expected_cents']) }}</strong></article>
+</section>

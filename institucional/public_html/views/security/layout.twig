@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Painel - Luz Própria 360 {% endblock title %}</title>
+
+    <link href="{{ asset('lib/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/font-awesome/css/font-awesome.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/ionicons/css/ionicons.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/jquery-ui/themes/smoothness/jquery-ui.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/bootstrap3-wysihtml5/dist/bootstrap-wysihtml5-0.0.2.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/datatables/media/css/jquery.dataTables.min.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('lib/datatables-bootstrap3-plugin/media/css/datatables-bootstrap3.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('css/AdminLTE.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('css/skins/skin-lp.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('css/main.css') }}" rel="stylesheet" type="text/css" />
+
+{% for author in site.composer.authors|default([]) %}
+    <meta name="author" content="{{ author.name }}" />
+{% endfor %}
+
+
+    {% block stylesheet %}{% endblock %}
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body {% block body_param %}class="skin-lp fixed"{% endblock body_param %}>
+    {% block body %}
+        {% block header %}
+            <header class="main-header">
+                <a href="/" class="logo">
+                    <img src="{{asset('imgs/logomini.png')}}" align="Luz Própria 360" class="img-responsive" style="max-width: 165px;">
+                </a>
+
+                <nav class="navbar navbar-static-top" role="navigation">
+                    <!-- Sidebar toggle button-->
+                    <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
+                        <span class="sr-only">Toggle navigation</span>
+                    </a>
+                    {% set path_logout = site.security_path != "" ? site.security_path ~ "_logout" : "logout" %}
+                    <!-- Navbar Right Menu -->
+                    <div class="navbar-custom-menu">
+                        <ul class="nav navbar-nav">
+                            <li><a href="{{ path(path_logout, {'_csrf_token': csrf_token('logout')}) }}" style="text-transform: capitalize;">{{ site.user_security.name }} &nbsp;<i class="fa fa-sign-out"></i></a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </header>
+        {% endblock header %}
+        {% block wrapper %}
+            <aside class="control-sidebar control-sidebar-light">
+                <div class="main-sidebar">
+                    <!-- Inner sidebar -->
+                    <div class="sidebar">
+                        <!-- Search Form (Optional) -->
+                        <!-- <form action="#" method="get" class="sidebar-form">
+                            <div class="input-group">
+                                <input type="text" name="q" class="form-control" placeholder="Buscar..." />
+                                <span class="input-group-btn">
+                                  <button type='submit' name='search' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
+                                </span>
+                            </div>
+                        </form> -->
+                        <!-- /.sidebar-form -->
+                        <!-- Sidebar Menu -->
+                        <ul class="sidebar-menu">
+                            <li class="header">MENU</li>
+                            {% block menu %}{% include 'menu.twig' %}{% endblock %}
+                        </ul>
+                        <!-- /.sidebar-menu -->
+                    </div>
+                    <!-- /.sidebar -->
+                </div>
+                <!-- /.main-sidebar -->
+            </aside>
+
+            <!-- Content Wrapper. Contains page content -->
+            <div class="content-wrapper">
+                {% set alertTypeAvaillable = [ 'info', 'success', 'warning', 'danger'] %}
+                {% if site.session.flashbag is defined %}
+                    {% for alertType in alertTypeAvaillable %}
+                        {% for alert in site.session.flashBag.get(alertType) %}
+                            <div class="container-fluid">
+                                <hr>
+                                <div class="alert alert-{{ alertType }} alert-dismissable">
+                                    {% if alertType == 'success' %}
+                                        <i class="fa fa-check"></i>
+                                    {% elseif alertType == 'danger' %}
+                                        <i class="fa fa-exclamation-triangle"></i>
+                                    {% elseif alertType == 'warning' %}
+                                        <i class="fa fa-bell"></i>
+                                    {% endif %}
+                                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                                    <b>{{ alert.message }}</b>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+                {% block content %}{% endblock %}
+                <!-- /.content -->
+            </div>
+            <!-- /.content-wrapper -->
+
+        {% endblock wrapper %}
+        <footer class="main-footer">
+            {% if site.composer is defined  %}<div class="pull-right hidden-xs"> <small>Versão: {{ site.composer.version }}</small></div>{% endif %}
+            <strong><a href="http://www.luzpropria.com.br/">Luz Própria</a> &copy; {{ 'now'|date('Y') }}</strong>
+        </footer>
+    {% endblock body %}
+
+    <script src="{{ asset('lib/jquery/dist/jquery.min.js') }}"></script>
+    <script>$.ajaxSetup({beforeSend: function(xhr, settings) { if (!/^(GET|HEAD|OPTIONS)$/i.test(settings.type) && !settings.crossDomain) { xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token('admin_action') }}'); } }});</script>
+    <script src="{{ asset('lib/jquery-ui/jquery-ui.min.js') }}"></script>
+    <script src="{{ asset('lib/bootstrap/dist/js/bootstrap.min.js') }}"></script>
+    <script src="{{ asset('lib/wysihtml5/parser_rules/advanced.js') }}"></script>
+    <script src="{{ asset('lib/wysihtml5/dist/wysihtml5-0.3.0.min.js') }}"></script>
+    <script src="{{ asset('lib/bootstrap3-wysihtml5/dist/bootstrap-wysihtml5-0.0.2.js') }}"></script>
+    <script src="{{ asset('lib/datatables/media/js/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('lib/datatables-bootstrap3-plugin/media/js/datatables-bootstrap3.js') }}"></script>
+    <script src="{{ asset('lib/slimScroll/jquery.slimscroll.min.js') }}"></script>
+    <script src="{{ asset('js/datatables.js') }}"></script>
+    {% block script %}{% endblock script %}
+    <script src="{{ asset('js/main.js') }}"></script>
+</body>
+</html>

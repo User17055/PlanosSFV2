@@ -1,0 +1,80 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e2]:
+    - banner [ref=f15e3]:
+      - generic [ref=f15e4]:
+        - link [ref=f15e5] [cursor=pointer]:
+          - /url: http://127.0.0.1:8765/painel
+          - img "São Francisco — serviços veterinários" [ref=f15e6]
+        - button "Abrir menu" [ref=f15e7] [cursor=pointer]
+      - group [ref=f15e11]:
+        - generic "Menu de Administração central" [ref=f15e12] [cursor=pointer]: A
+    - complementary "Menu" [ref=f15e16]:
+      - navigation "Navegação principal" [ref=f15e18]:
+        - generic [ref=f15e19]:
+          - generic [ref=f15e20]: Atendimento
+          - link "Visão geral" [ref=f15e21] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/painel
+          - link "Tutores e pets" [ref=f15e25] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/clientes
+          - link "Planos e pacotes" [ref=f15e29] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/catalogo
+          - link "Propostas e contratos" [ref=f15e33] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/propostas
+        - generic [ref=f15e37]:
+          - generic [ref=f15e38]: Resultados
+          - link "Financeiro" [ref=f15e39] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/financeiro
+          - link "Comissões" [ref=f15e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/comissoes
+          - link "Relatórios" [ref=f15e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/relatorios
+        - generic [ref=f15e51]:
+          - generic [ref=f15e52]: Rede
+          - link "Links de divulgação" [ref=f15e53] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/links-divulgacao
+          - link "Integrações" [ref=f15e57] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/integracoes
+          - link "Funcionários" [ref=f15e62] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/funcionarios
+          - link "Rede e acessos" [ref=f15e66] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/rede
+      - link "Site de contratação" [ref=f15e71] [cursor=pointer]:
+        - /url: http://127.0.0.1:8765/planos
+    - main [ref=f15e76]:
+      - option "Todas do meu acesso" [selected]
+      - option "Canal central"
+      - option "São Francisco · Ademar de Barros"
+      - option "São Francisco · Ana Jacinta"
+      - option "São Francisco · Damha"
+      - option "São Francisco · Manoel Goulart"
+      - option "Toda a equipe" [selected]
+      - option "Administração central"
+      - option "Beatriz · Recepção"
+      - option "Lucas · Comercial"
+      - option "Mariana · Gestão"
+      - option "Rafael · Financeiro"
+      - option "Todos os produtos" [selected]
+      - option "Econômico"
+      - option "Essencial"
+      - option "Prime"
+      - option "Super Econômico"
+      - option "Planos de saúde" [selected]
+      - option "Pacotes"
+      - option "Planos e pacotes"
+      - option "Todas as origens" [selected]
+      - option "Não informado"
+      - option "Acesso direto"
+      - option "Indicação"
+      - option "Link compartilhado"
+      - option "Instagram"
+      - option "Facebook"
+      - option "Google"
+      - option "Outra origem"
+      - option "Todas as cidades com planos" [selected]
+      - option "Presidente Prudente · SP"
+      - option "Dados reais" [selected]
+      - option "Demonstração"
+      - generic [ref=f15e77]:
+        - generic [ref=f15e78]: © 2026 São Francisco · Gestão de planos veterinários
+        - generic [ref=f15e79]: Acesso autenticado · Dados demonstrativos
+  - status

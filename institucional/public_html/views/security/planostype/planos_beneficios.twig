@@ -1,0 +1,74 @@
+{% extends 'security/planostype/theme.twig' %}
+
+
+{% block content %}
+<section class="content-header">
+    <h1>Lista de Beneficios para o plano:</h1>
+</section>
+
+<section class="content">
+   <div class="row">
+      <div class="col-xs-12">
+         <div class="box box-default">
+            <div class="box-header"></div>
+            <div class="box-body table-responsive">
+               <div class="container-fluid">
+                  <table id="planos_type" class="table table-bordered table-striped">
+                     <thead>
+                        <tr>
+                           <th>#</th>
+                           <th>Benefício</th>
+
+                        </tr>
+                     </thead>
+                     <tfoot>
+                        <tr>
+                           <th>#</th>
+                           <th>Benefício</th>
+
+                        </tr>
+                     </tfoot>
+                     {% if data|length > 0 %}
+                     <tbody>
+                        {% for item in data %}
+                           <tr>
+                              <td> <input type="checkbox" name="ckBeneficio" data-value="{{item.id}}" {% if item.id_beneficio != 0 %} checked="checked" {% endif %}> </td>
+                              <td>{{ item.title }}</td>
+
+                           </tr>
+                        {% endfor %}
+                     </tbody>
+                     {% endif %}
+                  </table>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+   {{ parent() }}
+   <script>
+   (function($){
+
+   }(jQuery))
+
+   $("input[name='ckBeneficio']").change(function(){
+      console.log($(this).data("value"));
+      console.log($(this).is(":checked"));
+      // {"pacotes": $(this).val() ,"status": $(this).is(":checked"),"id_menu":1
+
+      $.post( "{{ path('s_planos_beneficios_save') }}",
+         { beneficio: $(this).data("value"),
+            status: $(this).is(":checked"),
+            id_plano: {{planos_type.id}}  },
+            function(response){
+            console.log(response);
+         });
+
+    });
+
+   </script>
+{% endblock script %}

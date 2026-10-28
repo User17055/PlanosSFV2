@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_institucional_public_html_console", "label": "console", "file_type": "code", "source_file": "institucional/public_html/console", "source_location": "L1"}], "edges": [], "raw_calls": [], "php_type_table": {"path": "$graphify-root$/institucional/public_html/console", "table": {"kernel": "Kernel"}}}

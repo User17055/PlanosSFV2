@@ -1,0 +1,32 @@
+- generic [ref=f7e1]:
+  - main [ref=f7e2]:
+    - generic [ref=f7e3]:
+      - generic [ref=f7e4]:
+        - img "São Francisco — serviços veterinários" [ref=f7e5]
+        - heading "Acesse seu espaço" [level=1] [ref=f7e6]
+        - paragraph [ref=f7e7]: Entre para acompanhar seus planos, pets e contratos.
+        - group [ref=f7e8]:
+          - generic "Contas de demonstração" [ref=f7e9] [cursor=pointer]
+        - generic [ref=f7e12]:
+          - generic [ref=f7e13]:
+            - text: E-mail
+            - textbox "E-mail" [active] [ref=f7e14]:
+              - /placeholder: seu@email.com
+          - generic [ref=f7e15]:
+            - text: Senha
+            - generic [ref=f7e16]:
+              - textbox "Senha Mostrar senha" [ref=f7e17]:
+                - /placeholder: Digite sua senha
+              - button "Mostrar senha" [ref=f7e18] [cursor=pointer]: Mostrar
+          - generic [ref=f7e19] [cursor=pointer]:
+            - checkbox "Continuar conectado neste dispositivo" [ref=f7e20]
+            - generic [ref=f7e21]: Continuar conectado neste dispositivo
+          - button "Entrar" [ref=f7e22] [cursor=pointer]
+        - generic [ref=f7e23]:
+          - text: Ainda não tem conta?
+          - link "Crie uma agora." [ref=f7e24] [cursor=pointer]:
+            - /url: http://127.0.0.1:8765/cadastro
+        - generic [ref=f7e25]: Acesso protegido aos seus dados e contratos.
+      - complementary [ref=f7e28]:
+        - heading "Aqui, o cuidado tem um lugar." [level=2] [ref=f7e29]: Aqui, o cuidadotem um lugar.
+  - status
