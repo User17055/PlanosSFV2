@@ -98,8 +98,60 @@ jobs:
       - name: Generate app key
         run: php artisan key:generate
 
+      # Com o log binário ligado (padrão do MySQL 8.0), só quem tem SUPER cria trigger; as travas do V2 são
+      # triggers. Em produção vale o mesmo: ver docs/OPERACAO.md.
+      - name: Allow trigger creation by the database owner
+        run: mysql -h 127.0.0.1 -uroot -proot -e "SET GLOBAL log_bin_trust_function_creators = 1"
+
       - name: Execute tests
         run: vendor/bin/phpunit
+
+      # Banco limpo, migrado pelo dono (a suíte deixa linhas gravadas), e o usuário da aplicação.
+      - name: Create the application user (deploy/app-grants.sh)
+        env:
+          PLANOS_DB: planos_test
+          PLANOS_APP_HOST: '%'
+          MYSQL: mysql -h 127.0.0.1 -uroot -proot
+        run: |
+          php artisan migrate:fresh --force
+          $MYSQL -e "CREATE USER 'sf_application'@'%' IDENTIFIED BY 'sf_application'"
+          bash deploy/app-grants.sh
+
+      - name: Application user permissions
+        env:
+          DB_USERNAME: sf_application
+          DB_PASSWORD: sf_application
+          PLANOS_CHECK_APP_GRANTS: 1
+        run: |
+          vendor/bin/phpunit --colors=never --filter AppDatabaseUserTest | tee app-user.txt
+          grep -Eq "^OK \(3 tests" app-user.txt
+
+      - name: Control - the same test fails with the database owner
+        env:
+          PLANOS_CHECK_APP_GRANTS: 1
+        run: |
+          php artisan migrate:fresh --force
+          if vendor/bin/phpunit --colors=never --filter AppDatabaseUserTest > control.txt 2>&1; then
+            cat control.txt
+            echo "Passou com o dono do banco: o teste não distingue as permissões."
+            exit 1
+          fi
+          cat control.txt
+          grep -q "deveria ser negado" control.txt
+
+  deploy-scripts:
+    runs-on: ubuntu-latest
+
+    name: Scripts de deploy (shellcheck)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Shellcheck
+        run: shellcheck deploy/*.sh
 
   institucional:
     runs-on: ubuntu-latest

@@ -48,7 +48,15 @@ VINDI_ALLOW_CREATION=false
 
 Os valores ilustrativos não devem ser usados como segredos. Configurar e testar SMTP para confirmação do contato. Ativar a política comercial somente após aprovação. Não carregar os usuários/planos demonstrativos em produção. MFA e recuperação segura da equipe precisam ser concluídos antes da entrada em operação.
 
+## Banco MySQL: usuários e triggers
+
+- As travas contratuais são triggers. Com o log binário ligado (padrão do MySQL 8.0), só um usuário com `SUPER` cria trigger; sem isso a primeira migration falha com o erro 1419. Configure `log_bin_trust_function_creators = 1` no servidor (`SET PERSIST`, como root) ou rode as migrations com um usuário que tenha `SUPER`.
+- Dois usuários: a credencial de migração é dona do banco e só roda `migrate`; a aplicação (`DB_USERNAME` do `.env`, `sf_application`) recebe só leitura e escrita de dados. Depois de cada migration, como root: `bash deploy/app-grants.sh` (idempotente). `audit_logs` fica só com `SELECT` e `INSERT`; a aplicação não tem `CREATE`, `ALTER`, `DROP` nem `TRIGGER`, então não remove as travas.
+- A CI roda a suíte inteira no MySQL 8.0, os testes de concorrência real (`tests/Feature/ConcurrencyTest.php`) e o teste de permissões conectado como `sf_application`, com o controle de que o mesmo teste falha com o dono do banco.
+
 ## Deploy revisável
+
+Os passos abaixo estão em `deploy/deploy.sh` (release novo, migration com a credencial de migração, `app-grants.sh`, troca atômica do `current`) e `deploy/rollback.sh` (volta o `current` ao release anterior, sem tocar no banco). Caminhos e serviços são variáveis `PLANOS_*` no início de cada script. Os scripts ainda não foram executados num servidor real.
 
 1. Executar testes do release, revisar migrações e confirmar compatibilidade com a versão anterior. Testar triggers no MySQL exato da VPS.
 2. Confirmar backup externo recente de banco **e** documentos e capacidade de restaurar. Registrar release anterior e novo.
