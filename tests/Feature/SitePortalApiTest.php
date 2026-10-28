@@ -1,0 +1,157 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\{Customer,Franchise,Product,ProductVersion,Proposal,User};
+use App\Notifications\PortalVerifyEmail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\{DB,Http,Notification,Storage,URL};
+use Tests\TestCase;
+
+class SitePortalApiTest extends TestCase
+{
+    use RefreshDatabase;
+    private string $key;
+    private ProductVersion $version;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->key=str_repeat('test-site-key-',3);
+        config(['site_portal.enabled'=>true,'site_portal.key'=>$this->key,'plans.demo'=>true,'site_portal.public_url'=>'https://saofrancisco.vet.br']);
+        Notification::fake(); Storage::fake('local'); Http::preventStrayRequests();
+        Franchise::create(['code'=>'CENTRAL','name'=>'Canal central','active'=>true]);
+        $product=Product::create(['code'=>'SITE-TEST','name'=>'Cuidado','category'=>'health_plan','active'=>true]);
+        $this->version=$product->versions()->create(['version'=>1,'name'=>'Plano cuidado','price_cents'=>9900,'billing_cycle'=>'monthly',
+            'species'=>['dog','cat'],'is_demo'=>true,'contract_template'=>'Contrato de {{contratante_nome}} para {{pet_nome}}.']);
+        $this->version->benefitRules()->create(['code'=>'CONSULTA','name'=>'Consulta','waiting_days'=>30,'quantity_limit'=>2,'period_type'=>'contract_year','coverage_type'=>'included']);
+        $this->version->update(['status'=>'published','published_at'=>now()]);
+    }
+
+    private function headers(?string $token=null): array { return ['X-Site-Key'=>$this->key]+($token?['Authorization'=>'Bearer '.$token]:[]); }
+    private function data(): array
+    {
+        return ['name'=>'Tutor do site','document'=>'52998224725','email'=>'site@example.test','phone'=>'18999990000',
+            'street'=>'Rua de teste','number'=>'10','neighborhood'=>'Centro','city'=>'Presidente Prudente','state'=>'SP','zip'=>'19000000',
+            'password'=>'SitePassword@2026','password_confirmation'=>'SitePassword@2026','privacy_accepted'=>1,
+            'pet_name'=>'Lua','pet_species'=>'dog','pet_birth_date'=>'2020-01-01','product_version_id'=>$this->version->id];
+    }
+    private function registered(): array
+    {
+        return $this->postJson('/api/site/v1/register',$this->data(),$this->headers())->assertCreated()->json();
+    }
+
+    public function test_gateway_requires_its_private_key_and_can_be_disabled(): void
+    {
+        $this->getJson('/api/site/v1/catalog')->assertUnauthorized();
+        config(['site_portal.enabled'=>false]);
+        $this->getJson('/api/site/v1/catalog',$this->headers())->assertStatus(503);
+    }
+
+    public function test_catalog_is_versioned_and_does_not_expose_private_contract_or_customer_data(): void
+    {
+        $response=$this->getJson('/api/site/v1/catalog',$this->headers())->assertOk()->assertJsonPath('offers.0.price_cents',9900);
+        $this->assertArrayNotHasKey('contract_template',$response->json('offers.0'));
+        $this->assertArrayNotHasKey('customer',$response->json());
+        $this->assertStringContainsString('no-store',$response->headers->get('Cache-Control'));
+    }
+
+    public function test_registration_creates_same_records_used_by_management_and_only_hashes_the_access_token(): void
+    {
+        $result=$this->registered();
+        $this->assertDatabaseCount('customers',1); $this->assertDatabaseCount('pets',1); $this->assertDatabaseCount('proposals',1);
+        $this->assertDatabaseHas('portal_tokens',['token_hash'=>hash('sha256',$result['token'])]);
+        $this->assertDatabaseMissing('portal_tokens',['token_hash'=>$result['token']]);
+        $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertOk()->assertJsonPath('pets.0.name','Lua');
+        $this->assertSame('site',Proposal::first()->channel);
+        $this->assertNull(Proposal::first()->accepted_at);
+    }
+
+    public function test_invalid_pet_rolls_back_all_registration_records(): void
+    {
+        $this->postJson('/api/site/v1/register',array_replace($this->data(),['pet_birth_date'=>'2035-01-01']),$this->headers())->assertUnprocessable();
+        $this->assertDatabaseCount('customers',0); $this->assertDatabaseCount('users',0); $this->assertDatabaseCount('portal_tokens',0);
+    }
+
+    public function test_existing_cpf_cannot_be_used_to_claim_a_customer_record(): void
+    {
+        Customer::create(['name'=>'Existing','document'=>$this->data()['document']]);
+        $this->postJson('/api/site/v1/register',$this->data(),$this->headers())->assertConflict()->assertJsonPath('code','CUSTOMER_WITHOUT_ACCESS');
+        $this->assertDatabaseCount('users',0);
+    }
+
+    public function test_existing_account_is_sent_to_login_by_cpf_or_email(): void
+    {
+        $this->registered();
+        $this->postJson('/api/site/v1/register',$this->data(),$this->headers())->assertConflict()->assertJsonPath('code','ACCOUNT_EXISTS');
+        $this->postJson('/api/site/v1/register',array_replace($this->data(),['document'=>'11144477735']),$this->headers())->assertConflict()->assertJsonPath('code','ACCOUNT_EXISTS');
+        $this->assertDatabaseCount('users',1);
+        $this->assertDatabaseCount('customers',1);
+    }
+
+    public function test_staff_credentials_never_issue_customer_api_tokens(): void
+    {
+        User::factory()->create(['email'=>'staff@example.test','password'=>'StaffPassword@2026','role'=>'central_admin','active'=>true]);
+        $this->postJson('/api/site/v1/login',['email'=>'staff@example.test','password'=>'StaffPassword@2026'],$this->headers())->assertUnprocessable();
+        $this->assertDatabaseCount('portal_tokens',0);
+    }
+
+    public function test_signing_requires_authenticated_pdf_review_and_is_idempotent(): void
+    {
+        $result=$this->registered(); $id=$result['proposal_id']; $headers=$this->headers($result['token']);
+        $proposal=$this->getJson('/api/site/v1/proposals/'.$id,$headers)->assertOk()->json();
+        $input=['accepted'=>1,'signer_name'=>'Tutor do site','fingerprint'=>$proposal['fingerprint'],'signature_data'=>$this->signatureData()];
+        $this->postJson('/api/site/v1/proposals/'.$id.'/accept',$input,$headers)->assertConflict();
+        $this->get('/api/site/v1/proposals/'.$id.'/pdf',$headers)->assertOk()->assertHeader('Content-Type','application/pdf');
+        $this->postJson('/api/site/v1/proposals/'.$id.'/accept',array_diff_key($input,['signature_data'=>true]),$headers)->assertUnprocessable()->assertJsonValidationErrors('signature_data');
+        $this->postJson('/api/site/v1/proposals/'.$id.'/accept',$input,$headers+['X-Portal-IP'=>'200.1.2.3','X-Portal-Port'=>'40404'])->assertOk();
+        $this->assertSame(['200.1.2.3',40404],[\App\Models\Proposal::findOrFail($id)->acceptance_evidence['ip'],\App\Models\Proposal::findOrFail($id)->acceptance_evidence['ip_port']]);
+        $this->postJson('/api/site/v1/proposals/'.$id.'/accept',$input,$headers)->assertOk();
+        $this->assertDatabaseCount('subscriptions',1); $this->assertDatabaseCount('invoices',1); $this->assertDatabaseCount('payments',0);
+        $doc=$this->postJson('/api/site/v1/proposals/'.$id.'/document',[],$headers)->assertOk()->json('document_id');
+        $this->postJson('/api/site/v1/proposals/'.$id.'/document',[],$headers)->assertOk()->assertJsonPath('document_id',$doc);
+        $this->get('/api/site/v1/documents/'.$doc,$headers)->assertOk()->assertHeader('Content-Type','application/pdf');
+        $me=$this->getJson('/api/site/v1/me',$headers)->assertOk()->assertJsonPath('subscriptions.0.document_id',$doc)->json();
+        $sid=$me['subscriptions'][0]['id'];
+        $this->postJson('/api/site/v1/subscriptions/'.$sid.'/checkout',[],$headers)->assertUnprocessable();
+        Http::assertNothingSent();
+        $this->postJson('/api/site/v1/subscriptions/'.$sid.'/cancellation',['reason'=>'Solicito encerramento'],$headers)->assertOk();
+        $this->postJson('/api/site/v1/subscriptions/'.$sid.'/cancellation',['reason'=>'Repetindo pedido'],$headers)->assertOk();
+        $this->assertDatabaseCount('cancellation_requests',1);
+    }
+
+    public function test_another_customer_cannot_read_a_proposal_or_download_a_document(): void
+    {
+        $result=$this->registered();
+        $customer=Customer::create(['name'=>'Other','document'=>'11144477735','email'=>'other@example.test','contact_verified_at'=>now()]);
+        User::factory()->create(['email'=>'other@example.test','password'=>'OtherPassword@2026','role'=>'customer','active'=>true,'customer_id'=>$customer->id,'email_verified_at'=>now()]);
+        $other=$this->postJson('/api/site/v1/login',['email'=>'other@example.test','password'=>'OtherPassword@2026'],$this->headers())->assertOk()->json('token');
+        $this->getJson('/api/site/v1/proposals/'.$result['proposal_id'],$this->headers($other))->assertNotFound();
+        $this->getJson('/api/site/v1/proposals/'.$result['proposal_id'].'/pdf',$this->headers($other))->assertNotFound();
+    }
+
+    public function test_logout_and_password_change_revoke_access(): void
+    {
+        $result=$this->registered();
+        $this->postJson('/api/site/v1/logout',[],$this->headers($result['token']))->assertOk();
+        $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertUnauthorized();
+        $login=$this->postJson('/api/site/v1/login',['email'=>$this->data()['email'],'password'=>$this->data()['password']],$this->headers())->assertOk()->json('token');
+        User::first()->update(['password'=>'AnotherPassword@2026']);
+        $this->getJson('/api/site/v1/me',$this->headers($login))->assertUnauthorized();
+    }
+
+    public function test_email_verification_uses_institutional_link_and_does_not_expose_history_before_confirmation(): void
+    {
+        config(['plans.demo'=>false,'plans.commercial_approved'=>true]);
+        $result=$this->registered(); $user=User::first();
+        Notification::assertSentTo($user,PortalVerifyEmail::class,function($notification) use($user) {
+            $mail=$notification->toMail($user);
+            return str_starts_with($mail->actionUrl,'https://saofrancisco.vet.br/area-do-cliente/verificar-email/');
+        });
+        $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertOk()->assertJsonCount(0,'pets');
+        $this->getJson('/api/site/v1/proposals/'.$result['proposal_id'],$this->headers($result['token']))->assertForbidden();
+        $url=URL::temporarySignedRoute('site-api.verify-email',now()->addHour(),['user'=>$user->id,'hash'=>sha1($user->email)],false);
+        $this->getJson($url,$this->headers($result['token']))->assertOk();
+        $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertOk()->assertJsonCount(1,'pets');
+    }
+}

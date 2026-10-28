@@ -1,0 +1,8 @@
+<div class="form-grid">
+<label>Nome do pet <span>*</span><input name="pet_name" required maxlength="100" value="{{old.pet_name|default('')}}"></label>
+<label>Espécie <span>*</span><select name="pet_species" required><option value="dog" {{old.pet_species|default('dog')=='dog'?'selected':''}}>Cão</option><option value="cat" {{old.pet_species|default('')=='cat'?'selected':''}}>Gato</option></select></label>
+<label>Data de nascimento <span>*</span><input type="date" name="pet_birth_date" required max="{{'now'|date('Y-m-d')}}" value="{{old.pet_birth_date|default('')}}"></label>
+<label>Raça<input name="pet_breed" maxlength="100" value="{{old.pet_breed|default('')}}" placeholder="Se conhecida"></label>
+<label>Cor / pelagem<input name="pet_color" maxlength="100" value="{{old.pet_color|default('')}}"></label>
+<label>Sexo<select name="pet_sex"><option value="unknown">Não informado</option><option value="male" {{old.pet_sex|default('')=='male'?'selected':''}}>Macho</option><option value="female" {{old.pet_sex|default('')=='female'?'selected':''}}>Fêmea</option></select></label>
+</div>

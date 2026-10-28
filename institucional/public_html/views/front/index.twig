@@ -1,0 +1,135 @@
+  {% extends 'front/layout.twig' %}
+
+{% block content %}
+
+
+<section id="banner">
+  <div class="container box-info-banner">
+    <div class="box-info">
+      <img src="{{asset('imgs/banner-25.png')}}" data-aos="fade-up" data-aos-duration="800">
+      <div>
+        <h2 data-aos="fade-up" data-aos-delay="200" data-aos-duration="800">Você ama, a gente cuida!</h2>
+        <h3 data-aos="fade-up" data-aos-delay="400" data-aos-duration="800">Cuidado completo e especializado.</h3>
+     <!--<h2 data-aos="fade-up" data-aos-delay="200" data-aos-duration="800">Cuidado completo e especializado</h2>
+        <h3 data-aos="fade-up" data-aos-delay="400" data-aos-duration="800">para quem merece toda a atenção!</h3> -->
+      </div>
+    </div>
+    <div class="box-info-img" data-aos="fade-up"  data-aos-delay="600" data-aos-duration="800">
+      <img src="{{asset('imgs/banner-cao.png')}}">
+    </div>
+  </div>
+</section>
+
+<section id="quem-somos">
+  <div class="container">
+    <div class="box-servicos">
+      <div class="cada-servico">
+        <div class="icon">
+          <img src="{{asset('imgs/icon-1.png')}}">
+        </div>
+        <div class="descricao">
+          <h4>Serviços Médicos Veterinários</h4>
+          <p>Estrutura moderna, serviços de qualidade e atendimento personalizado 24h</p>
+        </div>
+        <a href="{{path('web_servicos')}}">SAIBA MAIS</a>
+      </div>
+      <div class="cada-servico">
+        <div class="icon">
+          <img src="{{asset('imgs/icon-2.png')}}">
+        </div>
+        <div class="descricao">
+          <h4>Banho e Tosa</h4>
+          <p>Higienização completa com conforto e segurança</p>
+        </div>
+        <a href="{{path('web_banho_tosa')}}">SAIBA MAIS</a>
+      </div>
+      <div class="cada-servico">
+        <div class="icon">
+          <img src="{{asset('imgs/icon-3.png')}}">
+        </div>
+        <div class="descricao">
+          <h4>Planos de Saúde</h4>
+          <p>Seu pet protegido com um plano preventivo</p>
+        </div>
+        <a href="{{path('web_planos')}}">SAIBA MAIS</a>
+      </div>
+    </div>
+
+    <div class="box-quem-somos">
+      <div class="box-cao" data-aos="fade-up"  data-aos-duration="800">
+        <img src="{{asset('imgs/cao-contato.png')}}"/>
+      </div>
+      <div class="box-info-quem-somos" data-aos="fade-up"  data-aos-delay="200"data-aos-duration="800">
+        <h3 class="title-section">Quem somos</h3>
+        <div class="box-text">
+          {{quem_somos.body|raw}}
+        </div>
+        <a href="javascript:void(0);" onclick="$('html,body').animate({scrollTop: $('#contato').offset().top - 100}, 1000);">FALE CONOSCO</a>
+      </div>
+    </div>
+
+    {% include 'front/contato.twig' %}
+
+
+  </div>
+</section>
+
+
+{% endblock %}
+
+{% block js %}
+
+<script type="text/javascript">
+  var verifyCallback = function(response) {
+    $('input[name="hiddenRecaptcha"]').val(response);
+    console.log(response + 'jopachav-xD-22042019');
+  };
+
+  var onloadCallback = function() {
+    grecaptcha.render('captcha', {
+      'sitekey' : '6Lf0nwArAAAAAMxVryDS5I-7_A0Yi-am5OoGboW7',
+      'callback' : verifyCallback,
+      'theme' : 'light'
+    });
+  };
+
+  $("#contato").validate({
+    rules: {
+      iNome: "required",
+      iTelefone: "required",
+      iCidade: "required",
+      iMensagem: "required",
+    },
+    submitHandler: function(form){
+      if (grecaptcha.getResponse() == '') {
+        $('#captcha iframe').addClass('error');
+        $('#captcha').append('<label class="error">Verificação obrigatória</label>');
+      } else {
+
+        $('#captcha').find('.error').remove();
+        $('#captcha iframe').removeClass('error');
+        form.submit();
+      }
+    }
+  });
+
+</script>
+
+<script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async="" defer=""></script>
+
+
+   {% set alertTypeAvaillable = [ 'info', 'success', 'warning', 'danger'] %}
+            {% if site.session.flashbag is defined %}
+                    {% for alertType in alertTypeAvaillable %}
+                            {% for alert in site.session.flashBag.get(alertType) %}
+                                            {% if alertType == 'success' %}
+                                                    <script language="javascript">
+                                                        swal("sucesso!", "Mensagem enviada com sucesso!", "success");
+                                                    </script>
+                                            {% endif %}
+                            {% endfor %}
+                    {% endfor %}
+            {% endif %}
+
+{% endblock %}
+

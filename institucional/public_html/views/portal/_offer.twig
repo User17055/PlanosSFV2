@@ -1,0 +1,12 @@
+{% import 'portal/_helpers.twig' as ui %}
+{% set inclusos = offer.benefits|filter(b => b.coverage_type|default('') != 'discount') %}
+{% set descontos = offer.benefits|filter(b => b.coverage_type|default('') == 'discount') %}
+{% set total = offer.benefits|length %}
+{% set recolher = total > 4 %}
+<aside class="offer-summary offer-card" aria-label="Plano escolhido"><div class="offer-card-head"><span class="eyebrow">O CUIDADO ESCOLHIDO</span><h2>{{offer.name}}</h2></div>
+<div class="offer-card-body"><div class="offer-price">{{ui.money(offer.price_cents)}}<small>{{ui.cycle(offer.billing_cycle)}}</small></div>
+<ul class="offer-meta">{% if offer.duration_months %}<li>Contrato de {{offer.duration_months}} meses</li>{% endif %}{% if offer.enrollment_fee_cents %}<li>Adesão: {{ui.money(offer.enrollment_fee_cents)}}</li>{% endif %}</ul>
+{% if offer.demo %}<div class="notice notice-warning">Plano disponível para demonstração local. Nenhuma cobrança real será emitida.</div>{% endif %}
+<ul class="offer-benefits" id="beneficios-oferta">{% for benefit in inclusos|merge(descontos) %}<li class="{{benefit.coverage_type|default('') == 'discount' ? 'is-desconto' : 'is-inclusa'}}{{recolher and loop.index > 3 ? ' is-extra'}}"><strong>{{benefit.name}}</strong><span class="offer-tags"><span>{{ui.benefit_tag(benefit)}}</span>{% if benefit.waiting_days %}<span class="tag-carencia">Carência: {{benefit.waiting_days}} dias</span>{% endif %}</span></li>{% endfor %}</ul>
+{% if recolher %}<button type="button" class="offer-ver-mais" aria-controls="beneficios-oferta" aria-expanded="true" data-ver-mais="Ver todos os {{total}} benefícios" data-ver-menos="Ver menos" hidden>Ver todos os {{total}} benefícios</button>{% endif %}
+<p class="fine-print">Confira os limites, as carências e as condições completas no contrato antes de assinar.</p><a class="text-link" href="{{path('web_planos')}}">Comparar outros planos</a></div></aside>

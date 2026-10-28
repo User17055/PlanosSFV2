@@ -1,0 +1,273 @@
+/*----------------------------
+    The file upload form
+-----------------------------*/
+
+#uploads {
+    margin: 0;
+    padding: 0;
+}
+#uploads > li {
+    float: left;
+    list-style: none outside none;
+    padding-bottom: 2em;
+    padding-right: 2em;
+    min-height: 125px;
+    width: 210px;
+}
+#upload {
+    background-color: #6D777E;
+    padding: 10px;
+}
+#uploads.galeria .lib-panel {
+    background-color: #6E777D;
+    line-height: 160px;
+    height: 165px;
+    width: 165px;
+    position: relative;
+}
+#uploads.galeria .lib-panel > i, #uploads.galeria .lib-panel a > i {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    font-size: 29px;
+    z-index: 1;
+    color: #000;
+    display: none;
+    cursor: pointer;
+}
+#uploads.galeria .lib-panel a > i {
+    top: 134px;
+}
+#uploads.galeria .lib-panel a > i.img2, #uploads.galeria .lib-panel i.img2 {
+    z-index: 2;
+    color: #F9F9F9;
+    font-size: 25px;
+    top: 5px;
+    right: 4px;
+}
+#uploads.galeria .lib-panel a > i.img2 {
+    font-size: 28px;
+    top: 137px;
+    right: 2px;
+}
+#uploads.galeria .star .lib-panel > i, #uploads.galeria .star .lib-panel > i.img2 {
+    display: block;
+}
+#uploads.galeria li:not(:last-child):hover i, #uploads.galeria li:not(:last-child):hover i.img2 {
+    display: block;
+}
+#uploads .lib-panel .image {
+    line-height: 160px;
+}
+#drop {} #drop a {
+    background-color: #76AF26;
+    border-radius: 2px;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 94px;
+    line-height: 124px;
+    margin: auto;
+    padding: 12px 26px;
+}
+#drop a:hover {
+    background-color: #5E8E16;
+}
+#drop input {
+    display: none;
+}
+#upload ul {
+    list-style: none;
+    margin: 0 -30px;
+    border-top: 1px solid #2b2e31;
+    border-bottom: 1px solid #3d4043;
+}
+#upload ul li {
+    background-color: #333639;
+    background-image: -webkit-linear-gradient(top, #333639, #303335);
+    background-image: -moz-linear-gradient(top, #333639, #303335);
+    background-image: linear-gradient(top, #333639, #303335);
+    border-top: 1px solid #3d4043;
+    border-bottom: 1px solid #2b2e31;
+    padding: 15px;
+    height: 52px;
+    position: relative;
+}
+#upload ul li input {
+    display: none;
+}
+#upload ul li p {
+    width: 144px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: #EEE;
+    font-size: 16px;
+    font-weight: bold;
+    position: absolute;
+    top: 20px;
+    left: 100px;
+}
+#upload ul li i {
+    font-weight: normal;
+    font-style: normal;
+    color: #7f7f7f;
+    display: block;
+}
+#upload ul li canvas {
+    top: 15px;
+    left: 32px;
+    position: absolute;
+}
+#upload ul li span {
+    width: 15px;
+    height: 12px;
+    background: url('../img/icons.png') no-repeat;
+    position: absolute;
+    top: 34px;
+    right: 33px;
+    cursor: pointer;
+}
+#upload ul li.working span {
+    height: 16px;
+    background-position: 0 -12px;
+}
+#upload ul li.error p {
+    color: red;
+}
+/*----------------------------
+    The Demo Footer
+-----------------------------*/
+
+footer {
+    background-color: #080808;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.4);
+    height: 40px;
+    left: 0;
+    position: fixed;
+    width: 100%;
+    z-index: 100000;
+}
+footer h2 {
+    font-size: 14px;
+    font-weight: normal;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    bottom: 0;
+    margin-left: -420px;
+    padding: 13px 20px 0;
+    border: 1px solid #000;
+    border-width: 0 1px;
+    background-color: rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 5px #000 inset;
+    line-height: 1;
+    margin-top: 0;
+}
+footer h2 a {
+    color: #EEEEEE !important;
+    text-decoration: none !important;
+}
+footer h2 i {
+    font-style: normal;
+    color: #888;
+}
+#tzine-download {
+    opacity: 0.9;
+    background-color: #257691;
+    font-size: 11px;
+    text-align: center;
+    text-transform: uppercase;
+    width: 150px;
+    height: 28px;
+    line-height: 28px;
+    text-decoration: none !important;
+    display: inline-block;
+    border-radius: 2px;
+    color: #fff !Important;
+    font-weight: bold;
+    box-shadow: 0 -1px 2px #1e5e74 inset;
+    border-top: 1px solid #26849c;
+    text-shadow: 1px 1px 1px #1e6176;
+    margin-top: 6px;
+}
+#tzine-download:hover {
+    opacity: 1;
+}
+#tzine-actions {
+    position: absolute;
+    top: 0;
+    width: 500px;
+    right: 50%;
+    margin-right: -420px;
+    text-align: right;
+}
+#tzine-actions iframe {
+    display: inline-block;
+    height: 21px;
+    width: 95px;
+    position: relative;
+    float: left;
+    margin-top: 11px;
+}
+/***** Galeria *****/
+
+.lib-panel {
+    position: relative;
+}
+.lib-panel img {
+    max-height: 165px;
+    max-width: 165px;
+    background-color: transparent;
+}
+.col-md-2 > .lib-panel, .lib-panel .row {
+    -webkit-box-shadow: 0px 0px 12px 0px rgba(50, 50, 50, 0.4);
+    -moz-box-shadow: 0px 0px 12px 0px rgba(50, 50, 50, 0.4);
+    box-shadow: 0px 0px 12px 0px rgba(50, 50, 50, 0.4);
+}
+.lib-panel .row, .lib-panel .col-md-6 {
+    padding: 0;
+    background-color: #FFFFFF;
+}
+.lib-panel .lib-row {
+    padding: 0 20px 0 20px;
+}
+.lib-panel .lib-row.lib-header {
+    background-color: #FFFFFF;
+    font-size: 20px;
+    padding: 10px 20px 0 20px;
+}
+.lib-panel .lib-row.lib-header .lib-header-seperator {
+    height: 2px;
+    width: 26px;
+    background-color: #d9d9d9;
+    margin: 7px 0 7px 0;
+}
+.lib-panel .lib-row.lib-desc {
+    display: block;
+    font-size: 13px;
+    height: 110px;
+    overflow: hidden;
+    position: relative;
+}
+.lib-panel .lib-row.lib-desc a {
+    position: absolute;
+    width: 100%;
+    bottom: 10px;
+    left: 20px;
+}
+.lib-panel > .btn {
+    bottom: 4px;
+    position: absolute;
+    right: -10px;
+}
+.row-margin-bottom {
+    margin-bottom: 20px;
+}
+.box-shadow {
+    -webkit-box-shadow: 0 0 10px 0 rgba(0, 0, 0, .10);
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, .10);
+}
+.no-padding {
+    padding: 0;
+}

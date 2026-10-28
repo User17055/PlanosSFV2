@@ -1,0 +1,36 @@
+{% extends 'security/layout.twig' %}
+
+{% block body_param %}class="login-page"{% endblock body_param %}
+
+{% set path_login = site.security_path != "" ? site.security_path ~ "_login_check" : "login_check" %}
+
+{% block body %}
+
+<div class="page-login">
+    <div class="container">
+        <form class="form-signin" action="{{ path(path_login) }}" method="post">
+            <p class="form-signin-heading text-muted">
+                <img src="{{ asset('imgs/logomini.png') }}" title="LuzPrópria"/>
+            </p>
+            <input type="text" name="_username" class="form-control" placeholder="E-mail ou Usuário" required="required" autofocus>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <input type="password" name="_password" class="form-control" placeholder="Senha" required="required">
+            <button class="btn btn-lg btn-luz btn-block" type="submit">
+                Logar-se
+            </button>
+
+            {% if error is defined and error %}
+                <hr>
+                <div class="callout callout-danger">
+                    <h4>Ops...</h4>
+                    {% if error == 'Bad credentials.' %}
+                        <p>Login ou senha inválido.</p>
+                    {% else %}
+                        <p>{{ error }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock body %}

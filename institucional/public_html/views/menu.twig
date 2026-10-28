@@ -1,0 +1,73 @@
+<li {% if menu_selected is defined and menu_selected == 'planos_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_planos_type') }}">
+        <i class="fa fa-bars"></i> <span>Cadastro de planos</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'beneficios_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_beneficios_type') }}">
+        <i class="fa fa-bars"></i> <span>Cadastro de Benefícios</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'adocoes_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_adocoes_type') }}">
+        <i class="fa fa-bars"></i> <span>Cadastro de Adoções</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'unidades_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_unidades_type') }}">
+        <i class="fa fa-bars"></i> <span>Cadastro de Unidades</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'servicos_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_servicos_type') }}">
+        <i class="fa fa-bars"></i> <span>Cadastro de serviços</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'institutional_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_institutional_type') }}">
+        <i class="fa fa-bars"></i> <span>Página institucional</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'banner_type' %}class="active"{% endif %}>
+    <a href="{{ path('s_banner_type') }}">
+        <i class="fa fa-bars"></i> <span>Banner</span>
+    </a>
+</li>
+
+<li {% if menu_selected is defined and menu_selected == 'seo' %}class="active"{% endif %}>
+    <a href="{{ path('s_seo') }}">
+        <i class="fa fa-bars"></i> <span>S.E.O.</span>
+    </a>
+</li>
+
+{% if 'ROLE_ADMIN' in site.user.roles %}
+<li class="treeview {% if menu_selected is defined and menu_selected in ['user', 'role', 'access'] %}active{% endif %}">
+    <a href="javascript:;">
+        <i class="fa fa-share"></i> <span>Configurações</span>
+        <i class="fa fa-angle-left pull-right"></i>
+    </a>
+    <ul class="treeview-menu menu-open">
+        <li {% if menu_selected is defined and menu_selected == 'user' %}class="active"{% endif %}>
+            <a href="{{ path('s_user') }}">
+                <i class="fa fa-users"></i> <span>Usuários</span>
+            </a>
+        </li>
+        <li {% if menu_selected is defined and menu_selected == 'role' %}class="active"{% endif %}>
+            <a href="{{ path('s_role') }}">
+                <i class="fa fa-key"></i> <span>Regras</span>
+            </a>
+        </li>
+        <li {% if menu_selected is defined and menu_selected == 'access' %}class="active"{% endif %}>
+            <a href="{{ path('s_access') }}">
+                <i class="fa fa-link"></i> <span>Regra de acesso</span>
+            </a>
+        </li>
+    </ul>
+</li>
+{% endif %}
