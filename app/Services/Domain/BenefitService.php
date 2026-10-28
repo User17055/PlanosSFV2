@@ -54,9 +54,10 @@ class BenefitService
     public function consume(BenefitUsage $usage, User $actor): BenefitUsage
     {
         $this->authorize($actor, $usage->servicing_franchise_id);
+        $subscription = $usage->subscription;
 
-        return DB::transaction(function () use ($usage, $actor) {
-            $s = $this->lockSubscription($usage->subscription);
+        return DB::transaction(function () use ($usage, $actor, $subscription) {
+            $s = $this->lockSubscription($subscription);
             $u = BenefitUsage::lockForUpdate()->findOrFail($usage->id);
             if ($u->status === 'consumed') {
                 return $u;
@@ -82,9 +83,10 @@ class BenefitService
         if (trim($reason) === '') {
             throw new DomainException('REASON_REQUIRED', 'Informe o motivo do cancelamento.', 422);
         }
+        $subscription = $usage->subscription;
 
-        return DB::transaction(function () use ($usage, $actor, $reason) {
-            $this->lockSubscription($usage->subscription);
+        return DB::transaction(function () use ($usage, $actor, $reason, $subscription) {
+            $this->lockSubscription($subscription);
             $u = BenefitUsage::lockForUpdate()->findOrFail($usage->id);
             if ($u->status === 'cancelled') {
                 return $u;
@@ -112,9 +114,10 @@ class BenefitService
         if ($idempotencyKey !== null && (strlen($idempotencyKey) > 200 || trim($idempotencyKey) === '')) {
             throw new DomainException('IDEMPOTENCY_KEY_INVALID', 'Informe uma chave de operação válida.', 422);
         }
+        $subscription = $usage->subscription;
 
-        return DB::transaction(function () use ($usage, $actor, $quantity, $reason, $idempotencyKey) {
-            $this->lockSubscription($usage->subscription);
+        return DB::transaction(function () use ($usage, $actor, $quantity, $reason, $idempotencyKey, $subscription) {
+            $this->lockSubscription($subscription);
             $u = BenefitUsage::lockForUpdate()->findOrFail($usage->id);
             if ($idempotencyKey && $existing = BenefitUsage::where('idempotency_key', $idempotencyKey)->first()) {
                 if ($existing->status !== 'reversal' || $existing->original_usage_id !== $u->id || $existing->quantity !== $quantity || $existing->reason !== $reason) {
@@ -141,6 +144,8 @@ class BenefitService
         }, 3);
     }
 
+    // Callers load the subscription before the transaction: in MySQL (REPEATABLE READ) the first plain read
+    // fixes the transaction snapshot, so a read before these locks would hide usages committed while waiting.
     private function lockSubscription(Subscription $subscription): Subscription
     {
         Customer::lockForUpdate()->findOrFail($subscription->customer_id);
