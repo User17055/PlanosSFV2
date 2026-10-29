@@ -6,14 +6,13 @@
   <meta name="theme-color" content="#0b1936">
   <title>{% block title %}Área do cliente{% endblock %} · São Francisco</title>
   <link rel="icon" href="{{asset('imgs/favicon.png')}}">
-  <link rel="stylesheet" href="{{asset('css/portal.css?v=12')}}">
-  <script defer src="{{asset('js/portal.js?v=5')}}"></script>
+  <link rel="stylesheet" href="{{asset('css/portal.css?v=22')}}">
+  <script defer src="{{asset('js/portal.js?v=6')}}"></script>
 </head>
 <body class="sf-portal {% block body_class %}{% endblock %}">
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <header class="portal-header"><a class="portal-brand" href="{{path('web_home')}}"><img src="{{asset('imgs/logo.png')}}" alt="São Francisco — serviços veterinários"><span>ÁREA DO CLIENTE</span></a>
-  <nav aria-label="Navegação principal"><a href="{{path('web_planos')}}">Conhecer os planos</a>
-  {% if logged_in %}<a href="{{path('portal_home')}}">Meu espaço</a><form method="post" action="{{path('portal_logout')}}"><input type="hidden" name="_token" value="{{csrf}}"><button class="portal-nav-button">Sair</button></form>
+  <nav aria-label="Navegação principal">  {% if logged_in %}<a href="{{path('portal_home')}}">Meu espaço</a><form method="post" action="{{path('portal_logout')}}"><input type="hidden" name="_token" value="{{csrf}}"><button class="portal-nav-button">Sair</button></form>
   {% else %}<a class="portal-nav-button" href="{{path('portal_login')}}">Entrar</a>{% endif %}</nav>
 </header>
 <main id="conteudo" class="portal-main">

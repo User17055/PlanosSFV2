@@ -14,7 +14,7 @@
 <section class="wiz-step is-active" data-step="1" aria-labelledby="wiz-t1">
 <div class="section-heading"><span class="section-number">1</span><div><h2 id="wiz-t1">Quem vai receber esse cuidado?</h2><p>Comece pelo nome do seu pet. Cada plano é individual, de um pet só.</p></div></div>
 <div data-pets>{% for p in (oldpets|length ? oldpets : [{}]) %}{{ w.pet_block(loop.index0, p) }}{% endfor %}</div>
-<div class="wiz-nav"><button type="button" class="button button-primary" data-next hidden>Prosseguir <span aria-hidden="true">→</span></button></div>
+<div class="wiz-nav"><button type="button" class="button button-primary" data-next hidden>Prosseguir</button></div>
 </section>
 
 <section class="wiz-step" data-step="2" aria-labelledby="wiz-t2">
@@ -31,7 +31,7 @@
 <div class="form-grid"><label>Crie uma senha <span>*</span><input name="password" type="password" required minlength="12" autocomplete="new-password"><small>Use pelo menos 12 caracteres.</small></label><label>Confirme a senha <span>*</span><input name="password_confirmation" type="password" required minlength="12" autocomplete="new-password"></label>
 <label>Como conheceu a São Francisco?<select name="acquisition_source"><option value="">Prefiro não informar</option><option value="direct">Já conheço a clínica</option><option value="referral">Indicação</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="google">Google</option><option value="other">Outro</option></select></label><label>Quem indicou? <span class="optional">(opcional)</span><input name="referrer_name" maxlength="180" value="{{old.referrer_name|default('')}}"></label></div>
 {% if not offer %}<label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos dados informados para meu cadastro. O cadastro não representa assinatura de contrato nem autorização de marketing.</span></label>{% endif %}
-<div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>← Voltar</button>{% if offer %}<button type="button" class="button button-primary" data-next hidden>Prosseguir <span aria-hidden="true">→</span></button>{% else %}<button class="button button-primary" data-busy="Salvando seu cadastro...">Criar meu acesso <span aria-hidden="true">→</span></button>{% endif %}</div>
+<div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>Voltar</button>{% if offer %}<button type="button" class="button button-primary" data-next hidden>Prosseguir</button>{% else %}<button class="button button-primary" data-busy="Salvando seu cadastro...">Criar meu acesso</button>{% endif %}</div>
 </section>
 
 {% if offer %}
@@ -45,7 +45,7 @@
 <div class="wiz-tpp"><strong>Preços exclusivos na Tudo pra Pet</strong><p>Quem tem plano São Francisco também tem acesso a preços exclusivos na Tudo pra Pet, para cuidar do seu pet em casa.</p></div>
 <ol class="wiz-proximos"><li>{{offer.informational|default(false) ? 'Salvamos seu cadastro.' : 'Você lê o contrato e assina.'}}</li><li>{{offer.informational|default(false) ? 'Quando a contratação abrir, avisamos você.' : 'Em seguida, faz o pagamento pela Vindi.'}}</li><li>Pronto: o plano é ativado.</li></ol>
 <label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos dados informados para meu cadastro e a contratação dos serviços São Francisco. O cadastro não representa assinatura do contrato nem autorização de marketing.</span></label>
-<div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>← Voltar</button><button class="button button-primary" data-busy="Salvando seu cadastro...">{{offer.informational|default(false) ? 'Finalizar cadastro' : 'Ler e assinar o contrato'}} <span aria-hidden="true">→</span></button></div>
+<div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>Voltar</button><button class="button button-primary" data-busy="Salvando seu cadastro...">{{offer.informational|default(false) ? 'Finalizar cadastro' : 'Ler e assinar o contrato'}}</button></div>
 </section>
 {% endif %}
 

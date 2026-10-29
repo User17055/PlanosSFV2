@@ -135,7 +135,11 @@
   const pets = () => [...petsBox.querySelectorAll('[data-pet]')];
   const refreshPets = () => {
     const list = pets();
-    list.forEach((pet, i) => { pet.querySelector('[data-pet-n]').textContent = i + 1; pet.querySelector('[data-remove-pet]').hidden = list.length < 2; });
+    list.forEach((pet, i) => {
+      const n = pet.querySelector('[data-pet-n]'), remove = pet.querySelector('[data-remove-pet]');
+      if (n) n.textContent = i + 1;
+      if (remove) remove.hidden = list.length < 2;
+    });
     if (addButton) addButton.hidden = list.length >= MAX_PETS;
   };
   const show = (index, scroll = true) => {

@@ -1,7 +1,7 @@
 {% extends 'front/layout.twig' %}
 
 {% block content %}
-<link rel="stylesheet" href="{{asset('css/assinaturas.css?v=5')}}">
+<link rel="stylesheet" href="{{asset('css/assinaturas.css?v=6')}}">
 
 <section id="banner" class="interna plano">
   <div class="container box-info-banner">
@@ -46,10 +46,10 @@
             {% endif %}
             <div class="assinatura-card-action">
               {% if item.subscription_url %}
-                <a class="assinatura-button{{item.offer.informational|default(false) ? ' sem-seta'}}" href="{{item.subscription_url}}" aria-label="{{item.offer.informational|default(false) ? 'Quero' : 'Contratar'}} {{item.title|striptags}}">{% if item.offer.informational|default(false) %}Quero este plano{% else %}Contratar este plano <span aria-hidden="true">→</span>{% endif %}</a>
+                <a class="assinatura-button{{item.offer.informational|default(false) ? ' sem-seta'}}" href="{{item.subscription_url}}" aria-label="{{item.offer.informational|default(false) ? 'Quero' : 'Contratar'}} {{item.title|striptags}}">{% if item.offer.informational|default(false) %}Quero este plano{% else %}Contratar este plano{% endif %}</a>
                 <small>Confira valores e contrato antes de assinar.</small>
               {% else %}
-                <a class="assinatura-button" href="#contato-planos">Falar com nossa equipe <span aria-hidden="true">→</span></a>
+                <a class="assinatura-button" href="#contato-planos">Falar com nossa equipe</a>
                 <small>Nossa equipe ajuda você a escolher.</small>
               {% endif %}
             </div>

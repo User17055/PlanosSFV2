@@ -1,6 +1,5 @@
 {% macro pet_block(i, p) %}
 <fieldset class="wiz-pet" data-pet>
-<legend class="wiz-pet-title"><span>Pet <b data-pet-n>{{ i is same as('__i__') ? '' : i + 1 }}</b></span><button type="button" class="wiz-remove" data-remove-pet hidden>Remover</button></legend>
 <label class="wiz-pet-name">Qual o nome do seu pet? <span>*</span><input name="pets[{{i}}][name]" required maxlength="100" value="{{p.name|default('')}}" placeholder="Ex.: Lua" autocomplete="off"></label>
 <div class="form-grid">
 <label>Espécie <span>*</span><select name="pets[{{i}}][species]" required><option value="dog" {{p.species|default('dog')=='dog'?'selected':''}}>Cão</option><option value="cat" {{p.species|default('')=='cat'?'selected':''}}>Gato</option></select></label>

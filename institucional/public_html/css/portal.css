@@ -119,8 +119,8 @@
 
 /* Celular: etapas, formulário e cartão do plano */
 @media(max-width:560px){
-.pagina-contratacao .journey{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0 14px;padding:0;overflow:visible}
-.pagina-contratacao .journey li{flex-direction:column;justify-content:flex-start;gap:4px;padding:8px 4px;border-radius:12px;font-size:11.5px;line-height:1.2;text-align:center;white-space:normal;min-width:0}
+.pagina-contratacao .journey{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:6px;margin:12px 0 14px;padding:0;overflow:visible}
+.pagina-contratacao .journey li{flex-direction:column;justify-content:flex-start;align-items:center;gap:4px;min-height:68px;padding:8px 4px;border-radius:12px;font-size:11.5px;line-height:1.2;text-align:center;white-space:normal;min-width:0}
 .pagina-contratacao .journey span{width:22px;height:22px;font-size:12px}
 .wiz-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:18px}
 .wiz-progress li{flex-direction:column;gap:4px;font-size:12px;text-align:center}
@@ -142,3 +142,46 @@
 .wiz-resumo{flex-direction:column;gap:10px}.wiz-resumo div:last-child{text-align:left}
 .wiz-nav .button{min-height:50px}
 }
+.portal-header nav>a:first-child{max-width:none}
+
+/* Cartão "O cuidado escolhido": tons de azul, cabeçalho em destaque e preço flutuando */
+.offer-card{overflow:hidden;border:1px solid #cfe5ee;border-radius:22px;background:linear-gradient(#f1f8fc,#fff 220px);box-shadow:0 18px 40px -28px rgba(11,89,136,.55)}
+.offer-card-head{position:relative;padding:24px 24px 38px;background:linear-gradient(135deg,#0b1936 0%,#0b4f7d 62%,#1b7fb3 100%);color:#fff;overflow:hidden}
+.offer-card-head:before,.offer-card-head:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.offer-card-head:before{top:-46px;right:-30px;width:140px;height:140px}
+.offer-card-head:after{bottom:-60px;left:-40px;width:120px;height:120px}
+.offer-card-head>*{position:relative;z-index:1}
+.offer-card-head .eyebrow{margin-bottom:6px;color:#a9d6ee;letter-spacing:1.6px}
+.offer-summary.offer-card h2{color:#fff}
+.offer-card-body{position:relative;padding-top:0}
+.offer-card .offer-price{width:fit-content;margin:-24px auto 0;padding:8px 22px;border:1px solid #cfe5ee;border-radius:999px;background:#fff;box-shadow:0 10px 22px -14px rgba(11,89,136,.6);color:#0b5988}
+.offer-meta li{background:#e1f0f6;color:#0b5988;font-weight:600}
+.offer-card .offer-benefits li.offer-group{background:#e1f0f6;color:#0b5988}
+.offer-card .offer-benefits li.offer-group~li.offer-group{background:#d9e6f7;color:#1e4f8f}
+.offer-card .offer-benefits li:not(.offer-group){border-top-color:#e4eef4}
+.offer-card .offer-ver-mais{border-color:#cfe5ee;color:#0b4f7d}
+.offer-card .offer-ver-mais:hover{background:#eef6fa}
+.offer-card .text-link{background:#0b4f7d;color:#fff;font-weight:600}
+.offer-card .text-link:hover{background:#0b3f64}
+.offer-card .fine-print{color:#4f6b7d}
+@media(max-width:560px){
+.offer-card-head{padding:18px 16px 34px}
+.offer-card .offer-price{margin-top:-22px;padding:7px 18px}
+}
+/* "Contrato de 12 meses" no canto do cabeçalho, sem etiqueta */
+.offer-card{position:relative}
+.offer-card .offer-meta{position:absolute;top:12px;right:16px;z-index:2;margin:0;gap:0}
+.offer-card .offer-meta li{padding:0;border:0;border-radius:0;background:none;color:#cfe8f5;font-size:12px;font-weight:600}
+@media(max-width:560px){.offer-card-head{padding-top:30px}.offer-card .offer-meta{top:10px;right:14px}.offer-card .offer-meta li{font-size:11.5px}}
+.offer-card-body{position:static}
+.offer-card .offer-price{position:relative;z-index:1}
+/* "Contrato de 12 meses" logo abaixo do preço, sem etiqueta */
+.offer-card .offer-meta{position:static;margin:8px 0 6px;justify-content:center}
+.offer-card .offer-meta li{color:#4f6b7d;font-size:13px;font-weight:600}
+/* Cabeçalho do cartão do plano mais escuro, igual ao azul do topo da página */
+.offer-card-head{background:linear-gradient(135deg,#0b1936 0%,#0b2a4d 60%,#0b3f66 100%)}
+.offer-card-head:before,.offer-card-head:after{background:rgba(255,255,255,.05)}
+/* "Incluso no plano" / "Descontos": só o título, sem faixa colorida */
+.offer-card .offer-benefits li.offer-group,.offer-card .offer-benefits li.offer-group~li.offer-group{margin:18px 0 2px;padding:0 4px;border-radius:0;background:none;color:#0b4f7d}
+.offer-card .offer-benefits li.offer-group:first-child{margin-top:16px;padding-top:0}
+.wiz-bloco h3,.wiz-bloco~.wiz-bloco h3{margin:20px 0 2px;padding:0 4px;border-radius:0;background:none;color:#0b4f7d}
