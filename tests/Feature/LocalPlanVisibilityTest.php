@@ -35,6 +35,7 @@ class LocalPlanVisibilityTest extends TestCase
 
     public function test_imported_plan_continues_from_registration_to_review_and_final_contract_locally(): void
     {
+        if (PHP_OS_FAMILY!=='Windows') $this->markTestSkipped('O PDF do contrato só sai pelo Microsoft Word no Windows; conversor no Linux pendente em docs/DECISOES_PENDENTES.md.');
         $version=$this->versions[1];
         $this->get(route('register',['product_version_id'=>$version->id]))->assertOk()->assertSee($version->name);
         $this->post(route('register.store'),[

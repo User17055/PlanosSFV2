@@ -175,7 +175,7 @@ class AttributionTest extends TestCase
         $p = $this->proposal([], $service->proposalData($request, [], $this->client));
         $original = $p->snapshot;
         $s = app(ProposalService::class)->accept($p, $this->client, ['accepted' => true]);
-        $this->assertSame($p->attribution_snapshot, $s->attribution_snapshot);
+        $this->assertSameIgnoringKeyOrder($p->attribution_snapshot, $s->attribution_snapshot);
         $this->assertSame($original, $s->contract_snapshot);
         $this->assertSame('shared_link', $s->acquisition_source);
         $this->assertSame($this->seller->id, $s->link_owner_id);

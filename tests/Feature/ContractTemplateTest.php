@@ -50,8 +50,8 @@ class ContractTemplateTest extends TestCase
         $this->assertSame($version->id, $installer->install()->id);
         $this->assertSame('draft', $version->status);
         $this->assertSame(8600, $version->price_cents);
-        $this->assertSame(13, $version->benefitRules()->count());
-        $this->assertSame(9, $version->benefitRules()->where('coverage_type', 'discount')->count());
+        $this->assertSame(11, $version->benefitRules()->count());
+        $this->assertSame(7, $version->benefitRules()->where('coverage_type', 'discount')->count());
         $this->assertStringContainsString('{{contratante_nome}}', $version->contract_template);
         $this->assertDatabaseCount('contract_documents', 0);
     }

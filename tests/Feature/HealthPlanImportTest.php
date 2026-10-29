@@ -29,7 +29,9 @@ class HealthPlanImportTest extends TestCase
             $this->assertStringContainsString('CLÁUSULA PRIMEIRA',$html);
             $this->assertStringNotContainsString('Texto integral contratado',$html);
             $this->assertStringNotContainsString('Condições congeladas e benefícios',$html);
-            $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
+            // Word → PDF só existe no Windows (Microsoft Word); fora dele a geração tem de ser recusada (docs/DECISOES_PENDENTES.md).
+            if (PHP_OS_FAMILY==='Windows') $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
+            else $this->assertThrows(fn()=>app(ContractService::class)->templatePdf($version),\RuntimeException::class,'Configure a conversão nativa de Word para PDF');
         }
         $this->assertSame([5200,8600,28200,33000],array_map(fn($v)=>$v->price_cents,$versions));
         $this->assertStringContainsString('plano Master',$versions[3]->contract_template);
@@ -39,7 +41,21 @@ class HealthPlanImportTest extends TestCase
         $this->assertDatabaseCount('product_versions',4);
         $admin=\App\Models\User::factory()->create(['role'=>'central_admin','active'=>true]);
         $this->actingAs($admin)->get(route('catalog.index'))->assertOk()->assertSee('Plano Super Econômico')->assertSee('Plano Prime');
-        $this->get(route('catalog.template-pdf',$versions[0]))->assertOk()->assertHeader('Content-Type','application/pdf');
+        if (PHP_OS_FAMILY==='Windows') $this->get(route('catalog.template-pdf',$versions[0]))->assertOk()->assertHeader('Content-Type','application/pdf');
+    }
+
+    public function test_plans_no_longer_offer_feed_or_franpet_product_discounts(): void
+    {
+        foreach(app(HealthPlanInstaller::class)->installAll() as $version) {
+            $this->assertSame(0,$version->benefitRules()->whereIn('code',['DESC_RACAO','DESC_PRODUTOS'])->count());
+            $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',$version->contract_template);
+            $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',json_encode($version->contract_layout,JSON_UNESCAPED_UNICODE));
+        }
+        foreach(json_decode(file_get_contents(resource_path('contracts/word/index.json')),true) as $entry) {
+            $zip=new \ZipArchive; $zip->open(resource_path('contracts/word/'.$entry['docx_sha256'].'.docx'));
+            $text=strip_tags($zip->getFromName('word/document.xml')); $zip->close();
+            $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',$text);
+        }
     }
 
     public function test_personalized_source_contract_escapes_input_and_keeps_the_signing_record_separate(): void

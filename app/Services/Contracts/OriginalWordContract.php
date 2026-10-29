@@ -2,6 +2,7 @@
 
 namespace App\Services\Contracts;
 
+use App\Services\Domain\Fingerprint;
 use DOMDocument;
 use DOMXPath;
 use ZipArchive;
@@ -89,7 +90,7 @@ class OriginalWordContract
         if (!data_get($snapshot,'version.contract_layout.source')) return null;
         $indexPath=resource_path('contracts/word/index.json');
         $index=is_file($indexPath)?json_decode(file_get_contents($indexPath),true):[];
-        $key=hash('sha256',json_encode(data_get($snapshot,'version.contract_layout'),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+        $key=Fingerprint::sha256(data_get($snapshot,'version.contract_layout'));
         $entry=$index[$key]??null;
         if (!$entry || !hash_equals($entry['text_sha256'],hash('sha256',(string)data_get($snapshot,'version.contract_template')))) throw new \RuntimeException('O Word original deste contrato ainda não está preparado.');
         return $entry;
