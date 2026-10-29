@@ -1637,3 +1637,17 @@ html:has(.auth-layout){scrollbar-gutter:auto}
   .pet-hero-nav .portal-hero-eyebrow{display:none}
   .pet-hero-nav.has-art>.pet-birth-corner,.pet-hero-nav>.pet-birth-corner{display:block;position:absolute;top:12px;right:12px;left:auto;width:auto;z-index:2;padding:3px 10px;border-radius:999px;background:rgba(11,25,54,.6);font-size:12px;line-height:1.4;color:#e3f1f5}
 }
+/* Login: título mais forte e escuro, logo colada ao título */
+.auth-logo{margin-bottom:6px}
+.auth-card h1{margin-bottom:6px;font-size:28px;font-weight:800;color:#3d5a80}
+.auth-card>p{font-weight:600;color:#14264b}
+.auth-card .field{font-weight:600;color:#0b1936}
+.auth-card input{font-weight:400}
+.auth-card input::placeholder{font-weight:300;color:#8a9bb0}
+.auth-card .field-error{margin-top:6px;font-size:12.5px;font-weight:500;color:var(--danger-text)}
+/* Login: a própria borda do campo muda de cor (sem anel extra); no erro fica vermelha e o campo treme */
+.auth-card input:focus{border-color:var(--primary);box-shadow:none}
+.auth-card input[aria-invalid=true],.auth-card input[aria-invalid=true]:focus{border-color:var(--danger-text);box-shadow:none}
+.auth-card .field:has(input[aria-invalid=true]) :is(input:not(#login-password),.password-field){animation:auth-shake .4s ease-in-out}
+@keyframes auth-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@media(prefers-reduced-motion:reduce){.auth-card .field:has(input[aria-invalid=true]) :is(input,.password-field){animation:none}}

@@ -9,6 +9,17 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    // O campo aceita e-mail ou CPF; o CPF vira o e-mail do único acesso ativo do cliente (sem acesso único, falha como qualquer outra tentativa).
+    private function resolveEmail(string $login): string
+    {
+        if (str_contains($login,'@')) return $login;
+        $cpf=preg_replace('/\D/','',$login);
+        if ($cpf==='') return $login;
+        $users=\App\Models\User::where('role','customer')->where('active',true)
+            ->whereIn('customer_id',\App\Models\Customer::where('document',$cpf)->select('id'))->limit(2)->get();
+        return $users->count()===1 ? $users->first()->email : $login;
+    }
+
     public function login(Request $request)
     {
         $intended=(string)$request->session()->get('url.intended','');
@@ -18,14 +29,18 @@ class AuthController extends Controller
 
     public function authenticate(Request $request)
     {
-        $data = $request->validate(['email' => 'required|email', 'password' => 'required|string']);
+        $data = $request->validate(['email' => 'required|string|max:255', 'password' => 'required|string']);
+        $login = trim($data['email']);
+        $valid = str_contains($login,'@') ? filter_var($login,FILTER_VALIDATE_EMAIL) : strlen(preg_replace('/\D/','',$login))===11;
+        if (! $valid) throw ValidationException::withMessages(['email' => 'Informe um e-mail ou CPF válido.']);
+        $data['email'] = $this->resolveEmail($login);
         $key = 'login:'.hash('sha256', strtolower($data['email']).'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            throw ValidationException::withMessages(['email' => 'Aguarde alguns minutos antes de tentar novamente.']);
+            throw ValidationException::withMessages(['password' => 'Aguarde alguns minutos antes de tentar novamente.']);
         }
         if (! Auth::attempt($data + ['active' => true], $request->boolean('remember'))) {
             RateLimiter::hit($key, 60);
-            throw ValidationException::withMessages(['email' => 'Não foi possível entrar com os dados informados.']);
+            throw ValidationException::withMessages(['password' => 'E-mail, CPF ou senha incorretos.']);
         }
         RateLimiter::clear($key);
         $request->session()->regenerate();

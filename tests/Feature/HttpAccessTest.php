@@ -145,6 +145,18 @@ class HttpAccessTest extends TestCase
         $this->actingAs(User::where('role','central_admin')->firstOrFail())->get(route('customers.show',$user->customer_id))->assertOk()->assertSee('Solicitação de cancelamento');
     }
 
+    public function test_customer_can_login_with_cpf(): void
+    {
+        $user=User::where('email','cliente@saofrancisco.local')->firstOrFail();
+        $user->customer->update(['document'=>'52998224725']);
+        $this->post(route('authenticate'),['email'=>'529.982.247-25','password'=>'Demo@2026!'])->assertRedirect(route('portal'));
+        $this->post(route('logout'));
+        $this->post(route('authenticate'),['email'=>'11111111111','password'=>'Demo@2026!'])->assertSessionHasErrors('password');
+        $this->post(route('authenticate'),['email'=>'abc','password'=>'x'])->assertSessionHasErrors('email');
+        $this->from(route('login'))->followingRedirects()->post(route('authenticate'),['email'=>'cliente@saofrancisco.local','password'=>'errada'])
+            ->assertSee('E-mail, CPF ou senha incorretos.')->assertDontSee('Confira as informações para continuar.');
+    }
+
     public function test_customer_login_ignores_a_staff_only_intended_url_and_goes_to_the_portal(): void
     {
         $this->get(route('dashboard'))->assertRedirect(route('login'));
