@@ -56,6 +56,18 @@ class SitePortalApiTest extends TestCase
         $this->assertStringContainsString('no-store',$response->headers->get('Cache-Control'));
     }
 
+    public function test_catalog_shows_real_draft_plans_as_informational_only_when_enabled(): void
+    {
+        $product=Product::create(['code'=>'SITE-REAL','name'=>'Real','category'=>'health_plan','active'=>true]);
+        $product->versions()->create(['version'=>1,'name'=>'Plano real','price_cents'=>8600,'billing_cycle'=>'monthly','species'=>['dog'],
+            'is_demo'=>false,'contract_layout'=>'x','contract_template'=>'Contrato.','status'=>'draft']);
+        $this->getJson('/api/site/v1/catalog',$this->headers())->assertOk()->assertJsonCount(1,'offers');
+        config(['site_portal.show_drafts'=>true]);
+        $offers=$this->getJson('/api/site/v1/catalog',$this->headers())->assertOk()->assertJsonCount(2,'offers')->json('offers');
+        $this->assertFalse(collect($offers)->firstWhere('name','Plano cuidado')['informational']);
+        $this->assertTrue(collect($offers)->firstWhere('name','Plano real')['informational']);
+    }
+
     public function test_registration_creates_same_records_used_by_management_and_only_hashes_the_access_token(): void
     {
         $result=$this->registered();

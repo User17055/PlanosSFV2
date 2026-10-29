@@ -45,11 +45,13 @@ class PortalApi
         $handle=curl_init($url); $body=''; $limit=$pdf?16*1024*1024:2*1024*1024;
         curl_setopt_array($handle,[CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_HTTPHEADER=>$headers,CURLOPT_CONNECTTIMEOUT=>5,
             CURLOPT_TIMEOUT=>$pdf?125:($path==='catalog'?6:25),CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,
-            CURLOPT_PROTOCOLS_STR=>$local?'https,http':'https',
             CURLOPT_WRITEFUNCTION=>static function($curl,string $chunk) use(&$body,$limit): int {
                 if (strlen($body)+strlen($chunk)>$limit) return 0;
                 $body.=$chunk; return strlen($chunk);
             }]);
+        // shortcut: libcurl < 7.85 (hospedagem atual) não tem CURLOPT_PROTOCOLS_STR; remover o ramo antigo quando todos os ambientes tiverem libcurl novo.
+        if (defined('CURLOPT_PROTOCOLS_STR')) curl_setopt($handle,CURLOPT_PROTOCOLS_STR,$local?'https,http':'https');
+        else curl_setopt($handle,CURLOPT_PROTOCOLS,$local?CURLPROTO_HTTPS|CURLPROTO_HTTP:CURLPROTO_HTTPS);
         if ($method==='POST') {
             $headers[]='Content-Type: application/json';
             curl_setopt($handle,CURLOPT_HTTPHEADER,$headers);

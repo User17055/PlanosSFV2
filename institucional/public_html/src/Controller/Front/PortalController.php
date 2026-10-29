@@ -110,7 +110,7 @@ class PortalController
         if ($r->getSession()->get('portal_token')) return $this->redirect('portal_home');
         if ($r->isMethod('POST')) {
             $data=$r->request->all(); unset($data['_token']);
-            $data['product_version_id']=$offer['id']??null;
+            $data['product_version_id']=empty($offer['informational'])?($offer['id']??null):null;
             try {
                 $result=$this->call($r,'POST','register',$data,false)->data;
             } catch (PortalApiException $e) {
@@ -138,6 +138,11 @@ class PortalController
         if (!$r->getSession()->get('portal_token')) return $this->signup($r,$offer);
         $account=$this->call($r,'GET','me')->data;
         if (!$account['user']['verified'])return $this->redirect('portal_home');
+        if (!empty($offer['informational'])) {
+            $r->getSession()->remove('portal_plan_code');
+            $this->success($r,'Seu cadastro está pronto. A contratação do plano '.$offer['name'].' será liberada em breve; avisaremos você.');
+            return $this->redirect('portal_home');
+        }
         if ($r->isMethod('POST')) {
             $pet=(int)$r->request->get('pet_id');
             foreach($account['proposals'] as $p) if((int)$p['pet_id']===$pet && (int)$p['version_id']===(int)$offer['id']) return $this->redirect('portal_proposal',['id'=>$p['id']]);

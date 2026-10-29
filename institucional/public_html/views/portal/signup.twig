@@ -1,8 +1,8 @@
 {% extends 'portal/layout.twig' %}
-{% block title %}{{offer ? 'Contratar ' ~ offer.name : 'Criar meu acesso'}}{% endblock %}
+{% block title %}{{offer ? (offer.informational|default(false) ? 'Quero o ' : 'Contratar ') ~ offer.name : 'Criar meu acesso'}}{% endblock %}
 {% block body_class %}pagina-contratacao{% endblock %}
 {% block content %}
-<div class="contratacao-hero{{offer ? ' com-foto'}}"><span class="eyebrow">UM NOVO CAPÍTULO DE CUIDADO</span><h1>Vamos cuidar do seu melhor amigo.</h1><p>Cadastre seus dados e os do pet. Depois, você confere o contrato antes de assinar.</p>
+<div class="contratacao-hero{{offer ? ' com-foto'}}"><span class="eyebrow">UM NOVO CAPÍTULO DE CUIDADO</span><h1>Vamos cuidar do seu melhor amigo.</h1><p>{{offer.informational|default(false) ? 'Cadastre seus dados e os do pet. A contratação deste plano será liberada em breve e você será avisado.' : 'Cadastre seus dados e os do pet. Depois, você confere o contrato antes de assinar.'}}</p>
 {% if offer %}<div class="contratacao-hero-foto"><img src="{{asset('imgs/banner-cao-4.png')}}" alt=""></div>{% endif %}</div>
 <ol class="journey" aria-label="Etapas da contratação"><li class="current" aria-current="step"><span>1</span> Cadastro</li><li><span>2</span> Contrato e assinatura</li><li><span>3</span> Pagamento e ativação</li></ol>
 <div class="portal-columns contratacao"><section class="panel contratacao-form"><form method="post" action="{{offer ? path('portal_subscribe',{'code':offer.code}) : path('portal_signup')}}" class="portal-form" data-postal-url="{{path('portal_postal',{'zip':'00000000'})}}"><input type="hidden" name="_token" value="{{csrf}}">
@@ -21,7 +21,7 @@
 <div class="form-grid"><label>Crie uma senha <span>*</span><input name="password" type="password" required minlength="12" autocomplete="new-password"><small>Use pelo menos 12 caracteres.</small></label><label>Confirme a senha <span>*</span><input name="password_confirmation" type="password" required minlength="12" autocomplete="new-password"></label>
 <label>Como conheceu a São Francisco?<select name="acquisition_source"><option value="">Prefiro não informar</option><option value="direct">Já conheço a clínica</option><option value="referral">Indicação</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="google">Google</option><option value="other">Outro</option></select></label><label>Quem indicou? <span class="optional">(opcional)</span><input name="referrer_name" maxlength="180" value="{{old.referrer_name|default('')}}"></label></div></div>
 <label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos dados informados para meu cadastro e a contratação dos serviços São Francisco. O cadastro não representa assinatura do contrato nem autorização de marketing.</span></label>
-<button class="button button-primary" data-busy="Salvando seu cadastro...">{{offer ? 'Continuar para o contrato' : 'Criar meu acesso'}} <span aria-hidden="true">→</span></button>
+<button class="button button-primary" data-busy="Salvando seu cadastro...">{{offer ? (offer.informational|default(false) ? 'Criar meu cadastro' : 'Continuar para o contrato') : 'Criar meu acesso'}} <span aria-hidden="true">→</span></button>
 <p class="auth-bottom">Já tem cadastro? <a href="{{path('portal_login')}}">Entre com seu acesso</a>.</p></form></section>
 {% if offer %}{% include 'portal/_offer.twig' %}{% else %}<aside class="panel offer-summary"><span class="eyebrow">O CUIDADO COMEÇA AQUI</span><h2>Um espaço para sua família.</h2><p>Cadastre seu pet e acompanhe seus planos, contratos, pagamentos e benefícios.</p><img src="{{asset('imgs/banner-cao-4.png')}}" alt="Seu melhor amigo" class="summary-dog"><p class="fine-print">Depois de criar seu acesso, você poderá escolher um plano para contratar.</p></aside>{% endif %}</div>
 {% endblock %}

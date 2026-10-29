@@ -31,7 +31,7 @@
 
             $mail->From = $mailConfig['From'];
             $mail->FromName = $mailConfig['FromName'];		
-            $mail->AddAddress("luan@luzpropria.com");
+            $mail->AddAddress($mailConfig['To'] ?? "luan@luzpropria.com");
             $mail->Subject = "Contato via Site - São Francisco Vet";
             
             $mail->Body = '<br>Nome: '. $data['iNome'];

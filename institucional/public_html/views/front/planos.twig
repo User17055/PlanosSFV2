@@ -1,7 +1,7 @@
 {% extends 'front/layout.twig' %}
 
 {% block content %}
-<link rel="stylesheet" href="{{asset('css/assinaturas.css?v=4')}}">
+<link rel="stylesheet" href="{{asset('css/assinaturas.css?v=5')}}">
 
 <section id="banner" class="interna plano">
   <div class="container box-info-banner">
@@ -46,7 +46,7 @@
             {% endif %}
             <div class="assinatura-card-action">
               {% if item.subscription_url %}
-                <a class="assinatura-button" href="{{item.subscription_url}}" aria-label="Contratar {{item.title|striptags}}">Contratar este plano <span aria-hidden="true">→</span></a>
+                <a class="assinatura-button{{item.offer.informational|default(false) ? ' sem-seta'}}" href="{{item.subscription_url}}" aria-label="{{item.offer.informational|default(false) ? 'Quero' : 'Contratar'}} {{item.title|striptags}}">{% if item.offer.informational|default(false) %}Quero este plano{% else %}Contratar este plano <span aria-hidden="true">→</span>{% endif %}</a>
                 <small>Confira valores e contrato antes de assinar.</small>
               {% else %}
                 <a class="assinatura-button" href="#contato-planos">Falar com nossa equipe <span aria-hidden="true">→</span></a>
@@ -140,7 +140,7 @@
             <tr>
               <td></td>
               {% for item in planos %}
-                <td{% if loop.index0 is same as(plano_destaque) %} class="is-destaque"{% endif %}>{% if item.subscription_url %}<a class="comparar-contratar" href="{{item.subscription_url}}" aria-label="Contratar {{item.title|striptags}}">Contratar</a>{% endif %}</td>
+                <td{% if loop.index0 is same as(plano_destaque) %} class="is-destaque"{% endif %}>{% if item.subscription_url %}<a class="comparar-contratar" href="{{item.subscription_url}}" aria-label="{{item.offer.informational|default(false) ? 'Quero' : 'Contratar'}} {{item.title|striptags}}">{{item.offer.informational|default(false) ? 'Quero' : 'Contratar'}}</a>{% endif %}</td>
               {% endfor %}
             </tr>
           </tfoot>

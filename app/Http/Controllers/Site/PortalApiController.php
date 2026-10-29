@@ -21,12 +21,18 @@ class PortalApiController extends Controller
 {
     public function catalog()
     {
-        $offers=ProductVersion::preferredOffers()->with(['product','benefitRules'])->orderByDesc('version')->get()->unique('product_id')->sortBy('price_cents')->values();
+        $offers=ProductVersion::preferredOffers()->with(['product','benefitRules'])->orderByDesc('version')->get()->unique('product_id');
+        if (config('site_portal.show_drafts')) {
+            $drafts=ProductVersion::where('status','draft')->where('is_demo',false)->whereNotNull('contract_layout')->whereHas('product',fn($q)=>$q->where('active',true))
+                ->with(['product','benefitRules'])->orderByDesc('version')->get()->unique('product_id')->reject(fn($v)=>$offers->contains('product_id',$v->product_id));
+            $offers=$offers->concat($drafts);
+        }
+        $offers=$offers->sortBy('price_cents')->values();
         return response()->json(['offers'=>$offers->map(fn($v)=>[
             'id'=>$v->id,'code'=>$v->product->code,'name'=>$v->name,'category'=>$v->product->category,
             'description'=>$v->description,'price_cents'=>$v->price_cents,'enrollment_fee_cents'=>$v->enrollment_fee_cents,
             'billing_cycle'=>$v->billing_cycle,'duration_months'=>$v->duration_months,'species'=>$v->species,
-            'demo'=>$v->is_demo || $v->status==='local_preview',
+            'demo'=>$v->is_demo || $v->status==='local_preview','informational'=>$v->status==='draft',
             'benefits'=>$v->benefitRules->map(fn($b)=>$b->only(['name','description','waiting_days','quantity_limit','period_type','coverage_type','discount_basis_points'])),
         ])]);
     }

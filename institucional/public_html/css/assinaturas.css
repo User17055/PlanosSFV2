@@ -101,3 +101,4 @@ html{scroll-behavior:smooth}
 @media(max-width:800px){.planos-comparar-intro .comparar-dica{display:block}.comparar-tabela tbody th,.comparar-tabela thead th:first-child,.comparar-tabela tfoot td:first-child{box-shadow:6px 0 8px -6px #0b193640}}
 @media(prefers-reduced-motion:reduce){.planos-assinatura .is-extra{animation:none}.plano-ver-mais i{transition:none}}
 @media(max-width:650px){#quem-somos.planos-assinatura .box-planos .plano{flex-basis:100%;max-width:none}.assinatura-intro{margin-bottom:28px}.planos-comparar{margin-top:110px}.comparar-tabela table{min-width:640px;font-size:12px}.comparar-tabela th,.comparar-tabela td{padding:12px 10px}.comparar-tabela tbody th{width:150px}}
+.assinatura-button.sem-seta{justify-content:center;text-align:center}
