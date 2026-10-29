@@ -106,3 +106,39 @@
 .contratacao-hero p{margin-top:8px;font-size:14px;line-height:1.4}
 .pagina-contratacao .portal-main{padding-top:12px}
 }
+
+/* Benefícios do cartão e da tela final: faixas de grupo e linhas separadas */
+.offer-card .offer-benefits li.offer-group{margin:16px 0 4px;padding:7px 12px;border-radius:10px;background:#eef5df;color:#3e5a14;font-size:12px;font-weight:700;letter-spacing:1.2px}
+.offer-card .offer-benefits li.offer-group~li.offer-group{background:#e7f3f6;color:#1d5a73}
+.offer-card .offer-benefits li.offer-group:first-child{margin-top:14px;padding-top:7px}
+.offer-card .offer-benefits li:not(.offer-group){padding:11px 4px;border-top:1px solid #efe9e3}
+.offer-card .offer-benefits li.offer-group+li:not(.offer-group){border-top:0}
+.wiz-bloco h3{margin:20px 0 4px;padding:7px 12px;border-radius:10px;background:#eef5df;color:#3e5a14}
+.wiz-bloco~.wiz-bloco h3{background:#e7f3f6;color:#1d5a73}
+.wiz-lista li{padding:11px 4px}
+
+/* Celular: etapas, formulário e cartão do plano */
+@media(max-width:560px){
+.pagina-contratacao .journey{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0 14px;padding:0;overflow:visible}
+.pagina-contratacao .journey li{flex-direction:column;justify-content:flex-start;gap:4px;padding:8px 4px;border-radius:12px;font-size:11.5px;line-height:1.2;text-align:center;white-space:normal;min-width:0}
+.pagina-contratacao .journey span{width:22px;height:22px;font-size:12px}
+.wiz-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:18px}
+.wiz-progress li{flex-direction:column;gap:4px;font-size:12px;text-align:center}
+.wiz-progress li+li:before{display:none}
+.wiz-progress li:after{content:"";display:block;width:100%;height:3px;border-radius:3px;background:#ece6df}
+.wiz-progress li.is-active:after{background:var(--navy)}.wiz-progress li.is-done:after{background:#83ac38}
+.wiz-step .section-number{display:none}
+.wiz-step .section-heading{gap:0;margin-bottom:14px}
+.wiz-step .section-heading h2{font-size:20px;line-height:1.25}
+.wiz-step .section-heading p{margin-top:4px;font-size:14px}
+.contratacao .contratacao-form{padding:18px 16px}
+.wiz-pet{padding:14px}
+.wiz-pet-title{float:left}.wiz-pet-title~*{clear:both}
+.wiz-pet .form-grid{grid-template-columns:1fr}
+.offer-card .offer-benefits.is-recolhida>li{display:none}
+.offer-card-head{padding:16px 16px 0}.offer-card-body{padding:6px 16px 16px}
+.offer-summary.offer-card h2{font-size:21px}.offer-card .offer-price{font-size:25px}
+.offer-card .fine-print{font-size:12.5px}
+.wiz-resumo{flex-direction:column;gap:10px}.wiz-resumo div:last-child{text-align:left}
+.wiz-nav .button{min-height:50px}
+}
