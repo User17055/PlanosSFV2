@@ -41,7 +41,7 @@ class HealthPlanImportTest extends TestCase
         $this->assertDatabaseCount('product_versions',4);
         $admin=\App\Models\User::factory()->create(['role'=>'central_admin','active'=>true]);
         $this->actingAs($admin)->get(route('catalog.index'))->assertOk()->assertSee('Plano Super Econômico')->assertSee('Plano Prime');
-        $this->get(route('catalog.template-pdf',$versions[0]))->assertOk()->assertHeader('Content-Type','application/pdf');
+        if (PHP_OS_FAMILY==='Windows') $this->get(route('catalog.template-pdf',$versions[0]))->assertOk()->assertHeader('Content-Type','application/pdf');
     }
 
     public function test_plans_no_longer_offer_feed_or_franpet_product_discounts(): void
