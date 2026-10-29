@@ -94,3 +94,15 @@
 .wiz-lista{margin:0;padding:0;list-style:none}.wiz-lista li{padding:8px 0;border-top:1px solid #f0ebe5;font-size:15px;line-height:1.4}.wiz-lista li:first-child{border-top:0}.wiz-lista small{color:#5c554d;font-size:14px}.wiz-lista small:before{content:"· "}
 .wiz-tpp{margin:22px 0;padding:16px 18px;border-radius:14px;background:#fff4dc;color:#5d4200}.wiz-tpp strong{display:block;margin-bottom:4px;color:#3f2c00;font-size:16px}.wiz-tpp p{margin:0;font-size:14px;line-height:1.5}
 .wiz-proximos{margin:0 0 18px;padding-left:20px;color:#4a443d;font-size:14px;line-height:1.7}
+/* Celular: card de abertura da contratação mais compacto */
+@media(max-width:560px){
+.contratacao-hero,.contratacao-hero.com-foto{min-height:200px;padding:22px 18px;border-radius:16px}
+.contratacao-hero>:not(.contratacao-hero-foto){position:relative;z-index:1}
+.contratacao-hero-foto{display:block;width:62%;opacity:.38}
+.contratacao-hero-foto:before{top:auto;bottom:-60px;left:auto;right:-70px;width:230px;height:230px;box-shadow:0 0 0 4px #83ac38}
+.contratacao-hero-foto img{left:auto;right:-6px;bottom:0;width:170px;height:170px}
+.contratacao-hero .eyebrow{font-size:10.5px;letter-spacing:1.2px}
+.contratacao-hero h1{margin-top:6px;font-size:23px;line-height:1.2;letter-spacing:-.4px}
+.contratacao-hero p{margin-top:8px;font-size:14px;line-height:1.4}
+.pagina-contratacao .portal-main{padding-top:12px}
+}
