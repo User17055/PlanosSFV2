@@ -118,3 +118,84 @@
     setTimeout(generate, 1000);
   }
 })();
+
+// Cadastro em etapas: pets primeiro, depois tutor e, havendo plano, a tela de benefícios. Sem JS, todas as etapas aparecem.
+(() => {
+  'use strict';
+  const form = document.querySelector('[data-wizard]');
+  if (!form) return;
+  const steps = [...form.querySelectorAll('[data-step]')], progress = [...form.querySelectorAll('.wiz-progress li')];
+  const petsBox = form.querySelector('[data-pets]'), template = document.getElementById('wiz-pet-template');
+  const addButton = form.querySelector('[data-add-pet]'), MAX_PETS = 5;
+  let current = 0, nextIndex = petsBox.querySelectorAll('[data-pet]').length;
+  const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  form.classList.add('wiz-on');
+  form.querySelectorAll('[data-next],[data-back],[data-add-pet]').forEach(button => { button.hidden = false; });
+
+  const pets = () => [...petsBox.querySelectorAll('[data-pet]')];
+  const refreshPets = () => {
+    const list = pets();
+    list.forEach((pet, i) => { pet.querySelector('[data-pet-n]').textContent = i + 1; pet.querySelector('[data-remove-pet]').hidden = list.length < 2; });
+    addButton.hidden = list.length >= MAX_PETS;
+  };
+  const show = (index, scroll = true) => {
+    current = Math.max(0, Math.min(steps.length - 1, index));
+    steps.forEach((step, i) => step.classList.toggle('is-active', i === current));
+    progress.forEach((item, i) => { item.classList.toggle('is-active', i === current); item.classList.toggle('is-done', i < current); });
+    form.querySelectorAll('[data-back]').forEach(button => { button.hidden = current === 0; });
+    if (steps[current].querySelector('[data-pet-names]')) summary();
+    if (scroll) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  const valid = () => {
+    for (const field of steps[current].querySelectorAll('input,select,textarea')) {
+      if (!field.checkValidity()) { field.closest('details')?.setAttribute('open', ''); field.reportValidity(); return false; }
+    }
+    const password = steps[current].querySelector('[name=password]'), confirmation = steps[current].querySelector('[name=password_confirmation]');
+    if (password && confirmation && password.value !== confirmation.value) {
+      confirmation.setCustomValidity('As senhas precisam ser iguais.'); confirmation.reportValidity();
+      confirmation.addEventListener('input', () => confirmation.setCustomValidity(''), { once: true });
+      return false;
+    }
+    return true;
+  };
+  const names = () => {
+    const list = pets().map(pet => pet.querySelector('[name$="[name]"]').value.trim()).filter(Boolean);
+    return list.length > 1 ? list.slice(0, -1).join(', ') + ' e ' + list.at(-1) : (list[0] || 'seu pet');
+  };
+  function summary() {
+    const count = pets().length, price = Number(form.dataset.price) || 0;
+    form.querySelector('[data-pet-names]').textContent = names();
+    form.querySelector('[data-pet-count]').textContent = count === 1 ? '1 pet' : count + ' pets';
+    const total = form.querySelector('[data-total]'), span = document.createElement('span');
+    span.textContent = form.dataset.cycle || '';
+    total.replaceChildren(document.createTextNode(money.format(price * count / 100)), span);
+  }
+
+  addButton.addEventListener('click', () => {
+    if (pets().length >= MAX_PETS) return;
+    const holder = document.createElement('div');
+    holder.innerHTML = template.innerHTML.replaceAll('__i__', nextIndex++);
+    const pet = holder.firstElementChild;
+    petsBox.append(pet); refreshPets(); pet.querySelector('input').focus();
+  });
+  petsBox.addEventListener('click', event => {
+    const remove = event.target.closest('[data-remove-pet]');
+    if (remove) { remove.closest('[data-pet]').remove(); refreshPets(); }
+  });
+  form.addEventListener('click', event => {
+    if (event.target.closest('[data-next]')) { if (valid()) show(current + 1); }
+    else if (event.target.closest('[data-back]')) show(current - 1);
+  });
+  // Enter dentro de uma etapa avança em vez de enviar o formulário incompleto.
+  form.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || current === steps.length - 1 || event.target.matches('button,summary,textarea')) return;
+    event.preventDefault();
+    if (valid()) show(current + 1);
+  });
+  // Se o navegador acusar campo inválido em etapa oculta, volta à etapa certa.
+  form.addEventListener('invalid', event => {
+    const index = steps.findIndex(step => step.contains(event.target));
+    if (index >= 0 && index !== current) show(index, false);
+  }, true);
+  refreshPets(); show(0, false);
+})();

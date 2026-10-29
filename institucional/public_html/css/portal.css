@@ -60,3 +60,37 @@
 .offer-aviso{display:block;width:fit-content;margin:6px auto 4px;padding:5px 12px;border-radius:999px;background:#fff4dc;color:#7a5200;font-size:13px;font-weight:700}
 @media(max-width:760px){.offer-card .offer-benefits li{padding:11px 0;font-size:15px}.offer-card-body{padding:8px 18px 18px}}
 .offer-card .offer-benefits.is-recolhida>.is-extra{display:none}
+/* Benefícios do cartão: lista simples e didática, só nome e quantidade */
+.offer-card .offer-benefits li:not(.offer-group){padding:9px 0;border-top:0;font-size:15px;line-height:1.4}
+.offer-card .offer-benefits li:not(.offer-group) strong{display:inline;font-weight:600}
+.offer-card .offer-benefits li:not(.offer-group) small{display:inline;margin-left:4px;color:#5c554d;font-size:14px;font-weight:400}
+.offer-card .offer-benefits li:not(.offer-group) small::before{content:"· "}
+
+/* Cadastro em etapas */
+.wiz-progress{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:0;list-style:none;font-size:13px}
+.wiz-progress li{display:flex;align-items:center;gap:7px;color:#7a736b;font-weight:600}
+.wiz-progress li span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#ece6df;color:#5c554d;font-size:12px}
+.wiz-progress li+li:before{content:"";width:22px;height:2px;margin-right:2px;background:#ece6df}
+.wiz-progress li.is-active{color:var(--navy)}.wiz-progress li.is-active span{background:var(--navy);color:#fff}
+.wiz-progress li.is-done span{background:#83ac38;color:#fff}
+.wiz-on .wiz-step{display:none}.wiz-on .wiz-step.is-active{display:block}
+.wiz-step+.wiz-step{margin-top:28px}.wiz-on .wiz-step+.wiz-step{margin-top:0}
+.wiz-pet{margin:0 0 16px;padding:18px;border:1px solid #e6dfd8;border-radius:16px;background:#fff;min-width:0}
+.wiz-pet-title{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0;margin-bottom:10px;color:#5c554d;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.wiz-remove{padding:4px 10px;border:0;border-radius:999px;background:#f4f1ed;color:#7a2d2d;font-size:12px;font-weight:700;cursor:pointer}
+.wiz-pet-name{font-size:18px;font-weight:700;color:var(--navy)}.wiz-pet-name input{margin-top:8px;font-size:18px;font-weight:600}
+.wiz-pet .form-grid{margin-top:14px}
+.wiz-more{margin-top:14px}.wiz-more summary{cursor:pointer;color:var(--navy);font-size:14px;font-weight:600}.wiz-more summary small{font-weight:400;color:#7a736b}
+.wiz-add{display:block;width:100%;padding:13px;border:2px dashed #cfc7bd;border-radius:14px;background:transparent;color:var(--navy);font-size:15px;font-weight:700;cursor:pointer}
+.wiz-add:hover{background:#f7f4f0}.wiz-add[hidden],.wiz-remove[hidden]{display:none}
+.wiz-nav{display:flex;flex-direction:column-reverse;gap:10px;margin-top:22px}
+.wiz-nav .button{width:100%;justify-content:center}
+@media(min-width:561px){.wiz-nav{flex-direction:row;justify-content:space-between}.wiz-nav .button{width:auto;min-width:180px}.wiz-nav .button:only-child{margin-left:auto}}
+.wiz-sub{margin:26px 0 12px;color:var(--navy);font-size:17px}
+.wiz-resumo{display:flex;justify-content:space-between;gap:16px;margin:4px 0 18px;padding:16px 18px;border-radius:14px;background:#e7f3f6}
+.wiz-resumo small{display:block;color:#5c554d;font-size:13px}.wiz-resumo strong{display:block;color:var(--navy);font-size:20px}.wiz-resumo strong span{margin-left:4px;color:#5c554d;font-size:14px;font-weight:400}
+.wiz-resumo div:last-child{text-align:right}
+.wiz-bloco h3{margin:18px 0 6px;color:#5c554d;font-size:12px;letter-spacing:1.4px;text-transform:uppercase}
+.wiz-lista{margin:0;padding:0;list-style:none}.wiz-lista li{padding:8px 0;border-top:1px solid #f0ebe5;font-size:15px;line-height:1.4}.wiz-lista li:first-child{border-top:0}.wiz-lista small{color:#5c554d;font-size:14px}.wiz-lista small:before{content:"· "}
+.wiz-tpp{margin:22px 0;padding:16px 18px;border-radius:14px;background:#fff4dc;color:#5d4200}.wiz-tpp strong{display:block;margin-bottom:4px;color:#3f2c00;font-size:16px}.wiz-tpp p{margin:0;font-size:14px;line-height:1.5}
+.wiz-proximos{margin:0 0 18px;padding-left:20px;color:#4a443d;font-size:14px;line-height:1.7}

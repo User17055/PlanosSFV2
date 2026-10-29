@@ -68,6 +68,17 @@ class SitePortalApiTest extends TestCase
         $this->assertTrue(collect($offers)->firstWhere('name','Plano real')['informational']);
     }
 
+    public function test_registration_accepts_several_pets_and_opens_one_proposal_per_pet(): void
+    {
+        $data=$this->data(); foreach(['pet_name','pet_species','pet_birth_date'] as $k) unset($data[$k]);
+        $data['pets']=[['name'=>'Lua','species'=>'dog','birth_date'=>'2020-01-01'],['name'=>'Mel','species'=>'cat','birth_date'=>'2021-05-05']];
+        $result=$this->postJson('/api/site/v1/register',$data,$this->headers())->assertCreated()->assertJsonCount(2,'proposal_ids')->json();
+        $this->assertDatabaseCount('pets',2); $this->assertDatabaseCount('proposals',2);
+        $this->assertSame($result['proposal_ids'][0],$result['proposal_id']);
+        $data['email']='outro@example.test'; $data['document']='11144477735'; $data['pets']=[];
+        $this->postJson('/api/site/v1/register',$data,$this->headers())->assertUnprocessable();
+    }
+
     public function test_registration_creates_same_records_used_by_management_and_only_hashes_the_access_token(): void
     {
         $result=$this->registered();

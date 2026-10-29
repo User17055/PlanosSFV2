@@ -57,30 +57,38 @@ class PortalApiController extends Controller
             'privacy_accepted'=>'accepted','street'=>'required|string|max:200','number'=>'required|string|max:30',
             'complement'=>'nullable|string|max:120','neighborhood'=>'required|string|max:150','city'=>'required|string|max:150',
             'state'=>'required|string|size:2','zip'=>'required|regex:/^\d{5}-?\d{3}$/',
+            'product_version_id'=>'nullable|integer|min:1',
+        ]+($r->has('pets') ? [
+            // Cadastro em etapas: um ou mais pets de uma vez (máx. 5).
+            'pets'=>'required|array|min:1|max:5','pets.*.name'=>'required|string|max:100','pets.*.species'=>'required|in:dog,cat',
+            'pets.*.birth_date'=>'required|date|before_or_equal:today','pets.*.breed'=>'nullable|string|max:100',
+            'pets.*.color'=>'nullable|string|max:100','pets.*.sex'=>'nullable|in:male,female,unknown',
+        ] : [
             'pet_name'=>'required|string|max:100','pet_species'=>'required|in:dog,cat','pet_birth_date'=>'required|date|before_or_equal:today',
             'pet_breed'=>'nullable|string|max:100','pet_color'=>'nullable|string|max:100','pet_sex'=>'nullable|in:male,female,unknown',
-            'product_version_id'=>'nullable|integer|min:1',
-        ]+CustomerAcquisition::rules());
+        ])+CustomerAcquisition::rules());
+        $petList=isset($data['pets']) ? array_values($data['pets']) : [['name'=>$data['pet_name'],'species'=>$data['pet_species'],'birth_date'=>$data['pet_birth_date'],
+            'breed'=>$data['pet_breed']??null,'color'=>$data['pet_color']??null,'sex'=>$data['pet_sex']??null]];
         $customers->validateCpf($data['document']);
         if (Customer::where('document',$data['document'])->exists()) throw ValidationException::withMessages(['document'=>'Não foi possível criar uma conta com estes dados. Entre com seu acesso ou solicite apoio à unidade.']);
         $version=empty($data['product_version_id'])?null:$this->offered((int)$data['product_version_id']);
         $unit=Franchise::where('code','CENTRAL')->where('active',true)->firstOrFail();
-        $proposal=null;
-        $user=DB::transaction(function() use($r,$data,$unit,$version,$proposals,&$proposal) {
+        $proposalIds=[];
+        $user=DB::transaction(function() use($r,$data,$petList,$unit,$version,$proposals,&$proposalIds) {
             $customer=Customer::create(['name'=>$data['name'],'document'=>$data['document'],'rg'=>$data['rg']??null,'email'=>$data['email'],
                 'phone'=>$data['phone'],'address'=>CustomerAddress::from($data),'originating_franchise_id'=>$unit->id,'contact_verified_at'=>config('plans.demo')?now():null]);
-            $pet=Pet::create(['customer_id'=>$customer->id,'name'=>$data['pet_name'],'species'=>$data['pet_species'],'birth_date'=>$data['pet_birth_date'],
-                'breed'=>$data['pet_breed']??null,'color'=>$data['pet_color']??null,'sex'=>$data['pet_sex']??'unknown']);
+            $createdPets=array_map(fn($p)=>Pet::create(['customer_id'=>$customer->id,'name'=>$p['name'],'species'=>$p['species'],'birth_date'=>$p['birth_date'],
+                'breed'=>$p['breed']??null,'color'=>$p['color']??null,'sex'=>$p['sex']??'unknown']),$petList);
             $user=User::create(['name'=>$data['name'],'email'=>$data['email'],'password'=>$data['password'],'role'=>'customer',
                 'customer_id'=>$customer->id,'active'=>true,'email_verified_at'=>config('plans.demo')?now():null]);
             $attribution=app(CustomerAcquisition::class)->record($customer,$user,$r,$data);
-            if ($version) $proposal=$proposals->create(['customer_id'=>$customer->id,'pet_id'=>$pet->id,'product_version_id'=>$version->id,
-                'originating_franchise_id'=>$unit->id,'channel'=>'site','prefill_by'=>'customer','signature_method'=>'digital'],$user,$attribution);
+            if ($version) foreach($createdPets as $pet) $proposalIds[]=$proposals->create(['customer_id'=>$customer->id,'pet_id'=>$pet->id,'product_version_id'=>$version->id,
+                'originating_franchise_id'=>$unit->id,'channel'=>'site','prefill_by'=>'customer','signature_method'=>'digital'],$user,$attribution)->id;
             Audit::record('portal.customer_registered',$customer,$user);
             return $user;
         });
         $sent=$user->email_verified_at?true:$this->sendVerification($user);
-        return response()->json($this->credentials($user)+['proposal_id'=>$proposal?->id,'verification_sent'=>$sent],201);
+        return response()->json($this->credentials($user)+['proposal_id'=>$proposalIds[0]??null,'proposal_ids'=>$proposalIds,'verification_sent'=>$sent],201);
     }
 
     private function existingAccount(string $cpf,string $email): ?array
