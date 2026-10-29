@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
+use App\Models\{Customer, Invoice, Pet, Subscription};
+use App\Services\Integrations\VindiCheckoutService;
 use App\Services\Domain\{EligibilityService, FinancialService};
 use Illuminate\Http\Request;
 
@@ -25,7 +26,38 @@ class PortalController extends Controller
     public function __invoke(Request $request,EligibilityService $eligibility,FinancialService $financial)
     {
         if (!$request->user()->email_verified_at) return view('auth.verify');
-        $customer=Customer::with(['pets'=>fn($q)=>$q->orderBy('name'),'subscriptions'=>fn($q)=>$q->orderByRaw("category='health_plan' desc")->latest('id'),'subscriptions.pet','subscriptions.originatingFranchise','subscriptions.productVersion.product','subscriptions.productVersion.benefitRules','subscriptions.contractDocuments','subscriptions.cancellationRequest',
+        return view('portal',$this->careData($request,$eligibility,$financial));
+    }
+
+    /** Página do pet: o plano contratado, benefícios, contrato e histórico daquele pet. */
+    public function pet(Request $request,Pet $pet,EligibilityService $eligibility,FinancialService $financial)
+    {
+        if (!$request->user()->email_verified_at) return view('auth.verify');
+        abort_unless($pet->customer_id===$request->user()->customer_id,404);
+        $data=$this->careData($request,$eligibility,$financial);
+        return view('portal.pet',$data+['pet'=>$data['customer']->pets->firstWhere('id',$pet->id)]);
+    }
+
+    /** Página de um plano do pet: saldo dos benefícios, histórico de uso, contrato e demais planos do pet. */
+    public function plan(Request $request,Pet $pet,Subscription $subscription,EligibilityService $eligibility,FinancialService $financial)
+    {
+        if (!$request->user()->email_verified_at) return view('auth.verify');
+        abort_unless($pet->customer_id===$request->user()->customer_id && $subscription->pet_id===$pet->id,404);
+        $data=$this->careData($request,$eligibility,$financial);
+        return view('portal.plan',$data+['pet'=>$data['customer']->pets->firstWhere('id',$pet->id),'subscription'=>$data['customer']->subscriptions->firstWhere('id',$subscription->id)]);
+    }
+
+    private function careData(Request $request,EligibilityService $eligibility,FinancialService $financial): array
+    {
+        $money=fn($cents)=>'R$ '.number_format($cents/100,2,',','.');
+        $date=fn($value)=>$value?->timezone('America/Sao_Paulo')->format('d/m/Y');
+        $ageLabel=function($pet){
+            $months=$pet->birth_date?max(0,(int)$pet->birth_date->diffInMonths(now())):$pet->estimated_age_months;
+            if($months===null) return null;
+            $label=$months<12?$months.($months===1?' mês':' meses'):intdiv($months,12).(intdiv($months,12)===1?' ano':' anos');
+            return $pet->birth_date?$label:'cerca de '.$label;
+        };
+        $customer=Customer::with(['pets'=>fn($q)=>$q->orderBy('name'),'subscriptions'=>fn($q)=>$q->orderByRaw("category='health_plan' desc")->latest('id'),'subscriptions.pet','subscriptions.originatingFranchise','subscriptions.productVersion.product','subscriptions.productVersion.benefitRules','subscriptions.contractDocuments','subscriptions.cancellationRequest','subscriptions.proposal',
             'subscriptions.usages'=>fn($q)=>$q->where('status','consumed')->with(['benefitRule','servicingFranchise','reversals'])->latest('consumed_at'),
             'proposals'=>fn($q)=>$q->latest('id'),'proposals.productVersion','proposals.pet','invoices.subscription.pet','invoices.subscription.productVersion'])->findOrFail($request->user()->customer_id);
         $financialState=$financial->customerStatus($customer);
@@ -36,15 +68,42 @@ class PortalController extends Controller
         foreach($activeSubscriptions as $subscription) {
             $result=$eligibility->subscription($subscription);
             $notices[$subscription->id]=$this->notices($subscription,$result);
-            foreach($subscription->productVersion->benefitRules as $rule) $benefits[$subscription->id][$rule->id]=$this->benefitState($rule,$eligibility->benefit($subscription,$rule),array_column($result['impediments'],'code'));
+            foreach($subscription->productVersion->benefitRules as $rule) {
+                $raw=$eligibility->benefit($subscription,$rule);
+                $benefits[$subscription->id][$rule->id]=$this->benefitState($rule,$raw,array_column($result['impediments'],'code'))+['remaining'=>data_get($raw,'remaining'),'periodEnd'=>data_get($raw,'period_end')];
+            }
         }
-        $isOpen=fn($invoice)=>!in_array($invoice->status,['paid','cancelled','refunded'],true) && $invoice->outstanding_cents>0;
-        [$openInvoices,$pastInvoices]=$customer->invoices->partition($isOpen);
-        $openInvoices=$openInvoices->sortBy('due_at')->values();
-        $pastInvoices=$pastInvoices->sortByDesc('due_at')->values();
+        [$openInvoices,$pastInvoices]=$this->splitInvoices($customer);
         $pendingProposals=$customer->proposals->filter(fn($proposal)=>in_array($proposal->status,['draft','awaiting_acceptance'],true) && !$proposal->locked_at && $proposal->expires_at?->isFuture())->values();
         $unit=$activeSubscriptions->pluck('originatingFranchise')->filter()->first(fn($franchise)=>$franchise->code!=='CENTRAL');
-        return view('portal',compact('customer','financialState','benefits','notices','openInvoices','pastInvoices','pendingProposals','activeSubscriptions','unit'));
+        return compact('customer','financialState','benefits','notices','openInvoices','pastInvoices','pendingProposals','activeSubscriptions','unit','money','date','ageLabel');
+    }
+
+    public function invoices(Request $request,FinancialService $financial)
+    {
+        if (!$request->user()->email_verified_at) return view('auth.verify');
+        $customer=Customer::with(['invoices.subscription.pet','invoices.subscription.productVersion'])->findOrFail($request->user()->customer_id);
+        [$openInvoices,$pastInvoices]=$this->splitInvoices($customer);
+        return view('portal.faturas',['financialState'=>$financial->customerStatus($customer),'openInvoices'=>$openInvoices,'pastInvoices'=>$pastInvoices]);
+    }
+
+    /** Abre a fatura na Vindi: só do próprio cliente e só para um endereço https dos domínios da Vindi. */
+    public function openInvoice(Request $request,Invoice $invoice,VindiCheckoutService $vindi)
+    {
+        abort_unless($invoice->customer_id===$request->user()->customer_id,404);
+        try {
+            return redirect()->away($vindi->paymentUrl((string)$invoice->payment_url));
+        } catch(\Throwable) {
+            return redirect()->route('portal.invoices')->with('error','Esta fatura ainda não está disponível na Vindi. Tente de novo em instantes ou fale com a unidade.');
+        }
+    }
+
+    /** Faturas em aberto (mais antigas primeiro) e já resolvidas (mais recentes primeiro). */
+    private function splitInvoices(Customer $customer): array
+    {
+        $isOpen=fn($invoice)=>!in_array($invoice->status,['paid','cancelled','refunded'],true) && $invoice->outstanding_cents>0;
+        [$open,$past]=$customer->invoices->partition($isOpen);
+        return [$open->sortBy('due_at')->values(),$past->sortByDesc('due_at')->values()];
     }
 
     /** Situação de um benefício; o motivo comum a toda a contratação já aparece no aviso dela. */

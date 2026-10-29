@@ -27,10 +27,8 @@ class LocalPlanVisibilityTest extends TestCase
         foreach($this->versions as $version) app(LocalHealthPlanPreview::class)->enable($version,$admin);
     }
 
-    public function test_real_plans_load_on_public_page_and_staff_selection_without_fictitious_offers(): void
+    public function test_real_plans_load_on_staff_selection_without_fictitious_offers(): void
     {
-        $response=$this->get(route('sales'))->assertOk()->assertDontSee('Completo')->assertDontSee('Cuidado Sênior');
-        foreach($this->versions as $version) $response->assertSee($version->name)->assertSee(number_format($version->price_cents/100,2,',','.'));
         $this->actingAs(User::where('role','central_admin')->firstOrFail())->get(route('proposals.create'))
             ->assertOk()->assertViewHas('versions',fn($versions)=>$versions->count()===4 && $versions->every(fn($v)=>$v->status==='local_preview'));
     }

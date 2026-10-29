@@ -15,6 +15,8 @@ class PortalApi
             'payment_hosts'=>array_filter(array_map('trim',explode(',',(string)(getenv('PORTAL_PAYMENT_HOSTS') ?: ($config['payment_hosts']??'app.vindi.com.br,sandbox-app.vindi.com.br')))))];
     }
 
+    public function managementUrl(): string { return preg_replace('#/api/site/v1$#','',$this->settings['url']); }
+
     public function paymentAllowed(string $url): bool
     {
         $parts=parse_url($url);

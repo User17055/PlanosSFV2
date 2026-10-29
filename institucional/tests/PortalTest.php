@@ -14,6 +14,7 @@ class PortalFakeApi extends PortalApi
     public bool $unavailable=false;
     public bool $verified=true;
     public function __construct() {}
+    public function managementUrl(): string { return 'https://gestao.test'; }
     public function paymentAllowed(string $url): bool { return $url==='https://app.vindi.com.br/bills/1'; }
     public function request(string $method,string $path,array $data=[],?string $token=null,array $context=[],bool $pdf=false): PortalResult
     {
@@ -62,8 +63,9 @@ class PortalTest extends TestCase
     }
     private function login(): void
     {
-        $csrf=$this->csrf('/area-do-cliente/entrar');
-        $this->browser->request('POST','/area-do-cliente/entrar',['_token'=>$csrf,'email'=>'tutor@example.test','password'=>'PasswordNotPersisted@2026']);
+        // O site não autentica mais: a sessão nasce do cadastro (o login fica na gestão).
+        $csrf=$this->csrf('/contratar/SF-ESS');
+        $this->browser->request('POST','/contratar/SF-ESS',['_token'=>$csrf,'name'=>'Tutor','password'=>'SecretPassword@2026','product_version_id'=>1]);
         self::assertSame(303,$this->browser->getResponse()->getStatusCode());
     }
 
@@ -71,9 +73,16 @@ class PortalTest extends TestCase
     {
         $this->browser->request('GET','/area-do-cliente');
         self::assertSame('/area-do-cliente/entrar',$this->browser->getResponse()->headers->get('Location'));
-        $this->browser->followRedirect();
-        self::assertStringContainsString('Seu espaço de cuidado.',$this->browser->getResponse()->getContent());
-        self::assertStringNotContainsString('googletagmanager',$this->browser->getResponse()->getContent());
+        $this->browser->request('GET','/area-do-cliente/entrar');
+        self::assertSame(302,$this->browser->getResponse()->getStatusCode());
+        self::assertSame('https://gestao.test/entrar',$this->browser->getResponse()->headers->get('Location'));
+    }
+
+    public function test_login_is_not_served_by_the_site_and_never_reaches_management_api(): void
+    {
+        $this->browser->request('POST','/area-do-cliente/entrar',['email'=>'tutor@example.test','password'=>'PasswordNotPersisted@2026']);
+        self::assertSame('https://gestao.test/entrar',$this->browser->getResponse()->headers->get('Location'));
+        self::assertCount(0,$this->api->calls);
     }
 
     public function test_plan_selection_and_registration_remain_on_the_institutional_site(): void
@@ -91,7 +100,7 @@ class PortalTest extends TestCase
 
     public function test_invalid_csrf_never_reaches_management_api(): void
     {
-        $this->browser->request('POST','/area-do-cliente/entrar',['_token'=>'invalid','email'=>'test@example.test','password'=>'secret']);
+        $this->browser->request('POST','/contratar/SF-ESS',['_token'=>'invalid','name'=>'Tutor','password'=>'secret']);
         self::assertSame(419,$this->browser->getResponse()->getStatusCode());
         self::assertCount(0,$this->api->calls);
     }
@@ -110,7 +119,7 @@ class PortalTest extends TestCase
 
     public function test_dashboard_and_private_pdf_are_served_by_the_institutional_site(): void
     {
-        $this->login(); $this->browser->followRedirect();
+        $this->login(); $this->browser->request('GET','/area-do-cliente');
         $html=$this->browser->getResponse()->getContent();
         self::assertStringContainsString('Meus planos e contratos',$html);
         self::assertStringContainsString('Lua',$html);
@@ -124,7 +133,7 @@ class PortalTest extends TestCase
     public function test_unverified_customer_sees_confirmation_screen_instead_of_history(): void
     {
         $this->api->verified=false;
-        $this->login(); $this->browser->followRedirect();
+        $this->login(); $this->browser->request('GET','/area-do-cliente');
         self::assertStringContainsString('Confirme seu e-mail.',$this->browser->getResponse()->getContent());
         self::assertStringNotContainsString('Meus planos e contratos',$this->browser->getResponse()->getContent());
     }

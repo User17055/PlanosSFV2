@@ -31,7 +31,20 @@ class AuthController extends Controller
         $request->session()->regenerate();
         $customerDestination = $request->session()->has('sf_suggested_product_version_id')
             ? route('proposals.create',['product_version_id'=>$request->session()->get('sf_suggested_product_version_id')]) : route('portal');
-        return redirect()->intended($request->user()->role === 'customer' ? $customerDestination : route('dashboard'));
+        $role=$request->user()->role;
+        // Um destino guardado antes do login (ex.: /painel) só vale se o perfil pode abri-lo; senão o cliente cairia num 403.
+        if (! $this->roleCanOpen($role,(string)$request->session()->get('url.intended',''))) $request->session()->forget('url.intended');
+        return redirect()->intended($role === 'customer' ? $customerDestination : route('dashboard'));
+    }
+
+    private function roleCanOpen(string $role,string $url): bool
+    {
+        if ($url==='') return true;
+        try { $route=app('router')->getRoutes()->match(Request::create($url)); } catch (\Throwable) { return false; }
+        foreach (app('router')->gatherRouteMiddleware($route) as $middleware) {
+            if (str_starts_with($middleware,\App\Http\Middleware\RequireRole::class.':') && ! in_array($role,explode(',',substr($middleware,strlen(\App\Http\Middleware\RequireRole::class)+1)),true)) return false;
+        }
+        return true;
     }
 
     public function logout(Request $request)
