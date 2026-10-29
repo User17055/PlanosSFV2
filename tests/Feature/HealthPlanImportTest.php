@@ -29,7 +29,9 @@ class HealthPlanImportTest extends TestCase
             $this->assertStringContainsString('CLÁUSULA PRIMEIRA',$html);
             $this->assertStringNotContainsString('Texto integral contratado',$html);
             $this->assertStringNotContainsString('Condições congeladas e benefícios',$html);
-            $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
+            // Word → PDF só existe no Windows (Microsoft Word); fora dele a geração tem de ser recusada (docs/DECISOES_PENDENTES.md).
+            if (PHP_OS_FAMILY==='Windows') $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
+            else $this->assertThrows(fn()=>app(ContractService::class)->templatePdf($version),\RuntimeException::class,'Configure a conversão nativa de Word para PDF');
         }
         $this->assertSame([5200,8600,28200,33000],array_map(fn($v)=>$v->price_cents,$versions));
         $this->assertStringContainsString('plano Master',$versions[3]->contract_template);
