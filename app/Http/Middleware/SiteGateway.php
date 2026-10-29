@@ -16,9 +16,10 @@ class SiteGateway
         abort_unless(config('site_portal.enabled') && strlen($key)>=32,503,'A contratação online está em preparação.');
         abort_unless(hash_equals($key,(string)$request->header('X-Site-Key')),401,'Acesso não autorizado.');
         abort_if(strlen($request->getContent())>65536,413,'Formulário excede o tamanho permitido.');
-        $identity=$request->bearerToken() ?: ($request->input('email') ?: $request->header('X-Portal-IP',$request->ip()));
+        $identity=$request->is('*/account-check') ? $request->header('X-Portal-IP',$request->ip())
+            : ($request->bearerToken() ?: ($request->input('email') ?: $request->header('X-Portal-IP',$request->ip())));
         $bucket='site-api:'.hash('sha256',$request->path().'|'.strtolower((string)$identity));
-        $max=$request->is('*/login')?5:($request->is('*/register','*/forgot-password','*/reset-password')?5:120);
+        $max=$request->is('*/account-check')?20:($request->is('*/login')?5:($request->is('*/register','*/forgot-password','*/reset-password')?5:120));
         abort_if(RateLimiter::tooManyAttempts($bucket,$max),429,'Aguarde um minuto e tente novamente.');
         RateLimiter::hit($bucket,60);
         // Attribution services need a session, but API clients never share Laravel cookies.

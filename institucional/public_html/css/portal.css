@@ -185,3 +185,38 @@
 .offer-card .offer-benefits li.offer-group,.offer-card .offer-benefits li.offer-group~li.offer-group{margin:18px 0 2px;padding:0 4px;border-radius:0;background:none;color:#0b4f7d}
 .offer-card .offer-benefits li.offer-group:first-child{margin-top:16px;padding-top:0}
 .wiz-bloco h3,.wiz-bloco~.wiz-bloco h3{margin:20px 0 2px;padding:0 4px;border-radius:0;background:none;color:#0b4f7d}
+
+/* Preços exclusivos na Tudo pra Pet: cartão branco com a logo */
+.wiz-tpp{border:1px solid #dfe8f3;background:#fff;color:#4a5d73}
+.wiz-tpp-logo{display:block;width:auto;height:30px;margin:0 0 10px}
+.wiz-tpp strong{color:#083689}
+
+/* Ícones SVG dos benefícios */
+.offer-card .offer-benefits li:not(.offer-group),.wiz-lista li{display:flex;align-items:center;gap:12px}
+.ben-ico{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:#e1f0f6;color:#0b5988}
+.ben-ico svg{display:block}
+.is-desconto .ben-ico,.wiz-bloco~.wiz-bloco .ben-ico{background:#eaf3dc;color:#3e5a14}
+.ben-txt{min-width:0}
+/* Ícones dos benefícios sem quadradinho de fundo */
+.ben-ico,.is-desconto .ben-ico,.wiz-bloco~.wiz-bloco .ben-ico{width:26px;height:26px;border-radius:0;background:none}
+.ben-ico svg{width:24px;height:24px}
+
+/* Benefícios: no celular só na etapa 3; no computador ficam no cartão lateral e a etapa 3 destaca a Tudo pra Pet */
+.wiz-tpp-lista{margin:14px 0 0;padding:0;list-style:none}
+.wiz-tpp-lista li{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #e8eef6;font-size:15px}
+@media(max-width:760px){
+.offer-card .offer-benefits,.offer-card .offer-ver-mais{display:none!important}
+.wiz-tpp-lista{display:none}
+}
+@media(min-width:761px){
+.wiz-bloco{display:none}
+.wiz-tpp{padding:24px 26px}
+.wiz-tpp-logo{height:38px;margin-bottom:14px}
+.wiz-tpp strong{font-size:18px}
+.wiz-tpp p{font-size:15px}
+}
+/* Data de nascimento (calendário) no mesmo padrão dos outros campos */
+.portal-form input[type=date]{min-height:48px;color:#14264b;font-family:inherit;font-size:inherit;line-height:1.2}
+.portal-form input[type=date]:invalid{color:#8a9bb0}
+.portal-form input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.8;padding:6px;border-radius:8px;filter:invert(22%) sepia(70%) saturate(1400%) hue-rotate(178deg)}
+.portal-form input[type=date]::-webkit-calendar-picker-indicator:hover{background:#e7f3f6}

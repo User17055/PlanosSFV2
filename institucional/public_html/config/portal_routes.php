@@ -16,6 +16,7 @@ return static function(RoutingConfigurator $routes): void {
         'resend'=>['/area-do-cliente/reenviar-email','resend',['POST']],
         'pet'=>['/area-do-cliente/pets/novo','pet',['GET','POST']],
         'postal'=>['/area-do-cliente/cep/{zip}','postal',['GET']],
+        'check'=>['/area-do-cliente/verificar-cadastro','check',['POST']],
         'proposal'=>['/area-do-cliente/contratacoes/{id}','proposal',['GET']],
         'review'=>['/area-do-cliente/contratacoes/{id}/conferencia.pdf','review',['GET']],
         'accept'=>['/area-do-cliente/contratacoes/{id}/assinar','accept',['POST']],

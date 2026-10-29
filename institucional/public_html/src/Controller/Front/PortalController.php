@@ -24,7 +24,7 @@ class PortalController
             $response=match($action) {
                 'home'=>$this->home($r),'signup'=>$this->signup($r),
                 'subscribe'=>$this->subscribe($r),'logout'=>$this->logout($r),'forgot'=>$this->forgot($r),'reset'=>$this->reset($r),
-                'verify'=>$this->verify($r),'resend'=>$this->resend($r),'pet'=>$this->pet($r),
+                'verify'=>$this->verify($r),'resend'=>$this->resend($r),'pet'=>$this->pet($r),'check'=>$this->check($r),
                 'postal'=>new JsonResponse($this->call($r,'GET','postal/'.$r->attributes->get('zip'),[],false)->data),
                 'proposal'=>$this->proposal($r),'review'=>$this->pdf($r,'proposals/'.$r->attributes->get('id').'/pdf'),
                 'document'=>$this->pdf($r,'documents/'.$r->attributes->get('id')),
@@ -98,6 +98,27 @@ class PortalController
         return $this->page($r,$account['user']['verified']?'home':'verify',['account'=>$account]);
     }
 
+    private function existingLoginUrl(Request $r,array $data): string
+    {
+        $login=($data['by']??'')==='document'?preg_replace('/\D/','',(string)$r->request->get('document')):trim((string)$r->request->get('email'));
+        return $this->api->managementUrl().'/entrar?'.http_build_query(['cadastro'=>'existente','login'=>mb_substr((string)$login,0,255)]);
+    }
+
+    // Chamada do cadastro (etapa "Seus dados"): avisa cedo se o CPF ou e-mail já têm acesso.
+    private function check(Request $r): Response
+    {
+        try {
+            $data=$this->call($r,'POST','account-check',['document'=>(string)$r->request->get('document'),'email'=>trim((string)$r->request->get('email'))],false)->data;
+        } catch(PortalApiException) {
+            return new JsonResponse(['ok'=>true]); // sem resposta da conta: segue, o envio final confere de novo
+        }
+        return match($data['code']??'') {
+            'ACCOUNT_EXISTS'=>new JsonResponse(['redirect'=>$this->existingLoginUrl($r,$data)]),
+            'CUSTOMER_WITHOUT_ACCESS'=>new JsonResponse(['message'=>(string)($data['message']??'')]),
+            default=>new JsonResponse(['ok'=>true]),
+        };
+    }
+
     private function catalog(Request $r): array { return $this->call($r,'GET','catalog',[],false)->data['offers']??[]; }
     private function offer(Request $r,string $code): array
     {
@@ -115,10 +136,8 @@ class PortalController
                 $result=$this->call($r,'POST','register',$data,false)->data;
             } catch (PortalApiException $e) {
                 if ($e->result->status!==409 || ($e->result->data['code']??'')!=='ACCOUNT_EXISTS') throw $e;
-                // Already has an account: go to the login with the e-mail filled in; a chosen plan continues after it.
-                $r->getSession()->set('portal_old',['email'=>trim((string)$r->request->get('email'))]);
-                $this->success($r,(string)$e->result->data['message']);
-                return $this->redirect('portal_login');
+                // Já tem acesso: vai para o login (na gestão) com o CPF ou e-mail preenchido.
+                return new RedirectResponse($this->existingLoginUrl($r,$e->result->data),302);
             }
             $this->establish($r,$result);
             $r->getSession()->remove('portal_plan_code');

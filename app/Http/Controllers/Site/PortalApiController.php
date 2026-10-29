@@ -37,6 +37,14 @@ class PortalApiController extends Controller
         ])]);
     }
 
+    // Pergunta do cadastro: já existe acesso com este CPF ou e-mail? O gateway limita por IP para não servir de consulta em massa.
+    public function accountCheck(Request $r)
+    {
+        $data=$r->validate(['document'=>'nullable|string|max:20','email'=>'nullable|email|max:180']);
+        $existing=$this->existingAccount(preg_replace('/\D/','',(string)($data['document']??'')),trim((string)($data['email']??'')));
+        return response()->json($existing??['code'=>'AVAILABLE']);
+    }
+
     public function login(Request $r)
     {
         $data=$r->validate(['email'=>'required|email|max:180','password'=>'required|string|max:1000']);
@@ -96,7 +104,7 @@ class PortalApiController extends Controller
         $customer=preg_match('/^\d{11}$/D',$cpf)?Customer::where('document',$cpf)->first():null;
         if (($customer && User::where('customer_id',$customer->id)->where('role','customer')->exists())
             || ($email!=='' && User::where('email',$email)->where('role','customer')->exists())) {
-            return ['code'=>'ACCOUNT_EXISTS','message'=>'Você já tem cadastro. Entre com seu e-mail e senha. Se não lembrar a senha, use “Esqueci minha senha”.'];
+            return ['code'=>'ACCOUNT_EXISTS','by'=>($customer && User::where('customer_id',$customer->id)->where('role','customer')->exists())?'document':'email','message'=>'Você já tem cadastro. Entre com seu e-mail e senha. Se não lembrar a senha, use “Esqueci minha senha”.'];
         }
         // Registered at a unit without online access: a password login would not work, so the unit sends the access link.
         return $customer?['code'=>'CUSTOMER_WITHOUT_ACCESS','message'=>'Seu CPF já está cadastrado em uma de nossas unidades. Peça à unidade o link para criar seu acesso ao site.']:null;

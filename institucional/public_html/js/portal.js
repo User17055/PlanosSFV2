@@ -148,6 +148,7 @@
     progress.forEach((item, i) => { item.classList.toggle('is-active', i === current); item.classList.toggle('is-done', i < current); });
     form.querySelectorAll('[data-back]').forEach(button => { button.hidden = current === 0; });
     if (steps[current].querySelector('[data-pet-names]')) summary();
+    if (typeof saveDraft === 'function' && KEY) saveDraft();
     if (scroll) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   const valid = () => {
@@ -186,20 +187,80 @@
     const remove = event.target.closest('[data-remove-pet]');
     if (remove) { remove.closest('[data-pet]').remove(); refreshPets(); }
   });
-  form.addEventListener('click', event => {
-    if (event.target.closest('[data-next]')) { if (valid()) show(current + 1); }
-    else if (event.target.closest('[data-back]')) show(current - 1);
+  // Na etapa de dados: se o CPF ou e-mail já têm acesso, leva direto ao login em vez de repetir o cadastro.
+  const checkAccount = async () => {
+    const step = steps[current], cpf = step.querySelector('[name=document]'), email = step.querySelector('[name=email]');
+    if (!cpf || !email || !form.dataset.checkUrl) return true;
+    const notice = step.querySelector('[data-check-notice]') || cpf.closest('label').appendChild(Object.assign(document.createElement('small'), { role: 'alert' }));
+    notice.setAttribute('data-check-notice', ''); notice.textContent = '';
+    try {
+      const body = new FormData(); body.set('_token', form.querySelector('[name=_token]').value); body.set('document', cpf.value); body.set('email', email.value);
+      const response = await fetch(form.dataset.checkUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (data.redirect) { window.location.assign(data.redirect); return false; }
+      if (data.message) { notice.textContent = data.message; cpf.focus(); return false; }
+    } catch { /* sem resposta: segue, o envio final confere de novo */ }
+    return true;
+  };
+  form.addEventListener('click', async event => {
+    const next = event.target.closest('[data-next]');
+    if (next) {
+      if (!valid()) return;
+      next.disabled = true;
+      const ok = await checkAccount();
+      next.disabled = false;
+      if (ok) show(current + 1);
+    } else if (event.target.closest('[data-back]')) show(current - 1);
   });
   // Enter dentro de uma etapa avança em vez de enviar o formulário incompleto.
   form.addEventListener('keydown', event => {
     if (event.key !== 'Enter' || current === steps.length - 1 || event.target.matches('button,summary,textarea')) return;
     event.preventDefault();
-    if (valid()) show(current + 1);
+    form.querySelector('.wiz-step.is-active [data-next]')?.click();
   });
   // Se o navegador acusar campo inválido em etapa oculta, volta à etapa certa.
   form.addEventListener('invalid', event => {
     const index = steps.findIndex(step => step.contains(event.target));
     if (index >= 0 && index !== current) show(index, false);
   }, true);
-  refreshPets(); show(0, false);
+  // Rascunho: guarda o que foi digitado neste aparelho (sem senhas nem aceite) para não perder tudo ao recarregar a tela.
+  const KEY = 'sf-cadastro-rascunho', TTL = 24 * 60 * 60 * 1000;
+  const draftFields = () => [...form.querySelectorAll('input,select,textarea')].filter(f => f.name && f.type !== 'hidden' && f.type !== 'password' && f.type !== 'checkbox');
+  const saveDraft = () => {
+    try {
+      const values = {}; draftFields().forEach(f => { if (f.value) values[f.name] = f.value; });
+      localStorage.setItem(KEY, JSON.stringify({ t: Date.now(), step: current, values }));
+    } catch { /* armazenamento bloqueado: segue sem rascunho */ }
+  };
+  const restoreDraft = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (!saved || Date.now() - saved.t > TTL) { localStorage.removeItem(KEY); return 0; }
+      draftFields().forEach(f => {
+        if (!f.value && saved.values[f.name] !== undefined) { f.value = saved.values[f.name]; f.dispatchEvent(new Event('input', { bubbles: true })); }
+      });
+      // As senhas não são guardadas: quem já passou da etapa de dados volta a ela para digitá-las de novo.
+      const password = form.querySelector('[name=password]');
+      return password && !password.value && saved.step > 1 ? 1 : Math.min(saved.step || 0, steps.length - 1);
+    } catch { return 0; }
+  };
+  let timer;
+  form.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(saveDraft, 300); });
+  form.addEventListener('change', saveDraft);
+  form.addEventListener('submit', () => { try { localStorage.removeItem(KEY); } catch {} });
+  refreshPets();
+  const resume = restoreDraft();
+  show(resume, false);
+  if (resume > 0) saveDraft();
 })();
+
+// CPF com máscara 000.000.000-00 enquanto digita; o servidor continua recebendo só o que for útil e valida os dígitos.
+document.querySelectorAll('input[name=document]').forEach(input => {
+  const mask = value => {
+    const d = value.replace(/\D/g, '').slice(0, 11);
+    return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
+  };
+  input.setAttribute('inputmode', 'numeric'); input.setAttribute('placeholder', '000.000.000-00'); input.setAttribute('maxlength', '14');
+  input.addEventListener('input', () => { input.value = mask(input.value); });
+  input.value = mask(input.value);
+});

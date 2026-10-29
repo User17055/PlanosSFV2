@@ -68,6 +68,16 @@ class SitePortalApiTest extends TestCase
         $this->assertTrue(collect($offers)->firstWhere('name','Plano real')['informational']);
     }
 
+    public function test_account_check_tells_when_cpf_or_email_already_have_access(): void
+    {
+        $this->getJson('/api/site/v1/account-check?document=&email=',$this->headers())->assertStatus(405);
+        $this->postJson('/api/site/v1/account-check',['document'=>'529.982.247-25','email'=>'site@example.test'],$this->headers())->assertOk()->assertJsonPath('code','AVAILABLE');
+        $this->registered();
+        $this->postJson('/api/site/v1/account-check',['document'=>'529.982.247-25','email'=>'outro@example.test'],$this->headers())->assertOk()->assertJsonPath('code','ACCOUNT_EXISTS')->assertJsonPath('by','document');
+        $this->postJson('/api/site/v1/account-check',['document'=>'11144477735','email'=>'site@example.test'],$this->headers())->assertOk()->assertJsonPath('code','ACCOUNT_EXISTS')->assertJsonPath('by','email');
+        $this->postJson('/api/site/v1/account-check',['document'=>'11144477735','email'=>'novo@example.test'],$this->headers())->assertOk()->assertJsonPath('code','AVAILABLE');
+    }
+
     public function test_registration_accepts_several_pets_and_opens_one_proposal_per_pet(): void
     {
         $data=$this->data(); foreach(['pet_name','pet_species','pet_birth_date'] as $k) unset($data[$k]);

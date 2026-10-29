@@ -145,6 +145,13 @@ class HttpAccessTest extends TestCase
         $this->actingAs(User::where('role','central_admin')->firstOrFail())->get(route('customers.show',$user->customer_id))->assertOk()->assertSee('Solicitação de cancelamento');
     }
 
+    public function test_login_page_greets_an_existing_customer_sent_from_the_signup(): void
+    {
+        $this->get(route('login',['cadastro'=>'existente','login'=>'529.982.247-25']))->assertOk()
+            ->assertSee('Você já tem cadastro.')->assertSee('value="529.982.247-25"',false);
+        $this->get(route('login'))->assertOk()->assertDontSee('Você já tem cadastro.');
+    }
+
     public function test_customer_can_login_with_cpf(): void
     {
         $user=User::where('email','cliente@saofrancisco.local')->firstOrFail();
