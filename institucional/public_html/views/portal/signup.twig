@@ -12,9 +12,8 @@
 <ol class="wiz-progress" aria-label="Passos do cadastro"><li class="is-active"><span>1</span> Seus pets</li><li><span>2</span> Seus dados</li>{% if offer %}<li><span>3</span> Benefícios</li>{% endif %}</ol>
 
 <section class="wiz-step is-active" data-step="1" aria-labelledby="wiz-t1">
-<div class="section-heading"><span class="section-number">1</span><div><h2 id="wiz-t1">Quem vai receber esse cuidado?</h2><p>Comece pelo nome do seu pet. O plano e seus benefícios são individuais.</p></div></div>
+<div class="section-heading"><span class="section-number">1</span><div><h2 id="wiz-t1">Quem vai receber esse cuidado?</h2><p>Comece pelo nome do seu pet. Cada plano é individual, de um pet só.</p></div></div>
 <div data-pets>{% for p in (oldpets|length ? oldpets : [{}]) %}{{ w.pet_block(loop.index0, p) }}{% endfor %}</div>
-<button type="button" class="wiz-add" data-add-pet hidden>+ Adicionar outro pet</button>
 <div class="wiz-nav"><button type="button" class="button button-primary" data-next hidden>Prosseguir <span aria-hidden="true">→</span></button></div>
 </section>
 
@@ -51,7 +50,6 @@
 {% endif %}
 
 <p class="auth-bottom">Já tem cadastro? <a href="{{path('portal_login')}}">Entre com seu acesso</a>.</p>
-<template id="wiz-pet-template">{{ w.pet_block('__i__', {}) }}</template>
 </form></section>
 {% if offer %}{% include 'portal/_offer.twig' %}{% else %}<aside class="panel offer-summary"><span class="eyebrow">O CUIDADO COMEÇA AQUI</span><h2>Um espaço para sua família.</h2><p>Cadastre seu pet e acompanhe seus planos, contratos, pagamentos e benefícios.</p><img src="{{asset('imgs/banner-cao-4.png')}}" alt="Seu melhor amigo" class="summary-dog"><p class="fine-print">Depois de criar seu acesso, você poderá escolher um plano para contratar.</p></aside>{% endif %}</div>
 {% endblock %}

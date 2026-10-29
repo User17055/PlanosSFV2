@@ -136,7 +136,7 @@
   const refreshPets = () => {
     const list = pets();
     list.forEach((pet, i) => { pet.querySelector('[data-pet-n]').textContent = i + 1; pet.querySelector('[data-remove-pet]').hidden = list.length < 2; });
-    addButton.hidden = list.length >= MAX_PETS;
+    if (addButton) addButton.hidden = list.length >= MAX_PETS;
   };
   const show = (index, scroll = true) => {
     current = Math.max(0, Math.min(steps.length - 1, index));
@@ -171,7 +171,7 @@
     total.replaceChildren(document.createTextNode(money.format(price * count / 100)), span);
   }
 
-  addButton.addEventListener('click', () => {
+  addButton?.addEventListener('click', () => {
     if (pets().length >= MAX_PETS) return;
     const holder = document.createElement('div');
     holder.innerHTML = template.innerHTML.replaceAll('__i__', nextIndex++);
