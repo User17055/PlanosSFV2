@@ -1,0 +1,33 @@
+- generic [active] [ref=f16e1]:
+  - banner [ref=f16e2]:
+    - link "São Francisco — serviços veterinários PLANOS E PACOTES" [ref=f16e3] [cursor=pointer]:
+      - /url: http://localhost:8765/planos
+      - img "São Francisco — serviços veterinários" [ref=f16e4]
+      - generic [ref=f16e5]: PLANOS E PACOTES
+    - navigation [ref=f16e6]:
+      - generic [ref=f16e7]: Demonstração
+      - link "Área do tutor" [ref=f16e9] [cursor=pointer]:
+        - /url: http://localhost:8765/entrar
+  - main [ref=f16e12]:
+    - generic [ref=f16e13]: FAÇA PARTE DESSA HISTÓRIA
+    - option "Cão" [selected]
+    - option "Gato"
+    - option "Não informado" [selected]
+    - option "Macho"
+    - option "Fêmea"
+    - option "Selecione, se souber" [selected]
+    - option "Indicação de alguém"
+    - option "Instagram"
+    - option "Facebook"
+    - option "Google"
+    - option "Recebi um link"
+    - option "Já conhecia a São Francisco"
+    - option "Outra forma"
+  - contentinfo [ref=f16e15]:
+    - link "São Francisco O cuidado que acompanha a vida." [ref=f16e16] [cursor=pointer]:
+      - /url: http://localhost:8765/planos
+      - img "São Francisco" [ref=f16e17]
+      - generic [ref=f16e18]: O cuidado que acompanha a vida.
+    - generic [ref=f16e19]: © 2026 · Ambiente demonstrativoValores e condições sujeitos à aprovação.
+    - generic [ref=f16e20]: Seus dados com cuidado.
+  - status

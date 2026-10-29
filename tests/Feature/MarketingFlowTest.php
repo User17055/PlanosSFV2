@@ -35,7 +35,7 @@ class MarketingFlowTest extends TestCase
         $this->get(route('attribution_links.index'))->assertOk()->assertSee('Instagram · Origem de homologação');
         $this->post(route('logout'))->assertRedirect();
         $this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertRedirect(route('sales',['product_version_id'=>$version->id]));
-        $this->get(route('sales',['product_version_id'=>$version->id]))->assertOk();
+        $this->get(route('sales',['product_version_id'=>$version->id]))->assertRedirect(config('site_portal.public_url').'/planos-saude/');
         $this->assertDatabaseCount('attribution_touches',1);
         $this->post(route('authenticate'),['email'=>$buyer->email,'password'=>'Demo@2026!'])->assertRedirect();
         $this->get(route('proposals.create'))->assertOk()->assertSee('Alguém indicou a São Francisco para você?')->assertDontSee('Origem informada');

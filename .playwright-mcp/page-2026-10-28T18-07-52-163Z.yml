@@ -1,0 +1,37 @@
+- generic [ref=f21e1]:
+  - main [ref=f21e2]:
+    - generic [ref=f21e3]:
+      - generic [ref=f21e4]:
+        - img "São Francisco — serviços veterinários" [ref=f21e5]
+        - heading "Acesse seu espaço" [level=1] [ref=f21e6]
+        - paragraph [ref=f21e7]: Entre para acompanhar seus planos, pets e contratos.
+        - generic [ref=f21e8]:
+          - generic [ref=f21e9]:
+            - text: E-mail
+            - textbox "E-mail" [active] [ref=f21e10]:
+              - /placeholder: seu@email.com
+          - generic [ref=f21e11]:
+            - text: Senha
+            - generic [ref=f21e12]:
+              - textbox "Senha Mostrar senha" [ref=f21e13]:
+                - /placeholder: Digite sua senha
+              - button "Mostrar senha" [ref=f21e14] [cursor=pointer]: Mostrar
+          - generic [ref=f21e15] [cursor=pointer]:
+            - checkbox "Continuar conectado neste dispositivo" [ref=f21e16]
+            - generic [ref=f21e17]: Continuar conectado neste dispositivo
+          - button "Entrar" [ref=f21e18] [cursor=pointer]
+        - generic [ref=f21e19]:
+          - text: Ainda não tem conta?
+          - link "Crie uma agora." [ref=f21e20] [cursor=pointer]:
+            - /url: http://localhost:8765/cadastro
+        - generic [ref=f21e21]: Acesso protegido aos seus dados e contratos.
+      - complementary [ref=f21e24]:
+        - generic [ref=f21e25]:
+          - generic [ref=f21e26]: Bem-vindo à São Francisco
+          - heading "Aqui, o cuidado tem um lugar." [level=2] [ref=f21e27]: Aqui, o cuidadotem um lugar.
+          - paragraph [ref=f21e28]: Planos e pacotes para acompanhar seu melhor amigo em cada fase da vida, com mais carinho, saúde e tranquilidade para você.
+          - list [ref=f21e29]:
+            - listitem [ref=f21e30]: Contratos e documentos sempre à mão
+            - listitem [ref=f21e33]: Pagamentos e faturas em um só lugar
+            - listitem [ref=f21e36]: Benefícios do seu pet sem complicação
+  - status

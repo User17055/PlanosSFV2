@@ -7,6 +7,7 @@ use App\Services\AccessService;
 use App\Services\Domain\{EligibilityService, FinancialService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -140,6 +141,24 @@ class CustomerController extends Controller
             AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$pet->customer->originating_franchise_id,'action'=>'pet.updated','entity_type'=>'pet','entity_id'=>$pet->id,'reason'=>$data['reason'],'data'=>['before'=>$before,'after'=>$locked->only(['name','breed','sex','birth_date','color'])]]);
         });
         return redirect()->to($this->workspaceUrl($request,$pet->customer,'pet-'.$pet->id))->with('success','Dados do pet atualizados na ficha. Os contratos existentes preservam os dados do aceite.');
+    }
+
+    public function petPhoto(Request $request,Pet $pet)
+    {
+        $this->access->customer($request->user(),$pet->customer);
+        abort_unless($pet->photo_path && Storage::disk('local')->exists($pet->photo_path),404);
+        return Storage::disk('local')->response($pet->photo_path,null,['Cache-Control'=>'private, max-age=86400']);
+    }
+
+    public function storePetPhoto(Request $request,Pet $pet)
+    {
+        $this->access->customer($request->user(),$pet->customer);
+        $request->validate(['photo'=>'required|image|mimes:jpg,jpeg,png,webp|max:4096'],array_fill_keys(['photo.required','photo.image','photo.mimes','photo.max','photo.uploaded'],'Envie uma foto JPG, PNG ou WebP de até 4 MB.'));
+        $previous=$pet->photo_path;
+        $pet->update(['photo_path'=>$request->file('photo')->store('pet-photos')]);
+        if ($previous) Storage::disk('local')->delete($previous);
+        AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$pet->customer->originating_franchise_id,'action'=>'pet.photo_updated','entity_type'=>'pet','entity_id'=>$pet->id,'reason'=>'Foto do pet atualizada.','data'=>[]]);
+        return back()->with('success','Foto de '.$pet->name.' atualizada.');
     }
 
     private function workspaceUrl(Request $request,Customer $customer,string $anchor): string

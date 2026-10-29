@@ -31,7 +31,7 @@ class HttpAccessTest extends TestCase
 
     public function test_customer_portal_public_catalog_and_registration_render(): void
     {
-        $this->get(route('sales'))->assertOk();
+        $this->get(route('sales'))->assertRedirect(config('site_portal.public_url').'/planos-saude/');
         $this->get(route('login'))->assertOk();
         $this->get(route('register'))->assertOk();
         $this->actingAs(User::where('role','customer')->firstOrFail())->get(route('portal'))->assertOk();
@@ -143,6 +143,18 @@ class HttpAccessTest extends TestCase
         $this->assertDatabaseHas('cancellation_requests',['subscription_id'=>$subscription->id,'requested_by'=>$user->id,'status'=>'pending']);
         $this->assertDatabaseCount('cancellation_requests',1);
         $this->actingAs(User::where('role','central_admin')->firstOrFail())->get(route('customers.show',$user->customer_id))->assertOk()->assertSee('Solicitação de cancelamento');
+    }
+
+    public function test_customer_login_ignores_a_staff_only_intended_url_and_goes_to_the_portal(): void
+    {
+        $this->get(route('dashboard'))->assertRedirect(route('login'));
+        $this->post(route('authenticate'),['email'=>'cliente@saofrancisco.local','password'=>'Demo@2026!'])->assertRedirect(route('portal'));
+    }
+
+    public function test_staff_login_keeps_a_permitted_intended_url(): void
+    {
+        $this->get(route('finance.index'))->assertRedirect(route('login'));
+        $this->post(route('authenticate'),['email'=>'financeiro@saofrancisco.local','password'=>'Demo@2026!'])->assertRedirect(route('finance.index'));
     }
 
     public function test_registration_requires_email_verification_outside_demo_mode(): void

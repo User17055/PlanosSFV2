@@ -260,9 +260,10 @@
   }
 
   const auth = $('.auth-layout');
-  if (auth) reveal(); // login sem animação de entrada
+  const plain = auth || $('.registration-form'); // login e cadastro sem animação de entrada
+  if (plain) reveal();
 
-  if (publicPage && entrance && !hero && !auth) {
+  if (publicPage && entrance && !hero && !plain) {
     const page = $('.public-main');
     const pieces = $$('.registration-intro > *', page);
     revealOnScroll([...(pieces.length ? pieces : []), ...[...page.children].filter(child => !child.matches('.registration-intro'))], { y: 24, stagger: .09 });

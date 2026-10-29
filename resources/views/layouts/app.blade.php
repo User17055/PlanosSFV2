@@ -4,7 +4,7 @@
 @php
 $currentRole=auth()->user()->role ?? 'operator';
 $navAccess=['finance.index'=>['central_admin','manager','finance'],'commissions.index'=>['central_admin','manager','finance','sales'],'reports.index'=>['central_admin','manager','finance'],'attribution_links.index'=>['central_admin','manager','sales'],'integrations.index'=>['central_admin'],'management.index'=>['central_admin'],'employees.index'=>['central_admin','manager','finance']];
-$navGroups=$currentRole==='customer' ? [[null,[['portal','home','Meu cuidado'],['proposals.index','file','Minhas propostas'],['proposals.create','plus','Contratar um plano'],['sales','heart','Ver os planos']]]] : [['Atendimento',[['dashboard','dashboard','Visão geral'],['customers.index','users','Tutores e pets'],['catalog.index','heart','Planos e pacotes'],['proposals.index','file','Propostas e contratos']]],['Resultados',[['finance.index','wallet','Financeiro'],['commissions.index','percent',$currentRole==='sales'?'Minhas comissões':'Comissões'],['reports.index','chart','Relatórios']]],['Rede',[['attribution_links.index','link','Links de divulgação'],['integrations.index','plug','Integrações'],['employees.index','users','Funcionários'],['management.index','store','Rede e acessos']]]];
+$navGroups=$currentRole==='customer' ? [['Meu espaço',[['portal','home','Meu cuidado'],['portal.invoices','wallet','Faturas'],['proposals.index','file','Minhas propostas']]],['Contratar',[['proposals.create','plus','Contratar um plano'],['sales','heart','Planos no site']]]] : [['Atendimento',[['dashboard','dashboard','Visão geral'],['customers.index','users','Tutores e pets'],['catalog.index','heart','Planos e pacotes'],['proposals.index','file','Propostas e contratos']]],['Resultados',[['finance.index','wallet','Financeiro'],['commissions.index','percent',$currentRole==='sales'?'Minhas comissões':'Comissões'],['reports.index','chart','Relatórios']]],['Rede',[['attribution_links.index','link','Links de divulgação'],['integrations.index','plug','Integrações'],['employees.index','users','Funcionários'],['management.index','store','Rede e acessos']]]];
 $navGroups=array_filter(array_map(fn($group)=>[$group[0],array_filter($group[1],fn($item)=>!isset($navAccess[$item[0]]) || in_array($currentRole,$navAccess[$item[0]]))],$navGroups),fn($group)=>$group[1]);
 // Um item ativo por vez: rota exata primeiro (Minhas propostas x Contratar um plano), depois o prefixo (proposals.show acende Propostas).
 $navRoutes=collect($navGroups)->flatMap(fn($group)=>array_column($group[1],0));
@@ -12,27 +12,28 @@ $activeRoute=$navRoutes->first(fn($route)=>request()->routeIs($route)) ?? $navRo
 $roleLabel=['central_admin'=>'Administração central','manager'=>'Gestão da unidade','sales'=>'Equipe de vendas','operator'=>'Recepção','finance'=>'Financeiro','customer'=>'Tutor'][$currentRole] ?? 'Equipe São Francisco';
 $userName=auth()->user()->name ?? 'Equipe São Francisco';
 $homeRoute=route($currentRole==='customer'?'portal':'dashboard');
+$navBadges=$currentRole==='customer' && auth()->user()->customer_id ? ['portal.invoices'=>\App\Models\Invoice::where('customer_id',auth()->user()->customer_id)->whereNotIn('status',['paid','cancelled','refunded'])->get()->filter(fn($invoice)=>$invoice->outstanding_cents>0)->count()] : [];
 @endphp
 <header class="topbar"><div class="topbar-left"><a href="{{ $homeRoute }}" class="topbar-brand"><img class="brand-logo" src="{{ asset('assets/brand/sao-francisco-logo.png') }}" alt="São Francisco — serviços veterinários" width="178" height="127"></a><button class="icon-button menu-toggle" type="button" data-sidebar-toggle aria-controls="sidebar" aria-label="Abrir menu">@include('components.icon',['name'=>'menu'])</button><span class="branch-name">{{ $currentRole==='customer'?'Portal do tutor':data_get(auth()->user(),'franchise.name','Gestão da rede') }}<small>{{ $currentRole==='customer'?'São Francisco · Planos e pacotes':'São Francisco · Administração' }}</small></span>@if($currentRole!=='customer')<form class="topbar-search" method="GET" action="{{ route('customers.index') }}" role="search">@include('components.icon',['name'=>'search'])<input name="q" value="{{ request()->routeIs('customers.index') ? request('q') : '' }}" placeholder="Buscar tutor por nome, CPF ou e-mail" aria-label="Buscar tutor cadastrado"></form>@endif</div>
-<div class="topbar-right">@if(config('plans.demo',false))<span class="demo-indicator"><span></span>Ambiente de demonstração</span>@endif<a class="topbar-portal" href="{{ route('sales') }}" target="_blank" rel="noopener">Ver site @include('components.icon',['name'=>'external'])</a>
+<div class="topbar-right">@if($currentRole!=='customer')<a class="topbar-portal" href="{{ route('sales') }}" target="_blank" rel="noopener">Ver site @include('components.icon',['name'=>'external'])</a>@endif
 <details class="user-menu"><summary aria-label="Menu de {{ $userName }}"><span class="avatar">{{ mb_substr($userName,0,1) }}</span><span class="user-menu-name">{{ $userName }}<small>{{ $roleLabel }}</small></span>@include('components.icon',['name'=>'down'])</summary>
-<div class="user-menu-panel"><div class="user-menu-head"><span class="avatar">{{ mb_substr($userName,0,1) }}</span><div><strong>{{ $userName }}</strong><small>{{ auth()->user()->email }}</small>@if(mb_strtolower($userName)!==mb_strtolower($roleLabel))<small>{{ $roleLabel }}</small>@endif</div></div>
+<div class="user-menu-panel"><div class="user-menu-head"><span class="avatar">{{ mb_substr($userName,0,1) }}</span><div><strong>{{ $userName }}</strong>@if(mb_strtolower($userName)!==mb_strtolower($roleLabel))<small>{{ $roleLabel }}</small>@endif</div><small class="user-menu-email">{{ auth()->user()->email }}</small></div>
 <a class="user-menu-item" href="{{ $homeRoute }}">@include('components.icon',['name'=>$currentRole==='customer'?'home':'dashboard']) {{ $currentRole==='customer'?'Meu cuidado':'Visão geral' }}</a>@if($currentRole==='customer' && auth()->user()->customer_id)<a class="user-menu-item" href="{{ route('customers.edit',auth()->user()->customer_id) }}">@include('components.icon',['name'=>'users']) Meus dados</a>@endif<a class="user-menu-item" href="{{ route('sales') }}" target="_blank" rel="noopener">@include('components.icon',['name'=>'external']) Site de contratação</a>
 <form method="POST" action="{{ route('logout') }}">@csrf<button class="user-menu-item is-danger">@include('components.icon',['name'=>'logout']) Sair</button></form></div></details></div></header>
 <div class="sidebar-overlay" data-sidebar-close></div>
-<aside class="sidebar" id="sidebar" aria-label="Menu">
+<aside class="sidebar{{ $currentRole==='customer' ? ' sidebar-customer' : '' }}" id="sidebar" aria-label="Menu">
 <div class="sidebar-scroll" id="sidebar-scroll">
 <nav class="main-nav" aria-label="Navegação principal">
 @foreach($navGroups as [$groupLabel,$groupItems])
 <div class="nav-group">@if($groupLabel)<div class="nav-group-label">{{ $groupLabel }}</div>@endif
 @foreach($groupItems as [$navRoute,$navIcon,$navLabel])
-<a href="{{ route($navRoute) }}" @if($navRoute===$activeRoute) aria-current="page" @endif class="nav-link {{ $navRoute===$activeRoute ? 'active' : '' }}">@include('components.icon',['name'=>$navIcon])<span>{{ $navLabel }}</span>@if($navRoute==='integrations.index')<i class="nav-dot" aria-hidden="true"></i>@endif</a>
+<a href="{{ route($navRoute) }}" @if($navRoute===$activeRoute) aria-current="page" @endif class="nav-link {{ $navRoute===$activeRoute ? 'active' : '' }}">@include('components.icon',['name'=>$navIcon])<span>{{ $navLabel }}</span>@if($navRoute==='integrations.index')<i class="nav-dot" aria-hidden="true"></i>@endif @if(($navBadges[$navRoute] ?? 0)>0)<b class="nav-badge" aria-label="{{ $navBadges[$navRoute] }} em aberto">{{ $navBadges[$navRoute] }}</b>@endif</a>
 @endforeach
 </div>
 @endforeach
 </nav>
 </div>
-@if($currentRole!=='customer')<div class="sidebar-bottom"><a class="nav-link" href="{{ route('sales') }}">@include('components.icon',['name'=>'external'])<span>Site de contratação</span></a></div>@endif
+@if($currentRole!=='customer')<div class="sidebar-bottom"><a class="nav-link" href="{{ route('sales') }}">@include('components.icon',['name'=>'external'])<span>Site de contratação</span></a></div>@else<div class="sidebar-bottom sidebar-help"><strong>Precisa de ajuda?</strong><span>Atendimento veterinário 24 horas</span><a class="sidebar-emergency" href="tel:+551832212021">Emergência 24h<br>(18) 3221-2021</a></div>@endif
 </aside><script>(function(s){if(!s)return;var k='sf-sidebar-scroll';try{var y=sessionStorage.getItem(k);if(y!==null)s.scrollTop=+y;var a=s.querySelector('.nav-link.active');if(a){var r=a.getBoundingClientRect(),b=s.getBoundingClientRect();if(r.top<b.top+8||r.bottom>b.bottom-8)s.scrollTop+=r.top-b.top-(b.height-r.height)/2}}catch(e){}addEventListener('pagehide',function(){try{sessionStorage.setItem(k,s.scrollTop)}catch(e){}})})(document.getElementById('sidebar-scroll'))</script>
 <div class="main-shell">
 <main class="main-content" id="main-content">
@@ -41,5 +42,7 @@ $homeRoute=route($currentRole==='customer'?'portal':'dashboard');
 @if(session('error'))<div class="alert alert-danger" role="alert">@include('components.icon',['name'=>'alert'])<div>{{ session('error') }}</div></div>@endif
 @if($errors->any())<div class="alert alert-danger" role="alert">@include('components.icon',['name'=>'alert'])<div><strong>Confira as informações para continuar.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div></div>@endif
 @yield('content')
-<footer class="page-footer"><span>© {{ date('Y') }} São Francisco · Gestão de planos veterinários</span><span>@include('components.icon',['name'=>'lock']) Acesso autenticado{{ config('plans.demo',false)?' · Dados demonstrativos':'' }}</span></footer>
+@if($currentRole==='customer')<footer class="page-footer portal-footer"><span>© {{ date('Y') }} São Francisco · Mais vida para viver juntos</span><a class="portal-emergency" href="tel:+551832212021">Emergência 24h · (18) 3221-2021</a></footer>@else
+<footer class="page-footer"><span>© {{ date('Y') }} São Francisco · Gestão de planos veterinários</span><span>@include('components.icon',['name'=>'lock']) Acesso autenticado</span></footer>
+@endif
 </main></div></div><div class="toast" id="toast" role="status"></div>@stack('scripts')</body></html>

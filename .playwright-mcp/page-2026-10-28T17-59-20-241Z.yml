@@ -1,0 +1,147 @@
+- generic [active] [ref=f17e1]:
+  - banner [ref=f17e2]:
+    - link "São Francisco — serviços veterinários PLANOS E PACOTES" [ref=f17e3] [cursor=pointer]:
+      - /url: http://localhost:8765/planos
+      - img "São Francisco — serviços veterinários" [ref=f17e4]
+      - generic [ref=f17e5]: PLANOS E PACOTES
+    - navigation [ref=f17e6]:
+      - generic [ref=f17e7]: Demonstração
+      - link "Área do tutor" [ref=f17e9] [cursor=pointer]:
+        - /url: http://localhost:8765/entrar
+  - main [ref=f17e12]:
+    - generic [ref=f17e13]:
+      - navigation "Você está em" [ref=f17e14]:
+        - link "Início" [ref=f17e15] [cursor=pointer]:
+          - /url: http://localhost:8765/planos
+        - generic [aria-hidden] [ref=f17e16]: ›
+        - generic [ref=f17e17]: Criar conta
+      - heading "Criar conta" [level=1] [ref=f17e18]
+      - paragraph [ref=f17e19]: Preencha seus dados e os do pet. O cadastro do tutor será criado automaticamente.
+    - generic [ref=f17e20]:
+      - generic [ref=f17e21]:
+        - generic [ref=f17e22]: "01"
+        - generic [ref=f17e23]:
+          - heading "Sobre você" [level=2] [ref=f17e24]
+          - paragraph [ref=f17e25]: Precisamos identificar o titular da contratação.
+      - generic [ref=f17e26]:
+        - generic [ref=f17e27]:
+          - text: Nome completo *obrigatório
+          - textbox "Nome completo *obrigatório" [ref=f17e28]
+        - generic [ref=f17e29]:
+          - text: CPF *obrigatório
+          - textbox "CPF *obrigatório" [ref=f17e30]
+        - generic [ref=f17e31]:
+          - text: Telefone *obrigatório
+          - textbox "Telefone *obrigatório" [ref=f17e32]
+        - generic [ref=f17e33]:
+          - text: E-mail *obrigatório
+          - textbox "E-mail *obrigatório" [ref=f17e34]
+        - generic [ref=f17e35]:
+          - text: RG
+          - textbox "RG" [ref=f17e36]
+        - generic [ref=f17e37]:
+          - text: CEP *obrigatório
+          - textbox "CEP *obrigatório Comece pelo CEP para preencher a rua, o bairro e a cidade." [ref=f17e38]:
+            - /placeholder: 00000-000
+          - status [ref=f17e39]: Comece pelo CEP para preencher a rua, o bairro e a cidade.
+        - generic [ref=f17e40]:
+          - text: Rua / avenida *obrigatório
+          - textbox "Rua / avenida *obrigatório" [ref=f17e41]:
+            - /placeholder: Preenchida pelo CEP; você pode corrigir
+        - generic [ref=f17e42]:
+          - text: Número *obrigatório
+          - textbox "Número *obrigatório O número deve ser informado por você." [ref=f17e43]:
+            - /placeholder: Informe o número ou S/N
+          - generic [ref=f17e44]: O número deve ser informado por você.
+        - generic [ref=f17e45]:
+          - text: Complemento
+          - textbox "Complemento" [ref=f17e46]:
+            - /placeholder: Apartamento, bloco, casa…
+        - generic [ref=f17e47]:
+          - text: Bairro
+          - textbox "Bairro" [ref=f17e48]
+        - generic [ref=f17e49]:
+          - text: Cidade
+          - textbox "Cidade" [ref=f17e50]
+        - generic [ref=f17e51]:
+          - text: Estado (UF)
+          - textbox "Estado (UF)" [ref=f17e52]
+        - generic [ref=f17e53]:
+          - text: Crie uma senha *obrigatório
+          - generic [ref=f17e54]:
+            - textbox "Crie uma senha *obrigatório Mostrar senha" [ref=f17e55]
+            - button "Mostrar senha" [ref=f17e56] [cursor=pointer]: Mostrar
+        - generic [ref=f17e57]:
+          - text: Confirme sua senha *obrigatório
+          - generic [ref=f17e58]:
+            - textbox "Confirme sua senha *obrigatório Mostrar senha" [ref=f17e59]
+            - button "Mostrar senha" [ref=f17e60] [cursor=pointer]: Mostrar
+        - list [ref=f17e61]:
+          - listitem [ref=f17e62]: ○Mínimo de 12 caracteres
+          - listitem [ref=f17e63]: ○As duas senhas são iguais
+      - generic [ref=f17e65]:
+        - generic [ref=f17e66]: "02"
+        - generic [ref=f17e67]:
+          - heading "Sobre seu melhor amigo" [level=2] [ref=f17e68]
+          - paragraph [ref=f17e69]: Cada pet tem seus próprios benefícios e contrato.
+      - generic [ref=f17e70]:
+        - generic [ref=f17e71]:
+          - text: Nome do pet *obrigatório
+          - textbox "Nome do pet *obrigatório" [ref=f17e72]
+        - generic [ref=f17e73]:
+          - text: Espécie *obrigatório
+          - combobox "Espécie *obrigatório" [ref=f17e74] [cursor=pointer]:
+            - option "Cão" [selected]
+            - option "Gato"
+        - generic [ref=f17e75]:
+          - text: Nascimento *obrigatório
+          - textbox "Nascimento *obrigatório" [ref=f17e76]
+        - generic [ref=f17e77]:
+          - text: Raça
+          - textbox "Raça" [ref=f17e78]:
+            - /placeholder: Se conhecida
+        - generic [ref=f17e79]:
+          - text: Cor / pelagem
+          - textbox "Cor / pelagem" [ref=f17e80]
+        - generic [ref=f17e81]:
+          - text: Sexo
+          - combobox "Sexo" [ref=f17e82] [cursor=pointer]:
+            - option "Não informado" [selected]
+            - option "Macho"
+            - option "Fêmea"
+      - generic [ref=f17e88]:
+        - heading "Como conheceu a São Francisco?" [level=2] [ref=f17e89]
+        - paragraph [ref=f17e90]: Conte como chegou até nós e se alguém recomendou nossos planos.
+      - generic [ref=f17e91]:
+        - generic [ref=f17e92]:
+          - text: Como conheceu?
+          - combobox "Como conheceu?" [ref=f17e93] [cursor=pointer]:
+            - option "Selecione, se souber" [selected]
+            - option "Indicação de alguém"
+            - option "Instagram"
+            - option "Facebook"
+            - option "Google"
+            - option "Recebi um link"
+            - option "Já conhecia a São Francisco"
+            - option "Outra forma"
+        - generic [ref=f17e94]:
+          - text: Quem recomendou?
+          - textbox "Quem recomendou? Pode informar uma indicação mesmo que tenha vindo por uma rede social." [ref=f17e95]:
+            - /placeholder: Nome de quem indicou, se houver
+          - generic [ref=f17e96]: Pode informar uma indicação mesmo que tenha vindo por uma rede social.
+      - generic [ref=f17e97] [cursor=pointer]:
+        - checkbox "Autorizo o uso destes dados para meu cadastro e para a contratação dos serviços São Francisco. Esta ação não representa aceite de um plano ou autorização de marketing." [ref=f17e98]
+        - generic [ref=f17e99]: Autorizo o uso destes dados para meu cadastro e para a contratação dos serviços São Francisco. Esta ação não representa aceite de um plano ou autorização de marketing.
+      - button "Criar meu acesso" [ref=f17e100] [cursor=pointer]
+      - paragraph [ref=f17e103]:
+        - text: Já tem uma conta?
+        - link "Entre no seu espaço" [ref=f17e104] [cursor=pointer]:
+          - /url: http://localhost:8765/entrar
+  - contentinfo [ref=f17e105]:
+    - link "São Francisco O cuidado que acompanha a vida." [ref=f17e106] [cursor=pointer]:
+      - /url: http://localhost:8765/planos
+      - img "São Francisco" [ref=f17e107]
+      - generic [ref=f17e108]: O cuidado que acompanha a vida.
+    - generic [ref=f17e109]: © 2026 · Ambiente demonstrativoValores e condições sujeitos à aprovação.
+    - generic [ref=f17e110]: Seus dados com cuidado.
+  - status

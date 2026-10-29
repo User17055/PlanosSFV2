@@ -44,9 +44,13 @@ class CustomerPortalTest extends TestCase
 
     public function test_overdue_tutor_sees_amount_once_instead_of_repeated_per_benefit(): void
     {
+        $user=User::where('email','cliente2@saofrancisco.local')->firstOrFail();
+        $pet=Pet::where('customer_id',$user->customer_id)->firstOrFail();
         $this->portalAs('cliente2')
             ->assertSee('em pagamentos vencidos')
             ->assertSee('Regularizar')
+            ->assertSee(route('portal.invoices'),false);
+        $this->get(route('portal.pet',$pet))->assertOk()
             ->assertSee('Os benefícios voltam a ser liberados após a regularização dos pagamentos vencidos.')
             ->assertDontSee('Cliente com mensalidade vencida');
     }
@@ -55,11 +59,17 @@ class CustomerPortalTest extends TestCase
     {
         $user=User::where('email','cliente@saofrancisco.local')->firstOrFail();
         $pet=Pet::where('customer_id',$user->customer_id)->where('name','Bento')->firstOrFail();
+        $luna=Pet::where('customer_id',$user->customer_id)->where('name','Luna')->firstOrFail();
         $this->portalAs('cliente')
+            ->assertSee(route('portal.pet',$pet),false)
+            ->assertDontSee('Pagamentos anteriores');
+        $this->get(route('portal.pet',$pet))->assertOk()
             ->assertSee('Contratar para Bento')
-            ->assertSee(route('proposals.create',['pet_id'=>$pet->id]),false)
-            ->assertSee('Histórico de uso (1)')
-            ->assertSee('Pagamentos anteriores (2)');
+            ->assertSee(route('proposals.create',['pet_id'=>$pet->id]),false);
+        $plan=$luna->subscriptions()->where('category','health_plan')->firstOrFail();
+        $this->get(route('portal.pet',$luna))->assertOk()->assertSee(route('portal.plan',[$luna,$plan]),false);
+        $this->get(route('portal.plan',[$luna,$plan]))->assertOk()->assertSee('Histórico de uso (1)');
+        $this->get(route('portal.invoices'))->assertOk()->assertSee('Pagamentos anteriores');
         $this->get(route('proposals.create',['pet_id'=>$pet->id]))->assertOk();
     }
 

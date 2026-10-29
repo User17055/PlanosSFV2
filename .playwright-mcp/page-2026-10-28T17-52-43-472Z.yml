@@ -1,0 +1,29 @@
+- generic [ref=f11e1]:
+  - main [ref=f11e2]:
+    - generic [ref=f11e4]:
+      - img "São Francisco — serviços veterinários" [ref=f11e5]
+      - heading "Acesse seu espaço" [level=1] [ref=f11e6]
+      - paragraph [ref=f11e7]: Entre para acompanhar seus planos, pets e contratos.
+      - group [ref=f11e8]:
+        - generic "Contas de demonstração" [ref=f11e9] [cursor=pointer]
+      - generic [ref=f11e12]:
+        - generic [ref=f11e13]:
+          - text: E-mail
+          - textbox "E-mail" [active] [ref=f11e14]:
+            - /placeholder: seu@email.com
+        - generic [ref=f11e15]:
+          - text: Senha
+          - generic [ref=f11e16]:
+            - textbox "Senha Mostrar senha" [ref=f11e17]:
+              - /placeholder: Digite sua senha
+            - button "Mostrar senha" [ref=f11e18] [cursor=pointer]: Mostrar
+        - generic [ref=f11e19] [cursor=pointer]:
+          - checkbox "Continuar conectado neste dispositivo" [ref=f11e20]
+          - generic [ref=f11e21]: Continuar conectado neste dispositivo
+        - button "Entrar" [ref=f11e22] [cursor=pointer]
+      - generic [ref=f11e23]:
+        - text: Ainda não tem conta?
+        - link "Crie uma agora." [ref=f11e24] [cursor=pointer]:
+          - /url: http://127.0.0.1:8765/cadastro
+      - generic [ref=f11e25]: Acesso protegido aos seus dados e contratos.
+  - status

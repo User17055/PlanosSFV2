@@ -17,12 +17,6 @@ class CatalogController extends Controller
         return view('catalog.index',compact('products'));
     }
 
-    public function sales()
-    {
-        $products=Product::where('active',true)->whereHas('versions',fn($q)=>$q->preferredOffers())->with(['versions'=>fn($q)=>$q->preferredOffers()->with('benefitRules')])->get();
-        return view('sales',compact('products'));
-    }
-
     public function subscribe(Request $request, string $code)
     {
         $version=ProductVersion::preferredOffers()->whereHas('product',fn($q)=>$q->where('code',$code))->orderByDesc('version')->first();

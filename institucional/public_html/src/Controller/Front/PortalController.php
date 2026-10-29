@@ -15,12 +15,14 @@ class PortalController
     public function handle(Request $r): Response
     {
         $action=(string)$r->attributes->get('portal_action');
+        // O login do cliente fica na gestão; esta página não existe mais no site.
+        if ($action==='login') return new RedirectResponse($this->api->managementUrl().'/entrar',302);
         if (!$r->isMethodSafe() && !$this->csrf->isTokenValid(new CsrfToken('portal_action',(string)$r->request->get('_token')))) {
             return $this->page($r,'error',['message'=>'Sua sessão expirou. Recarregue a página e tente novamente.'],419);
         }
         try {
             $response=match($action) {
-                'home'=>$this->home($r),'login'=>$this->login($r),'signup'=>$this->signup($r),
+                'home'=>$this->home($r),'signup'=>$this->signup($r),
                 'subscribe'=>$this->subscribe($r),'logout'=>$this->logout($r),'forgot'=>$this->forgot($r),'reset'=>$this->reset($r),
                 'verify'=>$this->verify($r),'resend'=>$this->resend($r),'pet'=>$this->pet($r),
                 'postal'=>new JsonResponse($this->call($r,'GET','postal/'.$r->attributes->get('zip'),[],false)->data),
@@ -94,18 +96,6 @@ class PortalController
         if (!$r->getSession()->get('portal_token')) return $this->redirect('portal_login');
         $account=$this->call($r,'GET','me')->data;
         return $this->page($r,$account['user']['verified']?'home':'verify',['account'=>$account]);
-    }
-
-    private function login(Request $r): Response
-    {
-        if ($r->isMethod('POST')) {
-            $data=$this->call($r,'POST','login',['email'=>trim((string)$r->request->get('email')),'password'=>(string)$r->request->get('password')],false)->data;
-            $this->establish($r,$data);
-            if ($pending=$r->getSession()->remove('portal_verification')) return $this->redirect('portal_verify',$pending);
-            $code=$r->getSession()->get('portal_plan_code');
-            return $code && $data['user']['verified']?$this->redirect('portal_subscribe',['code'=>$code]):$this->redirect('portal_home');
-        }
-        return $this->page($r,'login');
     }
 
     private function catalog(Request $r): array { return $this->call($r,'GET','catalog',[],false)->data['offers']??[]; }

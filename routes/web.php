@@ -4,8 +4,8 @@ use App\Http\Controllers\{AuthController, CatalogController, ContractController,
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/',fn(Request $r)=>$r->user()?redirect()->route($r->user()->role==='customer'?'portal':'dashboard'):app(CatalogController::class)->sales())->middleware(\App\Http\Middleware\CaptureAcquisition::class)->name('home');
-Route::get('/planos',[CatalogController::class,'sales'])->middleware(\App\Http\Middleware\CaptureAcquisition::class)->name('sales');
+Route::get('/',fn(Request $r)=>$r->user()?redirect()->route($r->user()->role==='customer'?'portal':'dashboard'):redirect()->route('login'))->name('home');
+Route::get('/planos',fn()=>redirect()->away(config('site_portal.public_url').'/planos-saude/'))->middleware(\App\Http\Middleware\CaptureAcquisition::class)->name('sales');
 Route::get('/contratar/{code}',[CatalogController::class,'subscribe'])->middleware(\App\Http\Middleware\CaptureAcquisition::class)->name('sales.subscribe');
 Route::get('/enderecos/cep/{zip}',\App\Http\Controllers\PostalAddressController::class)->middleware('throttle:30,1')->name('addresses.postal');
 Route::get('/planos/{version}/contrato',[CatalogController::class,'offeredContract'])->middleware('throttle:30,1')->name('sales.contract');
@@ -28,6 +28,10 @@ Route::middleware(['auth','active'])->group(function () {
     Route::get('/verificar-email/{user}/{hash}',[RegistrationController::class,'verify'])->middleware(['signed','throttle:6,1','role:customer'])->name('verification.verify');
     Route::post('/verificar-email',[RegistrationController::class,'resend'])->middleware(['throttle:3,1','role:customer'])->name('verification.resend');
     Route::get('/portal',PortalController::class)->middleware('role:customer')->name('portal');
+    Route::get('/meus-pets/{pet}',[PortalController::class,'pet'])->middleware('role:customer')->name('portal.pet');
+    Route::get('/meus-pets/{pet}/planos/{subscription}',[PortalController::class,'plan'])->middleware('role:customer')->name('portal.plan');
+    Route::get('/faturas',[PortalController::class,'invoices'])->middleware('role:customer')->name('portal.invoices');
+    Route::get('/faturas/{invoice}/abrir',[PortalController::class,'openInvoice'])->middleware(['role:customer','throttle:30,1'])->name('portal.invoice.open');
     Route::post('/assinaturas/{subscription}/pagamento',\App\Http\Controllers\CheckoutController::class)->middleware(['role:customer','throttle:6,1'])->name('subscriptions.checkout');
     Route::get('/convite/{token}',[ProposalController::class,'publicProposal'])->middleware('throttle:30,1')->name('sales.proposal');
     Route::get('/propostas',[ProposalController::class,'index'])->name('proposals.index');
@@ -46,6 +50,8 @@ Route::middleware(['auth','active'])->group(function () {
     Route::post('/clientes/{customer}/editar',[CustomerController::class,'update'])->middleware('role:central_admin,manager,sales,customer')->name('customers.update');
     Route::get('/pets/{pet}/editar',[CustomerController::class,'editPet'])->middleware('role:central_admin,manager,sales,customer')->name('pets.edit');
     Route::post('/pets/{pet}/editar',[CustomerController::class,'updatePet'])->middleware('role:central_admin,manager,sales,customer')->name('pets.update');
+    Route::get('/pets/{pet}/foto',[CustomerController::class,'petPhoto'])->middleware('role:central_admin,manager,sales,customer')->name('pets.photo');
+    Route::post('/pets/{pet}/foto',[CustomerController::class,'storePetPhoto'])->middleware(['role:central_admin,manager,sales,customer','throttle:10,1'])->name('pets.photo.store');
     Route::post('/assinaturas/{subscription}/solicitar-cancelamento',[ProposalController::class,'requestCancellation'])->middleware(['role:customer','throttle:5,1'])->name('subscriptions.request-cancellation');
 
     Route::middleware('role:central_admin,manager,sales,operator,finance')->group(function () {

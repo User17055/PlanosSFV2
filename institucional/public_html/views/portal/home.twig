@@ -2,7 +2,6 @@
 {% import 'portal/_helpers.twig' as ui %}
 {% block title %}Meu espaço{% endblock %}
 {% block content %}
-{% if account.demo %}<div class="demo-bar">Ambiente demonstrativo · Os pagamentos reais estão desabilitados.</div>{% endif %}
 <div class="dashboard-heading"><div><span class="eyebrow">SEU ESPAÇO DE CUIDADO</span><h1>Olá, {{account.user.name|split(' ')|first}}<span class="heading-dot">.</span></h1><p>Vamos acompanhar quem faz sua vida mais feliz.</p></div><a class="button button-primary" href="{{path('web_planos')}}">Contratar um plano <span aria-hidden="true">→</span></a></div>
 <nav class="dashboard-nav" aria-label="Seções da área do cliente"><a href="#meus-planos">Meus planos</a><a href="#meus-pagamentos">Pagamentos</a><a href="#meus-pets">Meus pets</a></nav>
 {% if account.financial.status=='blocked' %}<div class="notice notice-error"><strong>Há pagamentos vencidos.</strong><p>Os benefícios ficam bloqueados até a confirmação da regularização. <a href="#meus-pagamentos">Consultar pagamentos</a>.</p></div>{% elseif account.financial.status=='pending' %}<div class="notice notice-info"><strong>Seus pagamentos estão em conferência.</strong><p>A liberação dos benefícios depende da confirmação financeira e das condições de cada contrato.</p></div>{% endif %}

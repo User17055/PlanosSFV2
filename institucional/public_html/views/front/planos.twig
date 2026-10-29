@@ -42,7 +42,7 @@
           <h3>{{item.title|striptags}}</h3>
           <div class="box-info-plano">
             {% if item.offer|default(null) %}
-              <div class="assinatura-price">R$ {{(item.offer.price_cents / 100)|number_format(2, ',', '.')}}<span class="assinatura-ciclo">{{{'monthly':'/mês','annual':'/ano','one_time':' à vista'}[item.offer.billing_cycle]|default(' ' ~ item.offer.billing_cycle)}}</span>{% if item.offer.enrollment_fee_cents %}<small>Adesão: R$ {{(item.offer.enrollment_fee_cents / 100)|number_format(2, ',', '.')}}</small>{% endif %}{% if item.offer.demo %}<small>Disponível para demonstração local.</small>{% endif %}</div>
+              <div class="assinatura-price">R$ {{(item.offer.price_cents / 100)|number_format(2, ',', '.')}}<span class="assinatura-ciclo">{{{'monthly':'/mês','annual':'/ano','one_time':' à vista'}[item.offer.billing_cycle]|default(' ' ~ item.offer.billing_cycle)}}</span>{% if item.offer.enrollment_fee_cents %}<small>Adesão: R$ {{(item.offer.enrollment_fee_cents / 100)|number_format(2, ',', '.')}}</small>{% endif %}</div>
             {% endif %}
             <div class="assinatura-card-action">
               {% if item.subscription_url %}

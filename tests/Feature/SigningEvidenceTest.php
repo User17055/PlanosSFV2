@@ -99,7 +99,7 @@ class SigningEvidenceTest extends TestCase
         $this->actingAs($this->owner)->get(route('proposals.selfie',$proposal))->assertForbidden();
         $this->actingAs($this->admin)->postJson(route('proposals.regenerate-contract',$proposal))->assertOk()->assertJsonPath('ready',true);
         Notification::assertSentOnDemandTimes(ContractCopy::class,1);
-        $this->actingAs($this->owner)->get(route('portal'))->assertOk()->assertSee('Baixar contrato');
+        $this->actingAs($this->owner)->get(route('portal.pet',$proposal->pet_id))->assertOk()->assertSee('Baixar contrato');
     }
 
     public function test_link_proposal_is_emailed_to_customer(): void
