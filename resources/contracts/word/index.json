@@ -1,26 +1,30 @@
 {
-    "9024cce03af6a5debb64d1f0f9228bdcc52347ae3ea172f9267acdbef91d96e8": {
-        "source": "PLANO SUPER ECONOMICO.docx",
-        "source_sha256": "150d4bcf1697556b8ea0d8e25f5fa3c3176eb57cc2081833277745f62ae73f71",
-        "docx_sha256": "465f0d5133c0dc831ff81b436e91879328538b71b7baca67ea32f092c1b2cc29",
-        "text_sha256": "52187fc17283d81192d9f36a93fb0cff2a72940348dc706ff716471856bffbfe"
-    },
-    "50b2b623ef5d883dfb64d56ffbb1cacf331f10ebec60d116a66cc5eaca5f33ef": {
+    "adec08cd6f34e057066b6df092523934037ca8c9189fa56d6085f0f10f8dcb35": {
         "source": "PLANO ECONOMICO.docx",
         "source_sha256": "38b2449125d96378eff3b77d8b55d0118a83daca13e11e6f44dbdaca8c0ae576",
-        "docx_sha256": "afe230915f22d615a1b435c1409a39bacd191b4ce137eb7e85b8da5d623d2dad",
-        "text_sha256": "efd09cb21ca0746944332211437370247cd3ca25dd26dc9303490667e0f0824a"
+        "docx_sha256": "f8d55323dad34902413d93a38f5d7b5bb6fd6040eb9ce39fee34e5d4142485a0",
+        "text_sha256": "b8bfa5231c1f56b881e9fde00e9751a2abbec3e8df098137720320e889b2d542",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026)."
     },
-    "fb5bd38892044668ad1ea3b343d2dbb36df59bcdd48122527d1b19335876df84": {
+    "8ba435958ff6b6510025c8f223ace75bc4f39893e5f5b1f69b7267f37270cf67": {
         "source": "PLANO ESSENCIAL.docx",
         "source_sha256": "95f725e8d61bc5ed8f4b849c52ba50a9a985242712f0615eaad3ae55ee4ff3ad",
-        "docx_sha256": "4dd6ec857002e0e12dc3fee7a480bddd6184b7f61d946ad89579727299709556",
-        "text_sha256": "f9303cb21213b10782dd9898440a0e8f55f22117740ea4472f61a1f803250a72"
+        "docx_sha256": "141251cba20fb46faa9f2b3ea9b7faccf97000964d4faca4c93de1835a27e38c",
+        "text_sha256": "866f94664c3b28650b20dc5dd89a4338350c15a197d7963d68a9bfca58871f19",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026)."
     },
-    "2f8173c0d1c4cb9cd460cff40c3290c82753acf1e6b0a33828a17f9a82ce4e94": {
+    "cf2f6f998d0fc27b13ab0d530bf6a7622711590b41501acebb479c41fb65670b": {
         "source": "PLANO PRIME.docx",
         "source_sha256": "a15773521bf2f255891610297040d7e7f56972a0d48ddd16ec3bee582990210d",
-        "docx_sha256": "6da5cd6534677f219adfe6d57c117eb07ec277338de20f510bc9eff6d9a92ca0",
-        "text_sha256": "94e7fc6fb979707c6ae45a3fd74205cdd1f81bafb6636de4857b06161f69f0a9"
+        "docx_sha256": "14b3a3ace3cd24b35efcffb894158eae9b76d8d6f674999888a8fd1893ac1a30",
+        "text_sha256": "c689ff1eefc878dda4c38a555d86e66d7c23ed4f92661faed522567760132861",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026)."
+    },
+    "a7efd7a124cffe5582916671d9cd690c68280a99d65d547b5dd9edad8024536c": {
+        "source": "PLANO SUPER ECONOMICO.docx",
+        "source_sha256": "150d4bcf1697556b8ea0d8e25f5fa3c3176eb57cc2081833277745f62ae73f71",
+        "docx_sha256": "1117916a2dd463addaa2f827dbe57ce62a298577f2d2ca04afe52123293f84c2",
+        "text_sha256": "0f77498512c3ad8649116f138843ae2c9c18350c4ba01dbf23652a11b0b99a16",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026)."
     }
 }

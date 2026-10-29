@@ -6,6 +6,7 @@ use App\Models\ContractDocument;
 use App\Models\Subscription;
 use App\Notifications\ContractCopy;
 use App\Services\Domain\ActivationService;
+use App\Services\Domain\Fingerprint;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Http\UploadedFile;
@@ -22,7 +23,7 @@ class ContractService
     {
         $directory=storage_path('app/private/contract-reviews');
         if(!is_dir($directory)) mkdir($directory,0700,true);
-        $key=hash('sha256','review-word-v1|'.json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        $key=hash('sha256','review-word-v1|'.Fingerprint::json($snapshot));
         $path=$directory.'/'.$key.'.pdf';
         if(is_file($path) && filemtime($path)>time()-7200 && str_starts_with($bytes=file_get_contents($path),'%PDF-')) return $bytes;
         $bytes=app(OriginalWordContract::class)->pdf($snapshot);
@@ -71,7 +72,7 @@ class ContractService
             $method=$proposal->signature_method;
         }
         $evidence['accepted_at'] ??= now()->toIso8601String();
-        $evidence['snapshot_sha256'] = hash('sha256', json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        $evidence['snapshot_sha256'] = Fingerprint::sha256($snapshot);
         $signatureImage = $this->signatureImage($evidence['signature_data'] ?? $evidence['signature_image'] ?? null);
         unset($evidence['signature_image']);
         if ($signatureImage) {

@@ -15,7 +15,7 @@ foreach(App\Services\Contracts\HealthPlanInstaller::PLANS as $slug=>$_) {
     $hash=hash_file('sha256',$temporary);
     if (is_file($directory.'/'.$hash.'.docx')) unlink($temporary);
     else rename($temporary,$directory.'/'.$hash.'.docx');
-    $key=hash('sha256',json_encode($layout,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+    $key=App\Services\Domain\Fingerprint::sha256($layout);
     $index[$key]=['source'=>$layout['source'],'source_sha256'=>hash_file('sha256',$input),'docx_sha256'=>$hash,'text_sha256'=>$layout['template_sha256']];
     echo $slug.': '.count($fields).' campos preparados'.PHP_EOL;
 }

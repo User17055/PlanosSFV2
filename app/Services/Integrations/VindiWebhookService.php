@@ -5,7 +5,6 @@ namespace App\Services\Integrations;
 use App\Jobs\ProcessVindiWebhookJob;
 use App\Models\IntegrationEvent;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -35,7 +34,9 @@ class VindiWebhookService
         // When no provider event ID exists, deduplicate exact bodies only. A newer
         // notification for the same invoice is allowed and triggers a fresh GET.
         $key = 'vindi:'.$account.':'.hash('sha256', $externalId ? 'id:'.$externalId : 'body:'.$fingerprint);
-        $event = DB::transaction(fn () => IntegrationEvent::firstOrCreate(['idempotency_key' => $key], [
+        // No surrounding transaction: when a copy loses the race for the unique key, firstOrCreate reads the
+        // winner again, and inside a MySQL transaction that read would still use the snapshot without it.
+        $event = IntegrationEvent::firstOrCreate(['idempotency_key' => $key], [
             'provider' => 'vindi', 'provider_account' => $account,
             'external_event_id' => $externalId === null ? null : substr((string) $externalId, 0, 191),
             'event_type' => $type, 'entity_type' => $bill ? 'invoice' : ($subscription ? 'subscription' : null),
@@ -44,7 +45,7 @@ class VindiWebhookService
             'payload' => ['type' => $type, 'bill_id' => $bill, 'subscription_id' => $subscription,
                 'provider_created_at' => data_get($payload, 'event.created_at'), 'body_sha256' => $fingerprint],
             'status' => 'pending', 'received_at' => now(),
-        ]));
+        ]);
         if ($event->status === 'pending' || $event->status === 'error') {
             ProcessVindiWebhookJob::dispatch($event->id)->afterCommit();
         }
