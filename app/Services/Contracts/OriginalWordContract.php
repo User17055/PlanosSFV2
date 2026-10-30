@@ -125,10 +125,21 @@ class OriginalWordContract
                         if (!$size) { $size=$xml->createElementNS($run->namespaceURI,'w:sz'); $properties->appendChild($size); }
                         $size->setAttributeNS($run->namespaceURI,'w:val','16');
                     }
+                    // No Windows o Word insere a imagem e a página de evidência; no Linux elas entram no DOCX antes do LibreOffice converter.
+                    if (PHP_OS_FAMILY!=='Windows') $this->embedSigning($zip,$xml,$xp,$line,$context);
                 }
                 $zip->addFromString('word/document.xml',$xml->saveXML()); $zip->close();
             }
-            if (PHP_OS_FAMILY!=='Windows') throw new \RuntimeException('Configure a conversão nativa de Word para PDF neste servidor. O contrato não será reconstruído em HTML.');
+            if (PHP_OS_FAMILY!=='Windows') {
+                $this->convertWithLibreOffice($input,$directory);
+                $bytes=is_file($output)?file_get_contents($output):'';
+                if (!str_starts_with($bytes,'%PDF-')) throw new \RuntimeException('O LibreOffice não produziu um PDF válido.');
+                if (!$fill) {
+                    if (!is_dir(dirname($cache))) mkdir(dirname($cache),0700,true);
+                    file_put_contents($cache,$bytes,LOCK_EX);
+                }
+                return $bytes;
+            }
             $lock=fopen(storage_path('app/private/word-conversion.lock'),'c');
             if (!flock($lock,LOCK_EX|LOCK_NB)) { fclose($lock); throw new \RuntimeException('Conversor do Word ocupado. Tente novamente em instantes.'); }
             try {
@@ -169,5 +180,79 @@ class OriginalWordContract
             if(is_dir($directory)) rmdir($directory);
         }
     }
-}
 
+    private const W_NS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+    /** Converte o DOCX já preenchido em PDF com o LibreOffice (um por vez, com perfil próprio e prazo de 90 s). */
+    private function convertWithLibreOffice(string $input,string $directory): void
+    {
+        $home=storage_path('app/private/lo-home');
+        if (!is_dir($home)) mkdir($home,0700,true);
+        $lock=fopen(storage_path('app/private/word-conversion.lock'),'c');
+        if (!flock($lock,LOCK_EX|LOCK_NB)) { fclose($lock); throw new \RuntimeException('Conversor do Word ocupado. Tente novamente em instantes.'); }
+        try {
+            if((int)ini_get('max_execution_time')>0 && (int)ini_get('max_execution_time')<120) set_time_limit(120);
+            $process=new Process([config('plans.libreoffice_bin','soffice'),'--headless','--norestore','--nolockcheck','-env:UserInstallation=file://'.$home.'/profile',
+                '--convert-to','pdf:writer_pdf_Export','--outdir',$directory,$input],null,['HOME'=>$home]);
+            $process->setTimeout(90); $process->mustRun();
+        } finally { flock($lock,LOCK_UN); fclose($lock); }
+    }
+
+    /** Assinatura desenhada no campo do contratante e, ao final, a página com o registro da assinatura eletrônica. */
+    private function embedSigning(ZipArchive $zip,DOMDocument $xml,DOMXPath $xp,\DOMNode $line,array $context): void
+    {
+        $this->ensureContentTypes($zip);
+        $rels=(string)$zip->getFromName('word/_rels/document.xml.rels'); $n=1;
+        $addImage=function(string $bytes,string $ext) use($zip,&$rels,&$n): ?array {
+            $size=@getimagesizefromstring($bytes); if (!$size) return null;
+            $id='rIdSf'.$n; $name='sf'.($n++).'.'.$ext;
+            $zip->addFromString('word/media/'.$name,$bytes);
+            $rels=str_replace('</Relationships>','<Relationship Id="'.$id.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'.$name.'"/></Relationships>',$rels);
+            return ['id'=>$id,'w'=>$size[0],'h'=>$size[1]];
+        };
+        if (!empty($context['signature_image'])) {
+            $png=base64_decode(substr($context['signature_image'],22),true);
+            if ($png!==false && ($img=$addImage($png,'png'))) {
+                $width=220; $height=(int)round($width*$img['h']/$img['w']); if ($height>70) { $height=70; $width=(int)round($height*$img['w']/$img['h']); }
+                $first=$xp->query('w:r',$line)->item(0);
+                $line->insertBefore($this->pictureRun($xml,$img['id'],$width,$height,901),$first);
+                $line->insertBefore($this->fragment($xml,'<w:r><w:br/></w:r>'),$first);
+            }
+        }
+        if (!empty($context['evidence_lines'])) {
+            $body=$xp->query('//w:body')->item(0); $end=$xp->query('w:sectPr',$body)->item(0);
+            $add=fn(string $text,int $size,bool $bold,int $after)=>$body->insertBefore($this->fragment($xml,'<w:p><w:pPr><w:spacing w:before="0" w:after="'.$after.'"/></w:pPr><w:r><w:rPr>'.($bold?'<w:b/>':'').'<w:sz w:val="'.$size.'"/></w:rPr><w:t xml:space="preserve">'.htmlspecialchars($text,ENT_XML1|ENT_QUOTES,'UTF-8').'</w:t></w:r></w:p>'),$end);
+            $body->insertBefore($this->fragment($xml,'<w:p><w:r><w:br w:type="page"/></w:r></w:p>'),$end);
+            $lines=array_values($context['evidence_lines']);
+            for ($i=0;$i<3;$i++) $add('',18,false,0);
+            foreach ($lines as $i=>$text) $i===0 ? $add($text,22,true,200) : $add($text,18,false,60);
+            if (!empty($context['selfie_jpeg']) && ($img=$addImage($context['selfie_jpeg'],'jpg'))) {
+                $paragraph=$body->insertBefore($this->fragment($xml,'<w:p/>'),$end);
+                $paragraph->appendChild($this->pictureRun($xml,$img['id'],120,(int)round(120*$img['h']/$img['w']),902));
+            }
+        }
+        $zip->addFromString('word/_rels/document.xml.rels',$rels);
+    }
+
+    private function fragment(DOMDocument $xml,string $inner): \DOMNode
+    {
+        $fragment=$xml->createDocumentFragment();
+        if (!$fragment->appendXML(preg_replace('/^<(w:\w+)/','<$1 xmlns:w="'.self::W_NS.'"',$inner,1))) throw new \RuntimeException('Não foi possível montar a assinatura no Word.');
+        return $fragment;
+    }
+
+    private function pictureRun(DOMDocument $xml,string $rid,int $widthPx,int $heightPx,int $id): \DOMNode
+    {
+        $cx=$widthPx*9525; $cy=$heightPx*9525;
+        return $this->fragment($xml,'<w:r xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'.$cx.'" cy="'.$cy.'"/><wp:docPr id="'.$id.'" name="Imagem '.$id.'"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'.$id.'" name="img'.$id.'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'.$rid.'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'.$cx.'" cy="'.$cy.'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>');
+    }
+
+    private function ensureContentTypes(ZipArchive $zip): void
+    {
+        $types=(string)$zip->getFromName('[Content_Types].xml'); $changed=false;
+        foreach (['png'=>'image/png','jpg'=>'image/jpeg'] as $ext=>$mime) {
+            if (stripos($types,'Extension="'.$ext.'"')===false) { $types=preg_replace('/(<Types[^>]*>)/','$1<Default Extension="'.$ext.'" ContentType="'.$mime.'"/>',$types,1); $changed=true; }
+        }
+        if ($changed) $zip->addFromString('[Content_Types].xml',$types);
+    }
+}

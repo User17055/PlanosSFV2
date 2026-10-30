@@ -17,8 +17,12 @@ Route::middleware('guest')->group(function () {
     Route::get('/cadastro',[RegistrationController::class,'create'])->name('register');
     Route::post('/cadastro',[RegistrationController::class,'store'])->middleware('throttle:5,1')->name('register.store');
 });
+// A Vindi verifica o endereço ao cadastrar o webhook: responder 200 a uma consulta simples (sem dados) e 202 a um ping sem evento.
+Route::match(['get','head'],'/webhooks/vindi',fn()=>response()->json(['ok'=>true]))->middleware('throttle:60,1');
 Route::post('/webhooks/vindi',function(Request $request) {
-    $event=app(\App\Services\Integrations\VindiWebhookService::class)->receive($request);
+    $request->headers->set('Accept','application/json');
+    try { $event=app(\App\Services\Integrations\VindiWebhookService::class)->receive($request); }
+    catch (\Illuminate\Validation\ValidationException) { return response()->json(['received'=>false,'ignored'=>'sem evento reconhecível'],202); }
     return response()->json(['received'=>true,'event_id'=>$event->id],202);
 })->middleware('throttle:120,1')->name('webhooks.vindi');
 

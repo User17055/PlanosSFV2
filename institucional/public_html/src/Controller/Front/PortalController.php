@@ -91,11 +91,10 @@ class PortalController
         $r->getSession()->set('portal_token',$data['token']);
     }
 
+    // A área do cliente fica na gestão (planos, faturas e pets); o site cuida só da contratação.
     private function home(Request $r): Response
     {
-        if (!$r->getSession()->get('portal_token')) return $this->redirect('portal_login');
-        $account=$this->call($r,'GET','me')->data;
-        return $this->page($r,'home',['account'=>$account]);
+        return new RedirectResponse($this->api->managementUrl().'/portal',302);
     }
 
     private function existingLoginUrl(Request $r,array $data): string

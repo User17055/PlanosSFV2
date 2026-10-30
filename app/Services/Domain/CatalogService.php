@@ -33,8 +33,9 @@ class CatalogService
                 if (! in_array($rule->period_type, ['calendar_month', 'monthly_cycle', 'contract_year', 'lifetime'], true) || ($rule->quantity_limit !== null && $rule->quantity_limit < 1)) {
                     throw new DomainException('BENEFIT_RULE_INVALID', 'Regra de limite ou renovação não implementada.', 422);
                 }
-                if ($rule->coverage_type !== 'included' || $rule->copay_cents > 0 || $rule->requires_authorization) {
-                    throw new DomainException('BENEFIT_FLOW_PENDING', 'Desconto, coparticipação e autorização adicional exigem fluxo aprovado antes de publicar.', 422);
+                // Descontos e autorizações são informativos (valem no sistema Tudo pra Pet / na unidade); aqui o uso desses benefícios segue bloqueado pelo EligibilityService.
+                if ($rule->copay_cents > 0) {
+                    throw new DomainException('BENEFIT_FLOW_PENDING', 'Coparticipação exige fluxo aprovado antes de publicar.', 422);
                 }
             }
             $v->update(['published_at' => now(), 'published_by' => $actor->id, 'status' => 'published']);

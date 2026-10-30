@@ -72,7 +72,7 @@ class PortalTest extends TestCase
     public function test_customer_pages_render_without_a_cms_database_connection(): void
     {
         $this->browser->request('GET','/area-do-cliente');
-        self::assertSame('/area-do-cliente/entrar',$this->browser->getResponse()->headers->get('Location'));
+        self::assertSame('https://gestao.test/portal',$this->browser->getResponse()->headers->get('Location'));
         $this->browser->request('GET','/area-do-cliente/entrar');
         self::assertSame(302,$this->browser->getResponse()->getStatusCode());
         self::assertSame('https://gestao.test/entrar',$this->browser->getResponse()->headers->get('Location'));
@@ -117,33 +117,23 @@ class PortalTest extends TestCase
         self::assertStringNotContainsString('SecretPassword@2026',$html);
     }
 
-    public function test_dashboard_and_private_pdf_are_served_by_the_institutional_site(): void
+    public function test_customer_home_lives_in_the_management_area_and_the_private_pdf_stays_on_the_site(): void
     {
         $this->login(); $this->browser->request('GET','/area-do-cliente');
-        $html=$this->browser->getResponse()->getContent();
-        self::assertStringContainsString('Meus planos e contratos',$html);
-        self::assertStringContainsString('Lua',$html);
-        self::assertStringNotContainsString(str_repeat('a',64),$html);
+        self::assertSame(302,$this->browser->getResponse()->getStatusCode());
+        self::assertSame('https://gestao.test/portal',$this->browser->getResponse()->headers->get('Location'));
         $this->browser->request('GET','/area-do-cliente/contratacoes/1/conferencia.pdf');
         self::assertSame('application/pdf',$this->browser->getResponse()->headers->get('Content-Type'));
         self::assertStringStartsWith('%PDF-',$this->browser->getResponse()->getContent());
         self::assertStringContainsString('no-store',$this->browser->getResponse()->headers->get('Cache-Control'));
     }
 
-    public function test_unverified_customer_sees_confirmation_screen_instead_of_history(): void
-    {
-        $this->api->verified=false;
-        $this->login(); $this->browser->request('GET','/area-do-cliente');
-        self::assertStringContainsString('Confirme seu e-mail.',$this->browser->getResponse()->getContent());
-        self::assertStringNotContainsString('Meus planos e contratos',$this->browser->getResponse()->getContent());
-    }
-
     public function test_logout_revokes_upstream_token_and_clears_institutional_session(): void
     {
         $this->login();
-        $csrf=$this->csrf('/area-do-cliente');
+        $csrf=$this->csrf('/area-do-cliente/email-confirmado');
         $this->browser->request('POST','/area-do-cliente/sair',['_token'=>$csrf]);
-        $this->browser->request('GET','/area-do-cliente');
+        $this->browser->request('GET','/area-do-cliente/contratacoes/1/conferencia.pdf');
         self::assertSame('/area-do-cliente/entrar',$this->browser->getResponse()->headers->get('Location'));
         self::assertCount(1,array_filter($this->api->calls,fn($c)=>$c['path']==='logout'));
     }

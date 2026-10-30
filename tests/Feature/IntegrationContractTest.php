@@ -86,6 +86,15 @@ class IntegrationContractTest extends TestCase
         $this->assertDatabaseCount('payments', 0);
     }
 
+    public function test_webhook_address_answers_the_providers_verification_with_2xx(): void
+    {
+        $auth = ['HTTP_AUTHORIZATION' => 'Basic '.base64_encode('integration:'.str_repeat('a', 32))];
+        $this->get('/webhooks/vindi')->assertOk();
+        $this->postJson('/webhooks/vindi', ['event' => ['type' => 'test', 'data' => []]])->assertStatus(401);
+        $this->call('POST', '/webhooks/vindi', [], [], [], $auth + ['CONTENT_TYPE' => 'application/json'], '')->assertStatus(202)->assertJsonPath('received', false);
+        $this->call('POST', '/webhooks/vindi', [], [], [], $auth + ['CONTENT_TYPE' => 'application/json'], json_encode(['event' => ['type' => 'test', 'data' => []]]))->assertStatus(202)->assertJsonPath('received', true);
+    }
+
     public function test_provider_response_not_webhook_status_controls_payment(): void
     {
         $subscription = $this->subscription();
