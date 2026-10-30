@@ -1653,3 +1653,20 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 @media(prefers-reduced-motion:reduce){.auth-card .field:has(input[aria-invalid=true]) :is(input,.password-field){animation:none}}
 
 .auth-card .auth-note{margin:0 0 16px;padding:11px 14px;border-radius:10px;background:#e7f3f6;color:#0b4f7d;font-size:14px;font-weight:500;text-align:center}
+
+/* Aviso de e-mail pendente no portal: sem borda e com o botão de reenviar em destaque */
+.portal-email-notice{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:0;border-left:0;border-radius:14px;background:#e7f3f6;box-shadow:none}
+.portal-email-notice>.icon{flex:none;color:#0b5988}
+.portal-email-notice .portal-email-text{flex:1 1 220px;display:flex;flex-direction:column;gap:2px;color:#14264b;font-size:14px}
+.portal-email-notice .portal-email-text strong{font-size:15px}
+.portal-email-notice form{margin:0}
+.portal-email-notice .button{min-height:42px;padding:0 20px;font-weight:700}
+@media(max-width:520px){.portal-email-notice form,.portal-email-notice .button{width:100%}}
+
+/* Proposta assinada, aguardando pagamento e validação */
+.portal-pet-pending{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:8px 0 0;font-size:14px;color:var(--text-2)}
+.portal-pet-pending-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#fff4dc;color:#7a5200;font-size:12.5px;font-weight:700}
+.portal-awaiting{padding:20px;border:1px solid #f0dca8;background:#fffaf0}
+.portal-awaiting h3{margin:10px 0 6px;font-size:20px;color:var(--text)}.portal-awaiting p{margin:0 0 14px;color:var(--text-2);font-size:14.5px;line-height:1.55}
+.portal-awaiting-pay{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px}.portal-awaiting-pay>span{font-size:22px;font-weight:700;color:var(--text)}.portal-awaiting-pay small{font-size:13px;font-weight:400;color:var(--text-3)}
+@media(max-width:520px){.portal-awaiting-pay .button{width:100%}}

@@ -41,6 +41,7 @@ class PortalController extends Controller
     {
         abort_unless($pet->customer_id===$request->user()->customer_id && $subscription->pet_id===$pet->id,404);
         $data=$this->careData($request,$eligibility,$financial);
+        abort_unless($data['customer']->subscriptions->contains('id',$subscription->id),404);
         return view('portal.plan',$data+['pet'=>$data['customer']->pets->firstWhere('id',$pet->id),'subscription'=>$data['customer']->subscriptions->firstWhere('id',$subscription->id)]);
     }
 
@@ -58,6 +59,10 @@ class PortalController extends Controller
             'subscriptions.usages'=>fn($q)=>$q->where('status','consumed')->with(['benefitRule','servicingFranchise','reversals'])->latest('consumed_at'),
             'proposals'=>fn($q)=>$q->latest('id'),'proposals.productVersion','proposals.pet','invoices.subscription.pet','invoices.subscription.productVersion'])->findOrFail($request->user()->customer_id);
         $financialState=$financial->customerStatus($customer);
+        // Contratação ainda sem o primeiro pagamento não aparece em Meu cuidado: fica pendente em Faturas até ser paga.
+        $paid=fn($subscription)=>$subscription->activated_at || $customer->invoices->contains(fn($invoice)=>$invoice->subscription_id===$subscription->id && $invoice->is_initial && $invoice->status==='paid');
+        $pendingSubscriptions=$customer->subscriptions->reject(fn($subscription)=>$subscription->isTerminal() || $paid($subscription))->values();
+        $customer->setRelation('subscriptions',$customer->subscriptions->filter($paid)->values());
         $activeSubscriptions=$customer->subscriptions->reject(fn($subscription)=>$subscription->isTerminal());
         // Pets com cuidado vigente primeiro; a ordem alfabética vale dentro de cada grupo.
         $customer->setRelation('pets',$customer->pets->sortBy(fn($pet)=>$activeSubscriptions->contains('pet_id',$pet->id)?0:1)->values());
@@ -73,7 +78,7 @@ class PortalController extends Controller
         [$openInvoices,$pastInvoices]=$this->splitInvoices($customer);
         $pendingProposals=$customer->proposals->filter(fn($proposal)=>in_array($proposal->status,['draft','awaiting_acceptance'],true) && !$proposal->locked_at && $proposal->expires_at?->isFuture())->values();
         $unit=$activeSubscriptions->pluck('originatingFranchise')->filter()->first(fn($franchise)=>$franchise->code!=='CENTRAL');
-        return compact('customer','financialState','benefits','notices','openInvoices','pastInvoices','pendingProposals','activeSubscriptions','unit','money','date','ageLabel');
+        return compact('customer','financialState','benefits','notices','openInvoices','pastInvoices','pendingProposals','activeSubscriptions','pendingSubscriptions','unit','money','date','ageLabel');
     }
 
     public function invoices(Request $request,FinancialService $financial)

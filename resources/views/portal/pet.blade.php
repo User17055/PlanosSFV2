@@ -8,6 +8,7 @@ $petInvoices=$openInvoices->filter(fn($invoice)=>data_get($invoice,'subscription
 $overdueCents=$petInvoices->filter(fn($invoice)=>$invoice->due_at->isPast())->sum(fn($invoice)=>$invoice->outstanding_cents);
 $nextInvoice=$petInvoices->first();
 $species=['dog'=>'Cão','cat'=>'Gato'][$pet->species] ?? $pet->species;
+$awaiting=$pendingSubscriptions->where('pet_id',$pet->id)->values();
 @endphp
 <section class="portal-hero pet-hero-nav{{ $pet->photo_path ? ' has-art' : '' }}">
 @if($pet->photo_path)<span class="pet-hero-art"><img src="{{ route('pets.photo',[$pet,'v'=>$pet->updated_at?->timestamp]) }}" alt="Foto de {{ $pet->name }}"></span>@else<div class="pet-hero-photo"><span class="pet-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($pet->name,0,1)) }}</span></div>@endif
@@ -34,10 +35,16 @@ $species=['dog'=>'Cão','cat'=>'Gato'][$pet->species] ?? $pet->species;
 
 <section class="portal-section" aria-labelledby="pet-plans-title"><h2 class="portal-section-title" id="pet-plans-title">{{ $current->count()>1?'Planos contratados':'Plano contratado' }}</h2>
 <div class="pet-plans">
+@foreach($awaiting as $waiting)@php $waitingInvoice=$openInvoices->first(fn($invoice)=>$invoice->subscription_id===$waiting->id); @endphp
+<article class="card portal-awaiting"><span class="portal-pet-pending-chip">Aguardando validação da proposta</span><h3>{{ $waiting->productVersion->name }}</h3>
+<p>Contrato assinado em {{ $date($waiting->proposal?->accepted_at ?? $waiting->created_at) }}. O plano é validado e ativado quando o pagamento da 1ª parcela for confirmado e o e-mail for confirmado.</p>
+@if($waitingInvoice)<div class="portal-awaiting-pay"><span>{{ $money($waitingInvoice->outstanding_cents) }} <small>1ª parcela</small></span>@if($waitingInvoice->payment_url)<a class="button button-primary" href="{{ route('portal.invoice.open',$waitingInvoice) }}" target="_blank" rel="noopener">Pagar agora</a>@else<a class="button button-primary" href="{{ route('portal.invoices') }}">Ver fatura</a>@endif</div>@endif
+</article>
+@endforeach
 @foreach($current as $subscription)
 @include('portal.plan-card')
 @endforeach
-@if($current->isEmpty())<div class="portal-pet-empty"><strong>{{ $pet->name }} ainda não tem um plano.</strong><p>Escolha o cuidado ideal para ele e contrate em poucos minutos.</p><a class="button button-primary button-small portal-pet-cta" href="{{ route('proposals.create',['pet_id'=>$pet->id]) }}">@include('components.icon',['name'=>'plus']) Contratar para {{ $pet->name }}</a></div>@endif
+@if($current->isEmpty() && $awaiting->isEmpty())<div class="portal-pet-empty"><strong>{{ $pet->name }} ainda não tem um plano.</strong><p>Escolha o cuidado ideal para ele e contrate em poucos minutos.</p><a class="button button-primary button-small portal-pet-cta" href="{{ route('proposals.create',['pet_id'=>$pet->id]) }}">@include('components.icon',['name'=>'plus']) Contratar para {{ $pet->name }}</a></div>@endif
 </div>
 @if($history->isNotEmpty())<details class="card portal-disclosure pet-history"><summary>Planos encerrados ({{ $history->count() }})</summary><ul class="portal-list">@foreach($history as $subscription)@php $finalDocument=$subscription->contractDocuments->where('status','valid')->where('kind','final_contract')->sortByDesc('version')->first(); @endphp<li><div><a href="{{ route('portal.plan',[$pet,$subscription]) }}"><strong>{{ $subscription->productVersion->name }}</strong></a><small>{{ $subscription->cancelled_at?'Encerrado em '.$date($subscription->cancelled_at):($subscription->ends_at?'Encerrado em '.$date($subscription->ends_at):'Encerrado') }}</small></div>@if($finalDocument)<a class="text-link" href="{{ route('contracts.download',$finalDocument) }}">@include('components.icon',['name'=>'download']) Contrato</a>@endif</li>@endforeach</ul></details>@endif
 </section>

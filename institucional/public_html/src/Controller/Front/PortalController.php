@@ -27,6 +27,8 @@ class PortalController
                 'verify'=>$this->verify($r),'resend'=>$this->resend($r),'resendmail'=>$this->resendMail($r),'confirmed'=>$this->page($r,'confirmed',['ok'=>false,'login_url'=>$this->api->managementUrl().'/entrar']),'pet'=>$this->pet($r),'check'=>$this->check($r),
                 'postal'=>new JsonResponse($this->call($r,'GET','postal/'.$r->attributes->get('zip'),[],false)->data),
                 'proposal'=>$this->proposal($r),'review'=>$this->pdf($r,'proposals/'.$r->attributes->get('id').'/pdf'),
+                'reviewpage'=>$this->image($r,'proposals/'.$r->attributes->get('id').'/pages/'.$r->attributes->get('page')),
+                'docpage'=>$this->image($r,'documents/'.$r->attributes->get('id').'/pages/'.$r->attributes->get('page')),
                 'document'=>$this->pdf($r,'documents/'.$r->attributes->get('id')),
                 'accept'=>$this->accept($r),'generate'=>$this->generate($r),'checkout'=>$this->payment($r,'subscriptions','checkout'),
                 'invoice'=>$this->payment($r,'invoices','payment'),'cancel'=>$this->cancel($r),
@@ -259,6 +261,14 @@ class PortalController
         $auto=(int)$r->getSession()->get('portal_checkout_after_signing')===(int)($p['id']??0) && !empty($p['can_checkout']);
         if ($auto) $r->getSession()->remove('portal_checkout_after_signing');
         return $this->page($r,'proposal',['proposal'=>$p,'auto_checkout'=>$auto]);
+    }
+
+    private function image(Request $r,string $path): Response
+    {
+        @set_time_limit(140);
+        $result=$this->call($r,'GET',$path,[],true,true);
+        if (!str_starts_with($result->body,"\xFF\xD8\xFF")) throw new PortalApiException(new PortalResult(503,['message'=>'A página do contrato está em preparação. Tente novamente.']));
+        return new Response($result->body,200,['Content-Type'=>'image/jpeg']);
     }
 
     private function pdf(Request $r,string $path): Response

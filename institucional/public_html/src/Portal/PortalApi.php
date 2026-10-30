@@ -34,7 +34,7 @@ class PortalApi
         }
         $url=$base.'/'.ltrim($path,'/');
         if ($method==='GET' && $data) $url.='?'.http_build_query($data,'','&',PHP_QUERY_RFC3986);
-        $headers=['Accept: '.($pdf?'application/pdf':'application/json'),'X-Site-Key: '.$this->settings['key']];
+        $headers=['Accept: '.($pdf?'application/pdf, image/jpeg':'application/json'),'X-Site-Key: '.$this->settings['key']];
         if ($token && preg_match('/^[a-f0-9]{64}$/D',$token)) $headers[]='Authorization: Bearer '.$token;
         if (filter_var($context['ip']??'',FILTER_VALIDATE_IP)) $headers[]='X-Portal-IP: '.$context['ip'];
         $agent=preg_replace('/[\r\n\x00-\x1f]/',' ',(string)($context['agent']??''));
@@ -60,7 +60,7 @@ class PortalApi
         $success=curl_exec($handle); $status=(int)curl_getinfo($handle,CURLINFO_RESPONSE_CODE);
         unset($handle);
         if ($success===false || $status<200 || $status>=500 || ($status>=300 && $status<400)) return new PortalResult(503,['message'=>'Não foi possível concluir a conexão. Seus dados já salvos permanecem preservados. Tente novamente em instantes.']);
-        if ($pdf && $status===200 && str_starts_with($body,'%PDF-')) return new PortalResult(200,[],$body);
+        if ($pdf && $status===200 && (str_starts_with($body,'%PDF-') || str_starts_with($body,"\xFF\xD8\xFF"))) return new PortalResult(200,[],$body);
         $json=json_decode($body,true);
         if (!is_array($json)) return new PortalResult(503,['message'=>'Não foi possível concluir a conexão. Tente novamente em instantes.']);
         return new PortalResult($status,$json);

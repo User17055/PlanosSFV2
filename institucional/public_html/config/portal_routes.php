@@ -21,6 +21,8 @@ return static function(RoutingConfigurator $routes): void {
         'confirmed'=>['/area-do-cliente/email-confirmado','confirmed',['GET']],
         'proposal'=>['/area-do-cliente/contratacoes/{id}','proposal',['GET']],
         'review'=>['/area-do-cliente/contratacoes/{id}/conferencia.pdf','review',['GET']],
+        'reviewpage'=>['/area-do-cliente/contratacoes/{id}/conferencia/{page}.jpg','reviewpage',['GET']],
+        'docpage'=>['/area-do-cliente/documentos/{id}/pagina/{page}.jpg','docpage',['GET']],
         'accept'=>['/area-do-cliente/contratacoes/{id}/assinar','accept',['POST']],
         'generate'=>['/area-do-cliente/contratacoes/{id}/gerar-contrato','generate',['POST']],
         'document'=>['/area-do-cliente/documentos/{id}','document',['GET']],
@@ -30,6 +32,6 @@ return static function(RoutingConfigurator $routes): void {
     ];
     foreach($paths as $name=>[$path,$action,$methods]) {
         $routes->add('portal_'.$name,$path)->controller($controller)->defaults(['portal_action'=>$action])
-            ->requirements(['id'=>'[1-9][0-9]*','user'=>'[1-9][0-9]*','hash'=>'[a-f0-9]{40}','code'=>'[A-Za-z0-9_-]+','zip'=>'[0-9]{8}'])->methods($methods);
+            ->requirements(['id'=>'[1-9][0-9]*','user'=>'[1-9][0-9]*','hash'=>'[a-f0-9]{40}','code'=>'[A-Za-z0-9_-]+','zip'=>'[0-9]{8}','page'=>'[1-9][0-9]*'])->methods($methods);
     }
 };

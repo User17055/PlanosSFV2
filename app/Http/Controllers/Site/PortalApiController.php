@@ -7,7 +7,7 @@ use App\Models\{CancellationRequest,ContractDocument,Customer,Franchise,Invoice,
 use App\Notifications\PortalVerifyEmail;
 use App\Services\{CustomerAddress};
 use App\Services\Attribution\CustomerAcquisition;
-use App\Services\Contracts\{ContractService,SigningEvidence};
+use App\Services\Contracts\{ContractService,PdfPages,SigningEvidence};
 use App\Services\Domain\{Audit,EligibilityService,FinancialService,ProposalService};
 use App\Services\Integrations\{IntegrationPendingException,VindiCheckoutService};
 use Illuminate\Auth\Events\PasswordReset;
@@ -260,16 +260,23 @@ class PortalApiController extends Controller
         return response()->json(['id'=>$p->id],201);
     }
 
-    public function proposal(Request $r,Proposal $proposal,ProposalService $service,VindiCheckoutService $checkout)
+    public function proposal(Request $r,Proposal $proposal,ProposalService $service,VindiCheckoutService $checkout,ContractService $contracts,PdfPages $pages)
     {
         $this->verified($r); $this->owns($r,$proposal);
         $proposal=$service->refreshForReview($proposal);
         $s=$proposal->subscription;
         $doc=$s?->documents()->where('kind','final_contract')->where('status','valid')->latest('version')->first();
+        // Páginas como imagem (celular não abre PDF dentro da página); se a conversão falhar, o site cai para o PDF.
+        $reviewPages=null; $documentPages=null;
+        try {
+            if (!$proposal->accepted_at) $reviewPages=$pages->render($contracts->reviewPdf($proposal->snapshot))['count'];
+            elseif ($doc) $documentPages=$pages->render(Storage::disk(config('integrations.contracts.disk','local'))->get($doc->storage_path))['count'];
+        } catch(\Throwable $e) { Log::warning('portal.contract_pages_pending',['proposal_id'=>$proposal->id,'error_type'=>$e::class]); }
         return response()->json(['id'=>$proposal->id,'number'=>$proposal->number,'name'=>$proposal->productVersion->name,'pet_name'=>$proposal->pet->name,
             'signer_name'=>$proposal->customer->name,'price_cents'=>$proposal->price_cents,'billing_cycle'=>$proposal->productVersion->billing_cycle,
             'fingerprint'=>$service->reviewFingerprint($proposal),'accepted'=>(bool)$proposal->accepted_at,'expires_at'=>$proposal->expires_at->toIso8601String(),
             'available'=>!$proposal->locked_at && $proposal->expires_at->isFuture() && $proposal->productVersion->isOffered() && in_array($proposal->status,['draft','awaiting_acceptance'],true),
+            'review_pages'=>$reviewPages,'document_pages'=>$documentPages,
             'subscription_id'=>$s?->id,'document_id'=>$doc?->id,'can_checkout'=>$s?$checkout->available($s):false,
             'payment_methods'=>collect($checkout->paymentMethods())->map(fn($label,$code)=>['code'=>$code,'label'=>$label,'card'=>str_contains($code,'credit_card')])->values(),
             'payment_method'=>$s?->payment_method_code]+$this->nextBilling($proposal));
@@ -294,6 +301,27 @@ class PortalApiController extends Controller
         DB::table('portal_tokens')->where('id',$r->attributes->get('portal_token_id'))->update([
             'review_proposal_id'=>$proposal->id,'review_fingerprint'=>$service->reviewFingerprint($proposal),'reviewed_at'=>now()]);
         return response($bytes)->header('Content-Type','application/pdf')->header('Content-Disposition','inline; filename="contrato-para-conferencia.pdf"');
+    }
+
+    /** Uma página do contrato para conferência, como JPEG. Ver a última página conta como contrato conferido (igual a abrir o PDF). */
+    public function reviewPage(Request $r,Proposal $proposal,int $page,ProposalService $service,ContractService $contracts,PdfPages $pages)
+    {
+        $this->verified($r); $this->owns($r,$proposal);
+        $proposal=$service->refreshForReview($proposal);
+        $set=$pages->render($contracts->reviewPdf($proposal->snapshot));
+        abort_unless($page>=1 && $page<=$set['count'],404);
+        if ($page===$set['count']) DB::table('portal_tokens')->where('id',$r->attributes->get('portal_token_id'))->update([
+            'review_proposal_id'=>$proposal->id,'review_fingerprint'=>$service->reviewFingerprint($proposal),'reviewed_at'=>now()]);
+        return response()->file($pages->path($set['key'],$page),['Content-Type'=>'image/jpeg','Cache-Control'=>'private, no-store']);
+    }
+
+    public function documentPage(Request $r,ContractDocument $document,int $page,ContractService $contracts,PdfPages $pages)
+    {
+        $this->verified($r); $this->owns($r,$document->subscription);
+        abort_unless($document->kind==='final_contract' && $document->status==='valid' && $contracts->verifyIntegrity($document),404);
+        $set=$pages->render(Storage::disk(config('integrations.contracts.disk','local'))->get($document->storage_path));
+        abort_unless($page>=1 && $page<=$set['count'],404);
+        return response()->file($pages->path($set['key'],$page),['Content-Type'=>'image/jpeg','Cache-Control'=>'private, no-store']);
     }
 
     public function accept(Request $r,Proposal $proposal,ProposalService $service,ContractService $contracts,SigningEvidence $signing)
