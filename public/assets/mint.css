@@ -1670,3 +1670,31 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .portal-awaiting h3{margin:10px 0 6px;font-size:20px;color:var(--text)}.portal-awaiting p{margin:0 0 14px;color:var(--text-2);font-size:14.5px;line-height:1.55}
 .portal-awaiting-pay{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px}.portal-awaiting-pay>span{font-size:22px;font-weight:700;color:var(--text)}.portal-awaiting-pay small{font-size:13px;font-weight:400;color:var(--text-3)}
 @media(max-width:520px){.portal-awaiting-pay .button{width:100%}}
+
+/* Cartão do pet: texto simples em vez de bolinhas com fundo e borda */
+.portal-pet-tags{gap:2px 0}
+.portal-pet-tags li{padding:0;border-radius:0;background:none;font-size:13px;color:var(--text-2)}
+.portal-pet-tags li+li::before{content:"·";margin:0 8px;color:var(--text-3);font-weight:700}
+.portal-pet-pending-chip{padding:0;border-radius:0;background:none;font-size:13px;color:#9a6200}
+.portal-pet-pending-chip::before{content:"";display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;background:#f0a000;vertical-align:1px}
+.portal-pet-link .portal-pet-status{padding:0;border-radius:0;background:none;font-size:13px}
+.portal-pet-link .portal-pet-status.is-active{background:none;color:#3f5f12}
+.portal-pet-link .portal-pet-status.is-overdue{background:none;color:#b3261e}
+.portal-pet-link .portal-pet-foot{margin-top:6px}
+.portal-pet-info .portal-pet-tags{gap:2px 0}
+.portal-pet-info .portal-pet-tags li{padding:0;font-size:13px;background:none}
+.portal-pet-info .portal-pet-tags li+li::before{margin:0 7px}
+
+/* Títulos grandes e divertidos (Bricolage Grotesque); o resto do texto segue em Poppins */
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:200 800;font-stretch:75% 100%;font-display:swap;src:url('brand/bricolage-grotesque.woff2') format('woff2')}
+.admin-body:has(.sidebar-customer) :is(h1,h2),.public-body :is(h1,h2){font-family:'Bricolage Grotesque','Poppins',sans-serif;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.auth-card h1{font-size:40px}
+.auth-layout .auth-visual h2{font-size:clamp(38px,4.2vw,58px)}
+.admin-body:has(.sidebar-customer) .portal-hero h1{font-size:clamp(34px,4.2vw,52px)}
+.admin-body:has(.sidebar-customer) .portal-section-title{font-size:28px}
+@media(max-width:520px){.auth-card h1{font-size:34px}.admin-body:has(.sidebar-customer) .portal-hero h1{font-size:32px}}
+
+.portal-awaiting-doc{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-weight:600}
+
+/* Sem foto: o desenho do gato ou do cachorro no lugar da letra */
+.pet-avatar-species{display:block;object-fit:contain;object-position:center bottom;padding:4px;border-radius:50%;background:#e4f0cc}

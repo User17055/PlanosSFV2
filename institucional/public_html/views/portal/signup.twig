@@ -6,20 +6,20 @@
 {% import 'portal/_helpers.twig' as ui %}
 {% import 'portal/_ben-icon.twig' as bi %}
 {% set oldpets = old.pets|default([]) %}
-<div class="contratacao-hero{{offer ? ' com-foto'}}"><span class="eyebrow">UM NOVO CAPÍTULO DE CUIDADO</span><h1>Vamos cuidar do seu melhor amigo.</h1><p>{{offer.informational|default(false) ? 'Conte quem vai receber esse cuidado. A contratação deste plano será liberada em breve e você será avisado.' : 'Conte quem vai receber esse cuidado. Depois, você confere o contrato antes de assinar.'}}</p>
+<div class="contratacao-hero{{offer ? ' com-foto'}}"><span class="eyebrow">UM NOVO CAPÍTULO DE CUIDADO</span><h1>Vamos cuidar do seu melhor amigo.</h1><p>Cadastre, assine e pague. Rápido e seguro.</p>
 {% if offer %}<div class="contratacao-hero-foto"><img src="{{asset('imgs/banner-cao-4.png')}}" alt=""></div>{% endif %}</div>
-<ol class="journey" aria-label="Etapas da contratação"><li class="current" aria-current="step"><span>1</span> Cadastro</li><li><span>2</span> Contrato e assinatura</li><li><span>3</span> Pagamento e ativação</li></ol>
+<ol class="journey" aria-label="Etapas da contratação"><li class="current" aria-current="step"><span>1</span> Cadastro</li><li><span>2</span> Contrato</li><li><span>3</span> Pagamento</li></ol>
 <div class="portal-columns contratacao"><section class="panel contratacao-form"><form method="post" action="{{offer ? path('portal_subscribe',{'code':offer.code}) : path('portal_signup')}}" class="portal-form" data-postal-url="{{path('portal_postal',{'zip':'00000000'})}}" data-check-url="{{path('portal_check')}}" data-wizard data-price="{{offer.price_cents|default(0)}}" data-cycle="{{offer ? ui.cycle(offer.billing_cycle) : ''}}"><input type="hidden" name="_token" value="{{csrf}}">
 <ol class="wiz-progress" aria-label="Passos do cadastro"><li class="is-active"><span>1</span> Seus pets</li><li><span>2</span> Seus dados</li>{% if offer %}<li><span>3</span> Benefícios</li>{% endif %}</ol>
 
 <section class="wiz-step is-active" data-step="1" aria-labelledby="wiz-t1">
-<div class="section-heading"><span class="section-number">1</span><div><h2 id="wiz-t1">Quem vai receber esse cuidado?</h2><p>Comece pelo nome do seu pet. Cada plano é individual, de um pet só.</p></div></div>
+<div class="section-heading"><span class="section-number">1</span><div><h2 id="wiz-t1">Qual o nome do seu pet?</h2><p>Cada plano é de um pet só.</p></div></div>
 <div data-pets>{% for p in (oldpets|length ? oldpets : [{}]) %}{{ w.pet_block(loop.index0, p) }}{% endfor %}</div>
 <div class="wiz-nav"><button type="button" class="button button-primary" data-next hidden>Prosseguir</button></div>
 </section>
 
 <section class="wiz-step" data-step="2" aria-labelledby="wiz-t2">
-<div class="section-heading"><span class="section-number">2</span><div><h2 id="wiz-t2">Agora, seus dados</h2><p>Quem vai acompanhar cada etapa desse cuidado.</p></div></div>
+<div class="section-heading"><span class="section-number">2</span><div><h2 id="wiz-t2">Seus dados</h2><p>Para o contrato e o seu acesso.</p></div></div>
 <div class="form-grid"><label class="span-2">Nome completo <span>*</span><input name="name" required minlength="3" maxlength="180" autocomplete="name" value="{{old.name|default('')}}"></label>
 <label>CPF <span>*</span><input name="document" required inputmode="numeric" maxlength="14" autocomplete="off" value="{{old.document|default('')}}"></label><label>RG<input name="rg" maxlength="40" value="{{old.rg|default('')}}"></label>
 <label>E-mail <span>*</span><input name="email" type="email" required maxlength="180" autocomplete="email" value="{{old.email|default('')}}"></label><label>Celular <span>*</span><input name="phone" type="tel" required maxlength="30" autocomplete="tel" value="{{old.phone|default('')}}"></label></div>
@@ -31,7 +31,7 @@
 <h3 class="wiz-sub">Seu acesso</h3>
 <div class="form-grid"><label>Crie uma senha <span>*</span><input name="password" type="password" required minlength="12" autocomplete="new-password"><small>Use pelo menos 12 caracteres.</small></label><label>Confirme a senha <span>*</span><input name="password_confirmation" type="password" required minlength="12" autocomplete="new-password"></label>
 <label>Como conheceu a São Francisco?<select name="acquisition_source"><option value="">Prefiro não informar</option><option value="direct">Já conheço a clínica</option><option value="referral">Indicação</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="google">Google</option><option value="other">Outro</option></select></label><label>Quem indicou? <span class="optional">(opcional)</span><input name="referrer_name" maxlength="180" value="{{old.referrer_name|default('')}}"></label></div>
-{% if not offer %}<label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos dados informados para meu cadastro. O cadastro não representa assinatura de contrato nem autorização de marketing.</span></label>{% endif %}
+{% if not offer %}<label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos meus dados para o cadastro.</span></label>{% endif %}
 <div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>Voltar</button>{% if offer %}<button type="button" class="button button-primary" data-next hidden>Prosseguir</button>{% else %}<button class="button button-primary" data-busy="Salvando seu cadastro...">Criar meu acesso</button>{% endif %}</div>
 </section>
 
@@ -39,14 +39,14 @@
 {% set inclusos = offer.benefits|filter(b => b.coverage_type|default('') != 'discount') %}
 {% set descontos = offer.benefits|filter(b => b.coverage_type|default('') == 'discount') %}
 <section class="wiz-step" data-step="3" aria-labelledby="wiz-t3">
-<div class="section-heading"><span class="section-number">3</span><div><h2 id="wiz-t3">Tudo certo! Veja o que você vai ter</h2><p>Confira os benefícios de <strong data-pet-names>seu pet</strong> no {{offer.name}}.</p></div></div>
+<div class="section-heading"><span class="section-number">3</span><div><h2 id="wiz-t3">Confira seu plano</h2><p>Benefícios de <strong data-pet-names>seu pet</strong>.</p></div></div>
 <div class="wiz-resumo"><div><small>Plano</small><strong>{{offer.name}}</strong></div><div><small data-pet-count>1 pet</small><strong data-total>{{ui.money(offer.price_cents)}}<span>{{ui.cycle(offer.billing_cycle)}}</span></strong></div></div>
 <div class="wiz-bloco"><h3>Incluso no plano</h3><ul class="wiz-lista">{% for benefit in inclusos %}<li><span class="ben-ico">{{bi.ico(benefit.name, false)}}</span><span class="ben-txt"><strong>{{benefit.name}}</strong> <small>{{ui.benefit_tag(benefit)}}</small></span></li>{% endfor %}</ul></div>
 {% if descontos|length %}<div class="wiz-bloco"><h3>Descontos</h3><ul class="wiz-lista">{% for benefit in descontos %}<li><span class="ben-ico">{{bi.ico(benefit.name, true)}}</span><span class="ben-txt"><strong>{{benefit.name}}</strong> <small>{{ui.benefit_tag(benefit)}}</small></span></li>{% endfor %}</ul></div>{% endif %}
 <div class="wiz-tpp"><img class="wiz-tpp-logo" src="{{asset('imgs/tpp-logo.svg')}}" alt="Tudo pra Pet" width="174" height="30"><strong>Preços exclusivos na Tudo pra Pet</strong><p>Quem tem plano São Francisco também tem acesso a preços exclusivos na Tudo pra Pet, para cuidar do seu pet em casa.</p></div>
-<ol class="wiz-proximos"><li>{{offer.informational|default(false) ? 'Salvamos seu cadastro.' : 'Você lê o contrato e assina.'}}</li><li>{{offer.informational|default(false) ? 'Quando a contratação abrir, avisamos você.' : 'Em seguida, faz o pagamento pela Vindi.'}}</li><li>Pronto: o plano é ativado.</li></ol>
-<label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos dados informados para meu cadastro e a contratação dos serviços São Francisco. O cadastro não representa assinatura do contrato nem autorização de marketing.</span></label>
-<div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>Voltar</button><button class="button button-primary" data-busy="Salvando seu cadastro...">{{offer.informational|default(false) ? 'Finalizar cadastro' : 'Ler e assinar o contrato'}}</button></div>
+<ol class="wiz-proximos"><li>{{offer.informational|default(false) ? 'Salvamos seu cadastro.' : 'Leia e assine.'}}</li><li>{{offer.informational|default(false) ? 'Avisamos quando abrir.' : 'Pague.'}}</li><li>Confirme seu e-mail. Plano ativo!</li></ol>
+<label class="checkbox-label"><input type="checkbox" name="privacy_accepted" value="1" required><span>Autorizo o uso dos meus dados para o cadastro e a contratação.</span></label>
+<div class="wiz-nav"><button type="button" class="button button-secondary" data-back hidden>Voltar</button><button class="button button-primary" data-busy="Salvando seu cadastro...">{{offer.informational|default(false) ? 'Finalizar cadastro' : 'Ler e assinar'}}</button></div>
 </section>
 {% endif %}
 

@@ -1,5 +1,5 @@
 @php $initial=$subscription->invoices->firstWhere('is_initial',true); @endphp
-@if($subscription->productVersion->billing_cycle==='monthly' && $initial?->status!=='paid' && !$subscription->isTerminal())@php $schedule=app(\App\Services\Domain\BillingSchedule::class); $next=$schedule->firstRecurringBilling($subscription->proposal->accepted_at ?? now()); @endphp<p class="fine-print">A entrada paga agora é a 1ª parcela. A próxima fatura será gerada em {{ $next->format('d/m/Y') }}, com vencimento até {{ $schedule->dueDate($next)->format('d/m/Y') }}; as seguintes, todo dia {{ $next->format('d') }}.</p>@endif
+@if($subscription->productVersion->billing_cycle==='monthly' && $initial?->status!=='paid' && !$subscription->isTerminal())<p class="fine-print">Pague a 1ª parcela para ativar o plano.</p>@endif
 @if($initial?->status==='paid')
 <p>Pagamento confirmado. Acompanhe a ativação e as carências no portal.</p>
 @elseif(in_array($initial?->status,['cancelled','refunded','disputed'],true) || $subscription->isTerminal())

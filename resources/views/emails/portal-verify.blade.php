@@ -19,13 +19,13 @@
   </td></tr>
   <tr><td style="padding:30px 32px 8px;">
     <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0b1936;">Olá, {{ $name }}!</h1>
-    <p style="margin:0 0 8px;font-size:16px;line-height:1.6;color:#33465f;">Falta só um passo: confirme seu e-mail para ativar seu plano e acompanhar os cuidados do seu pet.</p>
+    <p style="margin:0 0 8px;font-size:16px;line-height:1.6;color:#33465f;">Confirme seu e-mail para ativar o plano.</p>
   </td></tr>
   <tr><td align="center" style="padding:18px 32px 10px;">
     <a href="{{ $url }}" style="display:inline-block;background:#83ac38;color:#0b1936;font-size:17px;font-weight:bold;text-decoration:none;padding:15px 34px;border-radius:12px;">Confirmar meu e-mail</a>
   </td></tr>
   <tr><td style="padding:12px 32px 4px;">
-    <p style="margin:0;font-size:14px;line-height:1.6;color:#5c6f85;text-align:center;">O link vale por <strong>1 hora</strong>. Se ele vencer, é só pedir outro na página da área do cliente.</p>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#5c6f85;text-align:center;">O link vale <strong>1 hora</strong>. Se vencer, peça outro.</p>
   </td></tr>
   <tr><td style="padding:22px 32px 8px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef6fa;border-radius:12px;"><tr><td style="padding:14px 16px;font-size:13px;line-height:1.6;color:#4f6b7d;">

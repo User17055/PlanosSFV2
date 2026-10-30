@@ -255,3 +255,21 @@
 @media(max-width:560px){.pay-panel{padding:18px 16px}.pay-head h2{font-size:21px}.pay-total strong{font-size:28px}}
 .pay-panel .pay-button,.pay-panel .pay-button:visited{background:#83ac38;color:#0b1936;border-color:#83ac38}
 .pay-panel .pay-button:hover,.pay-panel .pay-button:focus-visible{background:#6f9a2c;color:#0b1936;border-color:#6f9a2c}
+/* Títulos grandes e divertidos (Bricolage Grotesque); o resto do texto segue em Poppins */
+@font-face{font-family:'Bricolage Grotesque';src:url('../fonts/bricolage-grotesque.woff2') format('woff2');font-weight:200 800;font-stretch:75% 100%;font-display:swap}
+html body :is(h1,h2),html body :is(.offer-price,.pay-total strong){font-family:'Bricolage Grotesque',Poppins,Arial,sans-serif;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+html body .contratacao-hero h1{font-size:clamp(40px,6vw,68px)}
+html body .section-heading h2{font-size:clamp(28px,3.4vw,38px)}
+html body .pay-head h2{font-size:clamp(28px,4vw,38px)}
+html body .signed-state h2{font-size:clamp(30px,4vw,40px)}
+html body .offer-card-head h2{font-size:30px}
+html body .offer-price{font-size:38px}
+html body .pay-total strong{font-size:44px}
+@media(max-width:560px){
+html body .contratacao-hero h1{font-size:32px}
+html body .section-heading h2{font-size:26px}
+html body .pay-head h2{font-size:26px}
+html body .offer-card-head h2{font-size:26px}
+html body .offer-price{font-size:32px}
+html body .pay-total strong{font-size:36px}
+}

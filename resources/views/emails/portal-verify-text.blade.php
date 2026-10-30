@@ -1,6 +1,6 @@
 Olá, {{ $name }}!
 
-Falta só um passo: confirme seu e-mail para ativar seu plano e acompanhar os cuidados do seu pet.
+Confirme seu e-mail para ativar o plano.
 
 Confirmar meu e-mail:
 {{ $url }}

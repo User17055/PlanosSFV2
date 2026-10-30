@@ -11,7 +11,7 @@ $species=['dog'=>'Cão','cat'=>'Gato'][$pet->species] ?? $pet->species;
 $awaiting=$pendingSubscriptions->where('pet_id',$pet->id)->values();
 @endphp
 <section class="portal-hero pet-hero-nav{{ $pet->photo_path ? ' has-art' : '' }}">
-@if($pet->photo_path)<span class="pet-hero-art"><img src="{{ route('pets.photo',[$pet,'v'=>$pet->updated_at?->timestamp]) }}" alt="Foto de {{ $pet->name }}"></span>@else<div class="pet-hero-photo"><span class="pet-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($pet->name,0,1)) }}</span></div>@endif
+@if($pet->photo_path)<span class="pet-hero-art"><img src="{{ route('pets.photo',[$pet,'v'=>$pet->updated_at?->timestamp]) }}" alt="Foto de {{ $pet->name }}"></span>@else<div class="pet-hero-photo"><img class="pet-avatar pet-avatar-species" src="{{ asset('assets/brand/pet-'.($pet->species==='cat'?'gato':'cao').'.png') }}" alt="" width="88" height="88"></div>@endif
 @if($pet->birth_date)<span class="pet-birth-corner">Nasc. {{ $pet->birth_date->format('d/m/Y') }}</span>@endif
 <div class="portal-hero-text">
 <span class="portal-hero-eyebrow"><span class="eyebrow-label">Seu pet</span>@if($pet->birth_date)<span class="pet-hero-birth"><span class="eyebrow-label"> · </span>Nasc. {{ $pet->birth_date->format('d/m/Y') }}</span>@endif</span>
@@ -28,17 +28,18 @@ $awaiting=$pendingSubscriptions->where('pet_id',$pet->id)->values();
 @if($overdueCents>0)
 <a class="pet-pay-strip is-overdue" href="{{ route('portal.invoices') }}"><strong>Em atraso · {{ $money($overdueCents) }}</strong><span>Regularize para liberar os benefícios de {{ $pet->name }}.</span><b>Ver faturas</b></a>
 @elseif($nextInvoice)
-<a class="pet-pay-strip is-open" href="{{ route('portal.invoices') }}"><strong>Próxima fatura · {{ $money($nextInvoice->outstanding_cents) }}</strong><span>Vence em {{ $date($nextInvoice->due_at) }}.</span><b>Ver faturas</b></a>
+@if($nextInvoice->is_initial)<a class="pet-pay-strip is-open" href="{{ route('portal.invoices') }}"><strong>Pagamento pendente · {{ $money($nextInvoice->outstanding_cents) }}</strong><span>Pague para ativar o plano de {{ $pet->name }}.</span><b>Pagar</b></a>@else<a class="pet-pay-strip is-open" href="{{ route('portal.invoices') }}"><strong>Próxima fatura · {{ $money($nextInvoice->outstanding_cents) }}</strong><span>Vence em {{ $date($nextInvoice->due_at) }}.</span><b>Ver faturas</b></a>@endif
 @else
 <a class="pet-pay-strip is-ok" href="{{ route('portal.invoices') }}"><strong>Pagamentos em dia</strong><span>Nenhuma fatura em aberto para {{ $pet->name }}.</span><b>Ver faturas</b></a>
 @endif
 
 <section class="portal-section" aria-labelledby="pet-plans-title"><h2 class="portal-section-title" id="pet-plans-title">{{ $current->count()>1?'Planos contratados':'Plano contratado' }}</h2>
 <div class="pet-plans">
-@foreach($awaiting as $waiting)@php $waitingInvoice=$openInvoices->first(fn($invoice)=>$invoice->subscription_id===$waiting->id); @endphp
+@foreach($awaiting as $waiting)@php $waitingInvoice=$openInvoices->first(fn($invoice)=>$invoice->subscription_id===$waiting->id); $waitingDocument=$waiting->contractDocuments->where('status','valid')->where('kind','final_contract')->sortByDesc('version')->first(); @endphp
 <article class="card portal-awaiting"><span class="portal-pet-pending-chip">Aguardando validação da proposta</span><h3>{{ $waiting->productVersion->name }}</h3>
-<p>Contrato assinado em {{ $date($waiting->proposal?->accepted_at ?? $waiting->created_at) }}. O plano é validado e ativado quando o pagamento da 1ª parcela for confirmado e o e-mail for confirmado.</p>
-@if($waitingInvoice)<div class="portal-awaiting-pay"><span>{{ $money($waitingInvoice->outstanding_cents) }} <small>1ª parcela</small></span>@if($waitingInvoice->payment_url)<a class="button button-primary" href="{{ route('portal.invoice.open',$waitingInvoice) }}" target="_blank" rel="noopener">Pagar agora</a>@else<a class="button button-primary" href="{{ route('portal.invoices') }}">Ver fatura</a>@endif</div>@endif
+<p>Assinado em {{ $date($waiting->proposal?->accepted_at ?? $waiting->created_at) }}. Falta pagar e confirmar o e-mail.</p>
+@if($waitingInvoice)<div class="portal-awaiting-pay"><span>{{ $money($waitingInvoice->outstanding_cents) }}</span>@if($waitingInvoice->payment_url)<a class="button button-primary" href="{{ route('portal.invoice.open',$waitingInvoice) }}" target="_blank" rel="noopener">Pagar agora</a>@else<a class="button button-primary" href="{{ route('portal.invoices') }}">Ver fatura</a>@endif</div>@endif
+@if($waitingDocument)<a class="text-link portal-awaiting-doc" href="{{ route('contracts.download',$waitingDocument) }}">@include('components.icon',['name'=>'download']) Baixar contrato</a>@endif
 </article>
 @endforeach
 @foreach($current as $subscription)
