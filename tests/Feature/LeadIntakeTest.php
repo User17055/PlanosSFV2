@@ -52,16 +52,25 @@ class LeadIntakeTest extends TestCase
         $this->assertDatabaseCount('leads', 1);
     }
 
+    public function test_facebook_test_lead_with_dummy_text_is_accepted_and_marked_as_test(): void
+    {
+        $this->send(['nome' => '<test lead: dummy data for full_name>', 'telefone' => '<test lead: dummy data for phone_number>', 'lead_id' => '1434711191471404'])->assertCreated();
+        $lead = Lead::sole();
+        $this->assertSame('teste', $lead->source);
+        $this->assertNull($lead->phone);
+        $this->send(['nome' => 'Real', 'telefone' => '<sem número>'])->assertUnprocessable();
+    }
+
     public function test_staff_sees_and_updates_leads_but_customers_and_other_units_do_not(): void
     {
-        $this->send(['nome' => 'Maria Lead', 'telefone' => '18999990000'])->assertCreated();
+        $this->send(['nome' => 'Maria Lead', 'telefone' => '18999990000', 'idade_do_pet' => '3 anos'])->assertCreated();
         $lead = Lead::sole();
 
         $this->actingAs(User::factory()->create(['role' => 'customer', 'active' => true, 'email_verified_at' => now()]))->get('/leads')->assertForbidden();
         $this->actingAs(User::factory()->create(['role' => 'sales', 'active' => true]))->get('/leads')->assertOk()->assertDontSee('Maria Lead');
 
         $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
-        $this->actingAs($admin)->get('/leads')->assertOk()->assertSee('Maria Lead')->assertSee('wa.me/5518999990000', false);
+        $this->actingAs($admin)->get('/leads')->assertOk()->assertSee('Maria Lead')->assertSee('Idade do pet: 3 anos')->assertSee('wa.me/5518999990000', false);
         $this->actingAs($admin)->post('/leads/'.$lead->id, ['status' => 'contacted'])->assertRedirect();
         $this->assertSame('contacted', $lead->fresh()->status);
         $this->assertSame($admin->id, $lead->fresh()->handled_by);

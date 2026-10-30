@@ -36,8 +36,10 @@ class LeadController extends Controller
             return null;
         };
         $data = array_map($pick, array_combine(array_keys(self::ALIASES), array_keys(self::ALIASES)));
-        $data['phone'] = $data['phone'] ? preg_replace('/\D/', '', $data['phone']) : null;
-        if (! $data['phone'] && ! $data['email']) {
+        $data['phone'] = $data['phone'] ? (preg_replace('/\D/', '', $data['phone']) ?: null) : null;
+        // O teste do Facebook manda texto no lugar dos dados ("<test lead: dummy data for phone_number>"): entra marcado como teste, sem exigir contato.
+        $isTest = collect($flat)->contains(fn ($v) => str_starts_with($v, '<test lead:'));
+        if (! $isTest && ! $data['phone'] && ! $data['email']) {
             return response()->json(['received' => false, 'error' => 'Informe telefone ou e-mail do lead.'], 422);
         }
         if ($data['email'] && ! filter_var($data['email'], FILTER_VALIDATE_EMAIL)) $data['email'] = null;
@@ -61,6 +63,7 @@ class LeadController extends Controller
             'email' => $data['email'] ? mb_substr($data['email'], 0, 190) : null,
             'pet_name' => $data['pet_name'] ? mb_substr($data['pet_name'], 0, 100) : null,
             'campaign' => $data['campaign'] ? mb_substr($data['campaign'], 0, 160) : null,
+            'source' => $isTest ? 'teste' : 'facebook_lead_ads',
             'extra' => $extra ?: null,
         ]);
         return response()->json(['received' => true, 'id' => $lead->id], 201);

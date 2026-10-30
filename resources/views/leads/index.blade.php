@@ -10,7 +10,7 @@
 <div class="table-scroll"><table><thead><tr><th>Recebido</th><th>Nome</th><th>Contato</th><th>Pet</th><th>Origem</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
 @forelse($leads as $lead)<tr>
 <td>{{ $lead->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</td>
-<td><strong>{{ $lead->name }}</strong></td>
+<td><strong>{{ $lead->name }}</strong>@if($lead->source==='teste') <span class="badge badge-gray">Teste</span>@endif @foreach(array_slice($lead->extra ?? [],0,6,true) as $key=>$value)<small>{{ ucfirst(str_replace('_',' ',$key)) }}: {{ $value }}</small>@endforeach</td>
 <td>@if($lead->whatsappUrl())<a class="text-link" href="{{ $lead->whatsappUrl() }}" target="_blank" rel="noopener">@include('components.icon',['name'=>'phone']) {{ $lead->phone }}</a>@elseif($lead->phone){{ $lead->phone }}@endif @if($lead->email)<small>{{ $lead->email }}</small>@endif</td>
 <td>{{ $lead->pet_name ?? '—' }}</td>
 <td>{{ $lead->campaign ?? 'Anúncio' }}</td>
