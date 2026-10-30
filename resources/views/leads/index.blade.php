@@ -8,6 +8,7 @@ $labels=['idade_do_pet'=>'Idade do pet','especie_do_pet'=>'Espécie do pet','for
 $keep=fn(array $extra=[])=>array_filter($extra+['q'=>$q]);
 @endphp
 <div class="page-heading"><div><h1>Leads</h1><p>Quem pediu contato pelos anúncios. Chame pelo WhatsApp e marque como foi.</p></div></div>
+<nav class="workspace-nav lead-tabs" aria-label="Leads"><a class="active" aria-current="page" href="{{ route('leads.index') }}">Lista</a><a href="{{ route('leads.dashboard') }}">Painel</a></nav>
 <div class="lead-stats" role="group" aria-label="Filtrar por situação">
 <a class="lead-stat {{ !$status ? 'active' : '' }}" href="{{ route('leads.index',$keep()) }}"><strong>{{ $counts->sum() }}</strong><span>Todos</span></a>
 @foreach(\App\Models\Lead::STATUSES as $value=>$label)<a class="lead-stat lead-stat-{{ $value }} {{ $status===$value ? 'active' : '' }}" href="{{ route('leads.index',$keep(['situacao'=>$value])) }}"><strong>{{ $counts[$value] ?? 0 }}</strong><span>{{ $label }}</span></a>@endforeach

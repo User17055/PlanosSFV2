@@ -30,6 +30,7 @@ Route::post('/webhooks/leads/{token}',[\App\Http\Controllers\LeadController::cla
 
 Route::middleware(['auth','active'])->group(function () {
     Route::get('/leads',[\App\Http\Controllers\LeadController::class,'index'])->middleware('role:central_admin,manager,sales,operator,attendant')->name('leads.index');
+    Route::get('/leads/painel',[\App\Http\Controllers\LeadController::class,'dashboard'])->middleware('role:central_admin,manager,sales,operator,attendant')->name('leads.dashboard');
     Route::post('/leads/{lead}',[\App\Http\Controllers\LeadController::class,'update'])->middleware(['role:central_admin,manager,sales,operator,attendant','throttle:60,1'])->name('leads.update');
     Route::post('/leads/{lead}/excluir',[\App\Http\Controllers\LeadController::class,'destroy'])->middleware(['role:central_admin,manager','throttle:30,1'])->name('leads.destroy');
     Route::post('/sair',[AuthController::class,'logout'])->name('logout');

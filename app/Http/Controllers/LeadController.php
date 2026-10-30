@@ -87,6 +87,33 @@ class LeadController extends Controller
         return view('leads.index', compact('leads', 'counts', 'status', 'q'));
     }
 
+    /** Painel dos leads: de onde vieram, quantos a equipe chamou e quantos viraram cliente. Lead de teste fica de fora. */
+    public function dashboard(Request $request, AccessService $access)
+    {
+        $days = (int) ($request->validate(['dias' => 'nullable|in:7,30,90'])['dias'] ?? 30);
+        $start = now('America/Sao_Paulo')->startOfDay()->subDays($days - 1);
+        // shortcut: soma os leads do período em memória; troque por consultas agrupadas se um período passar de ~20 mil leads.
+        $leads = $access->scope(Lead::query(), $request->user())->where('source', '!=', 'teste')
+            ->where('created_at', '>=', $start->copy()->utc())->with('handler:id,name')
+            ->get(['id', 'status', 'campaign', 'extra', 'created_at', 'contacted_at', 'handled_by']);
+
+        $sum = fn ($group) => ['total' => $group->count(), 'called' => $group->where('status', '!=', 'new')->count(), 'converted' => $group->where('status', 'converted')->count()];
+        $breakdown = fn (callable $key) => $leads->groupBy($key)->map($sum)->sortByDesc('total');
+        $minutes = $leads->filter(fn ($lead) => $lead->contacted_at)->map(fn ($lead) => $lead->created_at->diffInMinutes($lead->contacted_at))->median();
+        $perDay = $leads->countBy(fn ($lead) => $lead->created_at->timezone('America/Sao_Paulo')->format('Y-m-d'));
+
+        return view('leads.dashboard', [
+            'days' => $days,
+            'totals' => $sum($leads) + ['waiting' => $leads->where('status', 'new')->count()],
+            'firstCall' => $minutes === null ? null : ($minutes < 60 ? round($minutes).' min' : ($minutes < 2880 ? round($minutes / 60).' h' : round($minutes / 1440).' dias')),
+            'perDay' => collect(range(0, $days - 1))->mapWithKeys(fn ($i) => [$start->copy()->addDays($i)->format('Y-m-d') => 0])->merge($perDay),
+            'campaigns' => $breakdown(fn ($lead) => $lead->campaign ?: 'Sem nome de campanha'),
+            'ads' => $leads->contains(fn ($lead) => isset($lead->extra['anuncio'])) ? $breakdown(fn ($lead) => $lead->extra['anuncio'] ?? 'Não informado') : collect(),
+            'species' => $leads->contains(fn ($lead) => isset($lead->extra['especie_do_pet'])) ? $breakdown(fn ($lead) => isset($lead->extra['especie_do_pet']) ? mb_convert_case($lead->extra['especie_do_pet'], MB_CASE_TITLE) : 'Não informado') : collect(),
+            'team' => $breakdown(fn ($lead) => $lead->handler?->name ?? '')->forget(''),
+        ]);
+    }
+
     /** Só lead de teste (o do Facebook) pode ser apagado; lead real fica no histórico. */
     public function destroy(Request $request, Lead $lead, AccessService $access)
     {

@@ -1715,6 +1715,21 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .lead-whats{margin-bottom:4px}
 .lead-actions form{display:inline-block;margin:0 10px 4px 0}
 @media(max-width:720px){.lead-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Leads: abas Lista/Painel e o painel (barras por dia e ranking de origem) */
+.workspace-nav a.active{background:var(--primary-strong);color:#fff}
+.lead-tabs{position:static}
+.lead-period{margin:-6px 0 14px}
+.lead-stat-converted strong{color:#3d7a14}
+.lead-days{display:flex;align-items:flex-end;gap:3px;height:140px}
+.lead-days span{flex:1;min-width:2px;height:max(var(--h),3px);border-radius:4px 4px 0 0;background:#14264b}
+.lead-days span:hover{background:#7cc242}
+.lead-days-axis{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--text-3)}
+.lead-breakdowns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.lead-breakdowns .card{margin:0}
+.lead-rank td small{color:var(--text-3)}
+.lead-bar{display:block;height:6px;margin-top:6px;border-radius:99px;background:#eef1f5}
+.lead-bar i{display:block;height:100%;border-radius:inherit;background:#7cc242}
+@media(max-width:900px){.lead-breakdowns{grid-template-columns:1fr}}
 
 /* Painel da equipe: os mesmos títulos grandes e divertidos da área do cliente (Bricolage Grotesque). O texto segue em Poppins. */
 html body.admin-body :is(h1,h2),html body.admin-body .metric-value,html body.admin-body .lead-stat strong{font-family:'Bricolage Grotesque','Poppins',sans-serif;font-weight:800;letter-spacing:-.02em;line-height:1.05}

@@ -61,6 +61,19 @@ class LeadAccessTest extends TestCase
         $this->actingAs($this->attendant)->get(route('leads.index'))->assertOk()->assertSee('nav-shortcuts', false)->assertSee('<b class="nav-count">1</b>', false)->assertDontSee('Falta pagar');
     }
 
+    public function test_lead_dashboard_shows_origin_and_conversion_without_test_leads(): void
+    {
+        $this->lead(['status' => 'converted', 'handled_by' => $this->attendant->id, 'contacted_at' => now()]);
+        $this->lead(['external_id' => 'x2']);
+        $this->lead(['campaign' => 'Black Friday', 'external_id' => 'x3', 'status' => 'contacted', 'extra' => ['especie_do_pet' => 'gato']]);
+        $this->lead(['name' => '<test lead: dummy data for full_name>', 'source' => 'teste', 'campaign' => 'Teste do Facebook', 'external_id' => 't1']);
+        $this->actingAs($this->attendant)->get(route('leads.dashboard'))->assertOk()
+            ->assertSee('Black Friday')->assertDontSee('Teste do Facebook')
+            ->assertSee('67%')->assertSee('33%')->assertSee('Gato')->assertSee('Ana Atendimento')
+            ->assertSee('<strong>0 min</strong>', false);
+        $this->actingAs($this->attendant)->get(route('leads.dashboard', ['dias' => 5]))->assertSessionHasErrors('dias');
+    }
+
     public function test_attendant_logs_in_straight_to_leads(): void
     {
         $this->post(route('authenticate'), ['email' => 'ana@example.test', 'password' => 'Example123!!!'])->assertRedirect(route('leads.index'));
