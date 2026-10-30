@@ -45,20 +45,25 @@
     const max = Math.max(10000, ...series.flatMap(s => [s.sold_cents, s.received_cents, s.commission_cents])) * 1.15;
     const plotH = h - top - bottom, plotW = w - left - right;
     const svg = make('svg', { viewBox: `0 0 ${w} ${h}`, 'aria-hidden': 'true' });
+    const hatch = make('pattern', { id: 'chart-hatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' });
+    hatch.append(make('line', { x1: 0, y1: 0, x2: 0, y2: 6, class: 'chart-hatch-line', 'stroke-width': 2 }));
+    const defs = make('defs');
+    defs.append(hatch);
+    svg.append(defs);
     for (let i = 0; i <= 4; i++) {
       const y = top + plotH * i / 4;
-      svg.append(make('line', { x1: left, x2: w - right, y1: y, y2: y, stroke: '#e6eaec', 'stroke-dasharray': '4 5' }));
-      svg.append(make('text', { x: left - 12, y: y + 4, 'text-anchor': 'end', fill: '#52677e', 'font-size': 10 }, money(max * (1 - i / 4))));
+      svg.append(make('line', { x1: left, x2: w - right, y1: y, y2: y, class: 'chart-grid', 'stroke-dasharray': '4 5' }));
+      svg.append(make('text', { x: left - 12, y: y + 4, 'text-anchor': 'end', class: 'chart-label', 'font-size': 10 }, money(max * (1 - i / 4))));
     }
     const slot = plotW / Math.max(1, series.length), bw = Math.min(28, slot / 5);
     series.forEach((s, index) => {
       const center = left + slot * (index + .5);
-      [['sold_cents', '#08649a'], ['received_cents', '#83ac38'], ['commission_cents', '#14264b']].forEach(([key, color], i) => {
+      ['sold_cents', 'received_cents', 'commission_cents'].forEach((key, i) => {
         const barH = Math.max(s[key] ? 2 : 0, plotH * s[key] / max);
-        const bar = make('rect', { x: center + (i - 1.5) * (bw + 4), y: top + plotH - barH, width: bw, height: barH, rx: 3, fill: color });
+        const bar = make('rect', { x: center + (i - 1.5) * (bw + 4), y: top + plotH - barH, width: bw, height: barH, rx: 3, class: `chart-bar chart-bar-${i}` });
         bar.append(make('title', {}, `${s.month}: ${money(s[key])}`)); svg.append(bar);
       });
-      svg.append(make('text', { x: center, y: h - 14, 'text-anchor': 'middle', fill: '#666', 'font-size': 11 }, s.month));
+      svg.append(make('text', { x: center, y: h - 14, 'text-anchor': 'middle', class: 'chart-label', 'font-size': 11 }, s.month));
     });
     host.replaceChildren(svg);
   }

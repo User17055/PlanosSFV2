@@ -273,3 +273,11 @@ html body .offer-card-head h2{font-size:26px}
 html body .offer-price{font-size:32px}
 html body .pay-total strong{font-size:36px}
 }
+
+/* Pagamento: passos que faltam e símbolo do PIX */
+.pay-steps{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 16px;padding:0;list-style:none}
+.pay-steps li{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#5c554d}
+.pay-steps li span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#e6dfd8;color:#0b1936;font-size:13px;font-weight:800}
+.pay-steps li.done{color:#3d5a14}.pay-steps li.done span{background:#83ac38}
+.pay-steps li.current{color:#0b1936}.pay-steps li.current span{background:#0b1936;color:#fff}
+.pay-method-pix{color:#2aa699}

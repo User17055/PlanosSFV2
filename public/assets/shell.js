@@ -54,4 +54,11 @@
     closeSidebar();
     menus.forEach(menu => { if (menu.open) { menu.open = false; menu.querySelector('summary')?.focus(); } });
   });
+  // "/" leva direto para a busca, como no campo do topo mostra.
+  document.addEventListener('keydown', event => {
+    const el = document.activeElement;
+    if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) || el?.isContentEditable) return;
+    const search = document.querySelector('.topbar-search input');
+    if (search) { event.preventDefault(); search.focus(); }
+  });
 })();

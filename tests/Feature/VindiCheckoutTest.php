@@ -152,7 +152,7 @@ class VindiCheckoutTest extends TestCase
     {
         config(['integrations.vindi.payment_methods'=>['credit_card'=>'Cartão de crédito','pix'=>'PIX','bolepix'=>'Bolepix']]);
         $this->actingAs($this->customerUser)->get(route('proposals.show',$this->subscription->proposal_id))->assertOk()
-            ->assertSee('Como você prefere pagar?')->assertSee('Bolepix')->assertSee('name="payment_method" value="pix"',false);
+            ->assertSee('Como pagar?')->assertSee('Bolepix')->assertSee('name="payment_method" value="pix"',false);
         $this->post(route('subscriptions.checkout',$this->subscription),['payment_method'=>'boleto_inexistente'])->assertSessionHas('error');
         Http::assertNothingSent();
         $this->post(route('subscriptions.checkout',$this->subscription),['payment_method'=>'bolepix'])->assertRedirect($this->paymentUrl);
