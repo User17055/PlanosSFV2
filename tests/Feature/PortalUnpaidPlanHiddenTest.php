@@ -24,17 +24,17 @@ class PortalUnpaidPlanHiddenTest extends TestCase
             'product_version_id' => $this->version->id, 'originating_franchise_id' => $this->unit->id, 'channel' => 'site'], $this->client);
         $subscription = app(ProposalService::class)->accept($proposal, $this->client, ['accepted' => true]);
 
-        $this->actingAs($this->client)->get(route('portal'))->assertOk()->assertDontSee('Versão teste');
-        $this->get(route('portal.pet', $this->pet))->assertOk()->assertDontSee('Versão teste');
+        $this->actingAs($this->client)->get(route('portal'))->assertOk()->assertDontSee('contratado em');
+        $this->get(route('portal.pet', $this->pet))->assertOk()->assertDontSee('Baixar contrato')->assertDontSee('Ver plano, saldo');
         $this->get(route('portal.plan', [$this->pet, $subscription]))->assertNotFound();
         $this->get(route('portal.invoices'))->assertOk()->assertSee('Versão teste');
         // O pet mostra que a proposta aguarda validação (e o botão de pagar), sem listar o plano como contratado.
         $this->get(route('portal'))->assertSee('Aguardando validação da proposta')->assertDontSee('Ainda sem plano contratado');
-        $this->get(route('portal.pet', $this->pet))->assertSee('Aguardando validação da proposta')->assertSee('Pagar agora')->assertDontSee('ainda não tem um plano');
+        $this->get(route('portal.pet', $this->pet))->assertSee('Aguardando validação da proposta')->assertSee('1ª parcela')->assertSee('Ver fatura')->assertDontSee('ainda não tem um plano');
 
         $invoice = $subscription->invoices()->firstOrFail();
         app(\App\Services\Domain\FinancialService::class)->applyVerifiedInvoice($invoice, ['status' => 'paid', 'paid_cents' => $invoice->amount_cents,
             'paid_at' => now()->toIso8601String(), 'provider_updated_at' => now()->toIso8601String(), 'reference' => 'transaction-'.$invoice->id, 'source' => 'test_verified']);
-        $this->get(route('portal'))->assertOk()->assertSee('Versão teste');
+        $this->get(route('portal'))->assertOk()->assertSee('contratado em')->assertDontSee('Aguardando validação da proposta');
     }
 }

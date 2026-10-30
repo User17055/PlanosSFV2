@@ -253,3 +253,5 @@
 .pay-button:hover{background:#6f9a2c}
 .pay-trust{margin:16px 0 0;padding:0 0 0 18px;color:#5c554d;font-size:13.5px;line-height:1.7}
 @media(max-width:560px){.pay-panel{padding:18px 16px}.pay-head h2{font-size:21px}.pay-total strong{font-size:28px}}
+.pay-panel .pay-button,.pay-panel .pay-button:visited{background:#83ac38;color:#0b1936;border-color:#83ac38}
+.pay-panel .pay-button:hover,.pay-panel .pay-button:focus-visible{background:#6f9a2c;color:#0b1936;border-color:#6f9a2c}
