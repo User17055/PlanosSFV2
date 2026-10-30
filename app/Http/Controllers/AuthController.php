@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +19,18 @@ class AuthController extends Controller
         $users=\App\Models\User::where('role','customer')->where('active',true)
             ->whereIn('customer_id',\App\Models\Customer::where('document',$cpf)->select('id'))->limit(2)->get();
         return $users->count()===1 ? $users->first()->email : $login;
+    }
+
+    // Entrada logo após confirmar o e-mail: link assinado, curto e de uso único, emitido só pela confirmação.
+    public function confirmedAccess(Request $request, \App\Models\User $user)
+    {
+        $used = Cache::add('confirmed-access:'.hash('sha256',(string) $request->query('signature')), 1, now()->addMinutes(10));
+        if (! $used || $user->role !== 'customer' || ! $user->active || ! $user->email_verified_at) {
+            return redirect()->route('login')->with('error','Este link já foi usado ou expirou. Entre com seu e-mail ou CPF e sua senha.');
+        }
+        Auth::login($user);
+        $request->session()->regenerate();
+        return redirect()->route('portal');
     }
 
     public function login(Request $request)

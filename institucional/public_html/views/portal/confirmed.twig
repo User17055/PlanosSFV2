@@ -1,0 +1,16 @@
+{% extends 'portal/layout.twig' %}
+{% block title %}{{ ok ? 'E-mail confirmado' : 'Confirmar e-mail' }}{% endblock %}
+{% block content %}<section class="panel narrow-panel">
+{% if ok %}
+<span class="round-symbol" aria-hidden="true">✓</span><span class="eyebrow">TUDO CERTO</span><h1>E-mail confirmado.</h1>
+<p>Obrigado! Agora é só entrar para continuar. Use o e-mail ou o CPF cadastrado e a senha que você criou.</p>
+<div class="button-row"><a class="button button-primary" href="{{login_url}}">Entrar na minha conta</a></div>
+{% else %}
+<span class="round-symbol" aria-hidden="true">✉</span><span class="eyebrow">NOVO LINK</span><h1>Peça um novo link.</h1>
+<p>Este link pode ter vencido (ele vale por 1 hora) ou já foi usado. Digite seu e-mail e enviamos outro.</p>
+<form method="post" action="{{path('portal_resendmail')}}" class="portal-form"><input type="hidden" name="_token" value="{{csrf}}">
+<label>E-mail<input name="email" type="email" required maxlength="180" autocomplete="email" placeholder="seu@email.com"></label>
+<button class="button button-primary" data-busy="Enviando...">Enviar novo link</button></form>
+<p class="fine-print">Já confirmou? <a href="{{login_url}}">Entre na sua conta</a>.</p>
+{% endif %}
+</section>{% endblock %}

@@ -24,7 +24,7 @@ class PortalController
             $response=match($action) {
                 'home'=>$this->home($r),'signup'=>$this->signup($r),
                 'subscribe'=>$this->subscribe($r),'logout'=>$this->logout($r),'forgot'=>$this->forgot($r),'reset'=>$this->reset($r),
-                'verify'=>$this->verify($r),'resend'=>$this->resend($r),'pet'=>$this->pet($r),'check'=>$this->check($r),
+                'verify'=>$this->verify($r),'resend'=>$this->resend($r),'resendmail'=>$this->resendMail($r),'confirmed'=>$this->page($r,'confirmed',['ok'=>false,'login_url'=>$this->api->managementUrl().'/entrar']),'pet'=>$this->pet($r),'check'=>$this->check($r),
                 'postal'=>new JsonResponse($this->call($r,'GET','postal/'.$r->attributes->get('zip'),[],false)->data),
                 'proposal'=>$this->proposal($r),'review'=>$this->pdf($r,'proposals/'.$r->attributes->get('id').'/pdf'),
                 'document'=>$this->pdf($r,'documents/'.$r->attributes->get('id')),
@@ -95,7 +95,7 @@ class PortalController
     {
         if (!$r->getSession()->get('portal_token')) return $this->redirect('portal_login');
         $account=$this->call($r,'GET','me')->data;
-        return $this->page($r,$account['user']['verified']?'home':'verify',['account'=>$account]);
+        return $this->page($r,'home',['account'=>$account]);
     }
 
     private function existingLoginUrl(Request $r,array $data): string
@@ -117,6 +117,15 @@ class PortalController
             'CUSTOMER_WITHOUT_ACCESS'=>new JsonResponse(['message'=>(string)($data['message']??'')]),
             default=>new JsonResponse(['ok'=>true]),
         };
+    }
+
+    // Reenvio pelo e-mail, para quem abriu um link vencido sem estar com a sessão aberta.
+    private function resendMail(Request $r): Response
+    {
+        try { $this->call($r,'POST','verification-resend',['email'=>trim((string)$r->request->get('email'))],false); }
+        catch(PortalApiException) { $this->success($r,'Informe um e-mail válido.'); return $this->redirect('portal_confirmed'); }
+        $this->success($r,'Se o e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link.');
+        return $this->redirect('portal_confirmed');
     }
 
     private function catalog(Request $r): array { return $this->call($r,'GET','catalog',[],false)->data['offers']??[]; }
@@ -142,8 +151,7 @@ class PortalController
             $this->establish($r,$result);
             $r->getSession()->remove('portal_plan_code');
             if (!empty($result['proposal_id']))$r->getSession()->set('portal_pending_proposal',$result['proposal_id']);
-            if (empty($result['verification_sent']))$this->success($r,'Cadastro salvo. Não foi possível enviar a confirmação agora; use Reenviar e-mail.');
-            return !empty($result['proposal_id']) && $result['user']['verified']
+            return !empty($result['proposal_id'])
                 ?$this->redirect('portal_proposal',['id'=>$result['proposal_id']]):$this->redirect('portal_home');
         }
         return $this->page($r,'signup',['offer'=>$offer]);
@@ -156,7 +164,6 @@ class PortalController
         $r->getSession()->set('portal_plan_code',$code);
         if (!$r->getSession()->get('portal_token')) return $this->signup($r,$offer);
         $account=$this->call($r,'GET','me')->data;
-        if (!$account['user']['verified'])return $this->redirect('portal_home');
         if (!empty($offer['informational'])) {
             $r->getSession()->remove('portal_plan_code');
             $this->success($r,'Seu cadastro está pronto. A contratação do plano '.$offer['name'].' será liberada em breve; avisaremos você.');
@@ -202,16 +209,22 @@ class PortalController
 
     private function verify(Request $r): Response
     {
-        if (!$r->getSession()->get('portal_token')) {
-            $r->getSession()->set('portal_verification',['user'=>$r->attributes->get('user'),'hash'=>$r->attributes->get('hash'),
-                'expires'=>(string)$r->query->get('expires'),'signature'=>(string)$r->query->get('signature')]);
-            return $this->redirect('portal_login');
+        try {
+            $confirmed=$this->call($r,'GET','verify-email/'.$r->attributes->get('user').'/'.$r->attributes->get('hash'),
+                ['expires'=>(string)$r->query->get('expires'),'signature'=>(string)$r->query->get('signature')],false)->data;
+        } catch(PortalApiException) {
+            return $this->page($r,'confirmed',['ok'=>false,'login_url'=>$this->api->managementUrl().'/entrar'],403);
         }
-        $this->call($r,'GET','verify-email/'.$r->attributes->get('user').'/'.$r->attributes->get('hash'),
-            ['expires'=>(string)$r->query->get('expires'),'signature'=>(string)$r->query->get('signature')]);
-        $this->success($r,'E-mail confirmado. Você já pode continuar sua contratação.');
-        $id=$r->getSession()->remove('portal_pending_proposal');
-        return $id?$this->redirect('portal_proposal',['id'=>$id]):$this->redirect('portal_home');
+        // Com a sessão do site aberta, segue a contratação; em outro navegador, mostra a confirmação e leva ao login.
+        if ($r->getSession()->get('portal_token')) {
+            $this->success($r,'E-mail confirmado. Você já pode continuar sua contratação.');
+            $id=$r->getSession()->remove('portal_pending_proposal');
+            return $id?$this->redirect('portal_proposal',['id'=>$id]):$this->redirect('portal_home');
+        }
+        // Em outro navegador: entra direto na conta pelo link de uso único da gestão (só aceito se for do endereço da gestão).
+        $enter=(string)($confirmed['login_url']??'');
+        if (str_starts_with($enter,$this->api->managementUrl().'/')) return new RedirectResponse($enter,302);
+        return $this->page($r,'confirmed',['ok'=>true,'login_url'=>$this->api->managementUrl().'/entrar']);
     }
 
     private function resend(Request $r): Response
@@ -223,7 +236,6 @@ class PortalController
     private function pet(Request $r): Response
     {
         $account=$this->call($r,'GET','me')->data;
-        if (!$account['user']['verified'])return $this->redirect('portal_home');
         if ($r->isMethod('POST')) {
             $this->call($r,'POST','pets',array_intersect_key($r->request->all(),array_flip(['name','species','breed','birth_date','color','sex'])));
             $this->success($r,'Seu pet foi cadastrado.');

@@ -10,13 +10,14 @@ Route::prefix('site/v1')->middleware(SiteGateway::class)->group(function() {
     Route::post('account-check',[Portal::class,'accountCheck']);
     Route::post('login',[Portal::class,'login']);
     Route::post('register',[Portal::class,'register']);
+    Route::get('verify-email/{user}/{hash}',[Portal::class,'verifyEmail'])->middleware('signed:relative')->name('site-api.verify-email');
+    Route::post('verification-resend',[Portal::class,'resendVerificationByEmail']);
     Route::post('forgot-password',[Portal::class,'forgotPassword']);
     Route::post('reset-password',[Portal::class,'resetPassword']);
     Route::middleware(PortalToken::class)->group(function() {
         Route::get('me',[Portal::class,'me']);
         Route::post('logout',[Portal::class,'logout']);
         Route::post('verification',[Portal::class,'resendVerification']);
-        Route::get('verify-email/{user}/{hash}',[Portal::class,'verifyEmail'])->middleware('signed:relative')->name('site-api.verify-email');
         Route::post('pets',[Portal::class,'addPet']);
         Route::post('proposals',[Portal::class,'createProposal']);
         Route::get('proposals/{proposal}',[Portal::class,'proposal']);

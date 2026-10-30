@@ -78,12 +78,12 @@ class HttpAccessTest extends TestCase
         $this->get(route('customers.show',$customer))->assertForbidden();
     }
 
-    public function test_unverified_account_cannot_open_personal_records(): void
+    public function test_unverified_account_can_still_open_its_records_to_sign_and_pay(): void
     {
         $user=User::where('role','customer')->firstOrFail();
         $user->forceFill(['email_verified_at'=>null])->save();
-        $this->actingAs($user)->get(route('portal'))->assertOk()->assertSee('Confirme seu e-mail');
-        $this->get(route('proposals.index'))->assertRedirect(route('portal'));
+        $this->actingAs($user)->get(route('portal'))->assertOk();
+        $this->get(route('proposals.index'))->assertOk();
     }
 
     public function test_contract_payment_and_cancellation_workflow_through_http(): void
@@ -176,7 +176,7 @@ class HttpAccessTest extends TestCase
         $this->post(route('authenticate'),['email'=>'financeiro@saofrancisco.local','password'=>'Demo@2026!'])->assertRedirect(route('finance.index'));
     }
 
-    public function test_registration_requires_email_verification_outside_demo_mode(): void
+    public function test_registration_does_not_wait_for_the_email_and_the_link_still_confirms_it(): void
     {
         \Illuminate\Support\Facades\Notification::fake();
         config(['plans.demo'=>false]);
@@ -188,8 +188,8 @@ class HttpAccessTest extends TestCase
         $user=User::where('email','titular-verificacao@example.test')->firstOrFail();
         $this->assertNull($user->email_verified_at);
         $this->assertNull($user->customer->contact_verified_at);
-        \Illuminate\Support\Facades\Notification::assertSentTo($user,\Illuminate\Auth\Notifications\VerifyEmail::class);
-        $this->get(route('portal'))->assertSee('Confirme seu e-mail');
+        \Illuminate\Support\Facades\Notification::assertNothingSent();
+        $this->get(route('portal'))->assertOk();
         $url=\Illuminate\Support\Facades\URL::temporarySignedRoute('verification.verify',now()->addMinutes(60),['user'=>$user->id,'hash'=>sha1($user->email)]);
         $this->get($url)->assertRedirect(route('portal'));
         $this->assertNotNull($user->fresh()->email_verified_at);

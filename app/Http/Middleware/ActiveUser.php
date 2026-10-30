@@ -17,9 +17,6 @@ class ActiveUser
             $request->session()->regenerateToken();
             abort(403, 'Este acesso está desativado.');
         }
-        if ($request->user()?->role==='customer' && !$request->user()->email_verified_at && !$request->routeIs('portal','verification.*','logout')) {
-            return redirect()->route('portal')->with('error','Verifique seu e-mail antes de acessar os dados e contratos.');
-        }
         return $next($request);
     }
 }

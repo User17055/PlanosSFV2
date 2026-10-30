@@ -13,7 +13,7 @@ use App\Services\Integrations\{IntegrationPendingException,VindiCheckoutService}
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Support\Facades\{DB,Hash,Log,Password,RateLimiter,Storage};
+use Illuminate\Support\Facades\{DB,Hash,Log,Password,RateLimiter,Storage,URL};
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -95,7 +95,7 @@ class PortalApiController extends Controller
             Audit::record('portal.customer_registered',$customer,$user);
             return $user;
         });
-        $sent=$user->email_verified_at?true:$this->sendVerification($user);
+        $sent=true; // a confirmação é pedida depois do pagamento
         return response()->json($this->credentials($user)+['proposal_id'=>$proposalIds[0]??null,'proposal_ids'=>$proposalIds,'verification_sent'=>$sent],201);
     }
 
@@ -131,7 +131,6 @@ class PortalApiController extends Controller
     {
         $user=$r->user();
         $basic=['user'=>['name'=>$user->name,'email'=>$user->email,'verified'=>(bool)$user->email_verified_at],'demo'=>(bool)config('plans.demo')];
-        if (!$user->email_verified_at) return response()->json($basic+['pets'=>[],'subscriptions'=>[],'invoices'=>[],'proposals'=>[]]);
         $customer=$user->customer->load(['pets','subscriptions.productVersion.benefitRules','subscriptions.pet','subscriptions.proposal',
             'subscriptions.documents','subscriptions.cancellationRequest','invoices.subscription','proposals.pet','proposals.productVersion']);
         return response()->json($basic+[
@@ -174,18 +173,35 @@ class PortalApiController extends Controller
 
     private function sendVerification(User $user): bool
     {
-        try { $user->notify(new PortalVerifyEmail); return true; }
-        catch (\Throwable $e) { Log::warning('portal.verification_pending',['user_id'=>$user->id,'error_type'=>$e::class]); return false; }
+        // O servidor de e-mail às vezes recusa por instantes (ex.: 451 temporário): tenta até 3 vezes antes de desistir.
+        for ($try=1;$try<=3;$try++) {
+            try { $user->notify(new PortalVerifyEmail); return true; }
+            catch (\Throwable $e) { if ($try<3) { sleep(2); continue; } Log::warning('portal.verification_pending',['user_id'=>$user->id,'error_type'=>$e::class]); }
+        }
+        return false;
+    }
+
+    // Link expirado ou e-mail não recebido: pede outro pelo e-mail, sem revelar se a conta existe.
+    public function resendVerificationByEmail(Request $r)
+    {
+        $data=$r->validate(['email'=>'required|email|max:180']);
+        $user=User::where('email',$data['email'])->where('role','customer')->where('active',true)->whereNull('email_verified_at')->first();
+        $key='portal-verify:'.($user?->id ?? sha1($data['email']));
+        if ($user && !RateLimiter::tooManyAttempts($key,1)) { RateLimiter::hit($key,60); $this->sendVerification($user); }
+        return response()->json(['message'=>'Se o e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link.']);
     }
 
     public function verifyEmail(Request $r,User $user,string $hash)
     {
-        abort_unless($r->user()->id===$user->id && hash_equals(sha1($user->email),$hash),403);
+        // O link assinado (válido por 1 hora e enviado só ao e-mail do cliente) basta: quem abre o e-mail pode estar em outro navegador.
+        abort_unless($user->role==='customer' && $user->customer && hash_equals(sha1($user->email),$hash),403);
         DB::transaction(function() use($user) {
             $user->forceFill(['email_verified_at'=>now()])->save();
             $user->customer->update(['contact_verified_at'=>now()]);
         });
-        return response()->json(['message'=>'E-mail confirmado. Você já pode conferir e assinar seu contrato.']);
+        app(\App\Services\Domain\ContactVerificationService::class)->activatePending($user->customer_id);
+        return response()->json(['message'=>'E-mail confirmado. Seu plano já pode ser ativado.',
+            'login_url'=>URL::temporarySignedRoute('login.confirmed',now()->addMinutes(5),['user'=>$user->id])]);
     }
 
     public function forgotPassword(Request $r)
@@ -216,7 +232,8 @@ class PortalApiController extends Controller
         return response()->json(['message'=>'Senha atualizada. Entre com sua nova senha.']);
     }
 
-    private function verified(Request $r): void { abort_unless($r->user()->email_verified_at && $r->user()->customer->contact_verified_at,403,'Confirme seu e-mail antes de continuar.'); }
+    // A confirmação do e-mail não bloqueia mais assinar nem pagar: ela vem por último e libera a ativação.
+    private function verified(Request $r): void {}
     private function owns(Request $r,object $record): void { abort_unless((int)$record->customer_id===(int)$r->user()->customer_id,404); }
     private function offered(int $id): ProductVersion { return ProductVersion::offered()->with('product')->findOrFail($id); }
 

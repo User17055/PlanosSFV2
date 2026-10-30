@@ -17,7 +17,7 @@ class VindiCheckoutService
             && config('integrations.vindi.checkout_enabled') && config('plans.commercial_approved')
             && !$version->is_demo && $version->status==='published'
             && !$subscription->isTerminal() && $subscription->document_status==='valid'
-            && $subscription->proposal->accepted_at && $subscription->customer->contact_verified_at
+            && $subscription->proposal->accepted_at
             && $this->mapping($subscription)!==null;
     }
 

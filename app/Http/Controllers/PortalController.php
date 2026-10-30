@@ -25,14 +25,12 @@ class PortalController extends Controller
 
     public function __invoke(Request $request,EligibilityService $eligibility,FinancialService $financial)
     {
-        if (!$request->user()->email_verified_at) return view('auth.verify');
         return view('portal',$this->careData($request,$eligibility,$financial));
     }
 
     /** Página do pet: o plano contratado, benefícios, contrato e histórico daquele pet. */
     public function pet(Request $request,Pet $pet,EligibilityService $eligibility,FinancialService $financial)
     {
-        if (!$request->user()->email_verified_at) return view('auth.verify');
         abort_unless($pet->customer_id===$request->user()->customer_id,404);
         $data=$this->careData($request,$eligibility,$financial);
         return view('portal.pet',$data+['pet'=>$data['customer']->pets->firstWhere('id',$pet->id)]);
@@ -41,7 +39,6 @@ class PortalController extends Controller
     /** Página de um plano do pet: saldo dos benefícios, histórico de uso, contrato e demais planos do pet. */
     public function plan(Request $request,Pet $pet,Subscription $subscription,EligibilityService $eligibility,FinancialService $financial)
     {
-        if (!$request->user()->email_verified_at) return view('auth.verify');
         abort_unless($pet->customer_id===$request->user()->customer_id && $subscription->pet_id===$pet->id,404);
         $data=$this->careData($request,$eligibility,$financial);
         return view('portal.plan',$data+['pet'=>$data['customer']->pets->firstWhere('id',$pet->id),'subscription'=>$data['customer']->subscriptions->firstWhere('id',$subscription->id)]);
@@ -81,7 +78,6 @@ class PortalController extends Controller
 
     public function invoices(Request $request,FinancialService $financial)
     {
-        if (!$request->user()->email_verified_at) return view('auth.verify');
         $customer=Customer::with(['invoices.subscription.pet','invoices.subscription.productVersion'])->findOrFail($request->user()->customer_id);
         [$openInvoices,$pastInvoices]=$this->splitInvoices($customer);
         return view('portal.faturas',['financialState'=>$financial->customerStatus($customer),'openInvoices'=>$openInvoices,'pastInvoices'=>$pastInvoices]);

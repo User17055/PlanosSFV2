@@ -69,10 +69,10 @@ class OnlineRegistrationTest extends TestCase
     public function test_email_verification_returns_the_client_to_their_automatically_created_proposal(): void
     {
         config(['plans.demo'=>false,'plans.commercial_approved'=>true]);
-        $this->post(route('register.store'),$this->data())->assertRedirect(route('portal'));
+        $this->post(route('register.store'),$this->data())->assertRedirect();
         $user = User::where('email','online@example.test')->sole();
         $proposal = Proposal::where('customer_id',$user->customer_id)->sole();
-        $this->get(route('proposals.show',$proposal))->assertRedirect(route('portal'));
+        $this->get(route('proposals.show',$proposal))->assertOk();
         $url = URL::temporarySignedRoute('verification.verify',now()->addMinutes(30),['user'=>$user->id,'hash'=>sha1($user->email)]);
         $this->get($url)->assertRedirect(route('proposals.show',$proposal));
         $this->assertNotNull($user->fresh()->email_verified_at);

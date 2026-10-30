@@ -71,11 +71,10 @@ class RegistrationController extends Controller
             $request->session()->put('sf_online_proposal_id', $proposal->id);
             $request->session()->forget('sf_suggested_product_version_id');
         }
-        if(!config('plans.demo')) $this->notify($user);
-        if ($proposal && $user->email_verified_at) {
+        if ($proposal) {
             return redirect()->route('proposals.show', $proposal)->with('success','Seus dados e os do pet foram salvos. Confira o contrato do plano escolhido para continuar.');
         }
-        return redirect()->route('portal')->with('success',config('plans.demo')?'Conta de demonstração criada.':'Conta criada. Confirme seu e-mail antes de aceitar um contrato.');
+        return redirect()->route('portal')->with('success',config('plans.demo')?'Conta de demonstração criada.':'Conta criada. Confira o contrato do plano para continuar; o e-mail é confirmado por último.');
     }
 
     public function verify(Request $request,User $user,string $hash)
@@ -85,6 +84,7 @@ class RegistrationController extends Controller
             $user->forceFill(['email_verified_at'=>now()])->save();
             $user->customer?->update(['contact_verified_at'=>now()]);
         });
+        app(\App\Services\Domain\ContactVerificationService::class)->activatePending((int) $user->customer_id);
         $proposal = Proposal::whereKey($request->session()->pull('sf_online_proposal_id'))
             ->where('customer_id', $user->customer_id)->whereNull('locked_at')->where('expires_at','>',now())->first();
         return $proposal ? redirect()->route('proposals.show', $proposal)->with('success','Contato verificado. Confira seu contrato para continuar.')

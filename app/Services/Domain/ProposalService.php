@@ -149,10 +149,6 @@ class ProposalService
         if (! $customerOwns && ! $tablet) {
             throw new DomainException('CUSTOMER_ACCEPTANCE_REQUIRED', 'O aceite pertence ao cliente. O preenchimento pelo vendedor não substitui a assinatura.', 403);
         }
-        if (! $proposal->customer->contact_verified_at) {
-            throw new DomainException('CONTACT_NOT_VERIFIED', 'Confirme o contato do titular antes de assinar.', 422);
-        }
-
         return $this->commit($proposal, $actor, $evidence, false);
     }
 

@@ -177,14 +177,23 @@ class SitePortalApiTest extends TestCase
     {
         config(['plans.demo'=>false,'plans.commercial_approved'=>true]);
         $result=$this->registered(); $user=User::first();
-        Notification::assertSentTo($user,PortalVerifyEmail::class,function($notification) use($user) {
-            $mail=$notification->toMail($user);
-            return str_starts_with($mail->actionUrl,'https://saofrancisco.vet.br/area-do-cliente/verificar-email/');
-        });
-        $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertOk()->assertJsonCount(0,'pets');
-        $this->getJson('/api/site/v1/proposals/'.$result['proposal_id'],$this->headers($result['token']))->assertForbidden();
-        $url=URL::temporarySignedRoute('site-api.verify-email',now()->addHour(),['user'=>$user->id,'hash'=>sha1($user->email)],false);
-        $this->getJson($url,$this->headers($result['token']))->assertOk();
+        // O cadastro não manda e-mail nem trava: o cliente já vê o plano e pode seguir para o contrato.
+        Notification::assertNothingSent();
         $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertOk()->assertJsonCount(1,'pets');
+        $this->getJson('/api/site/v1/proposals/'.$result['proposal_id'],$this->headers($result['token']))->assertOk();
+        $this->assertStringStartsWith('https://saofrancisco.vet.br/area-do-cliente/verificar-email/',(new PortalVerifyEmail)->toMail($user)->viewData['url']);
+        $url=URL::temporarySignedRoute('site-api.verify-email',now()->addHour(),['user'=>$user->id,'hash'=>sha1($user->email)],false);
+        // O link funciona sem a sessão do site (e-mail aberto em outro navegador) e um link adulterado é recusado.
+        $this->getJson($url.'x',$this->headers())->assertForbidden();
+        $loginUrl=$this->getJson($url,$this->headers())->assertOk()->json('login_url');
+        $this->assertStringContainsString('/acesso/confirmado/'.$user->id,$loginUrl);
+        // Link de entrada: leva ao portal do cliente uma única vez.
+        $this->get($loginUrl)->assertRedirect(route('portal'));
+        $this->assertAuthenticatedAs($user->fresh());
+        auth()->logout();
+        $this->get($loginUrl)->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->getJson('/api/site/v1/me',$this->headers($result['token']))->assertOk()->assertJsonCount(1,'pets');
+        $this->assertNotNull($user->fresh()->email_verified_at);
     }
 }

@@ -10,6 +10,7 @@ Route::get('/contratar/{code}',[CatalogController::class,'subscribe'])->middlewa
 Route::get('/enderecos/cep/{zip}',\App\Http\Controllers\PostalAddressController::class)->middleware('throttle:30,1')->name('addresses.postal');
 Route::get('/planos/{version}/contrato',[CatalogController::class,'offeredContract'])->middleware('throttle:30,1')->name('sales.contract');
 Route::get('/l/{token}',[\App\Http\Controllers\MarketingLinkController::class,'visit'])->middleware('throttle:60,1')->name('attribution_links.visit');
+Route::get('/acesso/confirmado/{user}',[AuthController::class,'confirmedAccess'])->middleware(['signed','throttle:20,1'])->name('login.confirmed');
 Route::middleware('guest')->group(function () {
     Route::get('/entrar',[AuthController::class,'login'])->name('login');
     Route::post('/entrar',[AuthController::class,'authenticate'])->name('authenticate');

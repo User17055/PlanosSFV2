@@ -101,6 +101,9 @@ class FinancialService
 
             return $current;
         }, 3);
+        if ($result->status === 'paid') {
+            app(ContactVerificationService::class)->requestAfterPayment($invoice->customer_id);
+        }
         foreach (Subscription::where('customer_id', $invoice->customer_id)->whereNotIn('status', Subscription::TERMINAL)->get() as $subscription) {
             app(ActivationService::class)->activate($subscription);
         }
