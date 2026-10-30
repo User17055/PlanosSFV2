@@ -26,6 +26,12 @@ class Lead extends DomainModel
         return 'https://wa.me/'.(strlen($digits) <= 11 ? '55'.$digits : $digits).($message ? '?text='.rawurlencode($message) : '');
     }
 
+    /** Primeira mensagem do WhatsApp, já escrita para a equipe só enviar. */
+    public function greeting(): string
+    {
+        return 'Olá, '.explode(' ', trim($this->name))[0].'! Aqui é da São Francisco. Vi que você pediu informações sobre os planos para o seu pet. Posso te ajudar?';
+    }
+
     /** (18) 99999-0000 para a tela; número fora do padrão aparece como veio. */
     public function phoneLabel(): ?string
     {

@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Lead;
+use App\Services\AccessService;
 use App\Services\Reports\DashboardService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, DashboardService $dashboard)
+    public function __invoke(Request $request, DashboardService $dashboard, AccessService $access)
     {
-        $filters=$dashboard->filters($request->user(),$request->query());
-        return response()->view('dashboard',$dashboard->report($request->user(),$filters))->header('Cache-Control','private, no-store');
+        $user=$request->user();
+        $filters=$dashboard->filters($user,$request->query());
+        $recentLeads=in_array($user->role,['central_admin','manager','sales','operator'],true) ? $access->scope(Lead::where('status','new'),$user)->latest('id')->limit(3)->get() : collect();
+        return response()->view('dashboard',$dashboard->report($user,$filters)+['recentLeads'=>$recentLeads])->header('Cache-Control','private, no-store');
     }
 
     public function export(Request $request,DashboardService $dashboard)

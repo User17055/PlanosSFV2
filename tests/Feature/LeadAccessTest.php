@@ -53,6 +53,14 @@ class LeadAccessTest extends TestCase
         $this->post(route('employees.store'), [])->assertForbidden();
     }
 
+    public function test_new_leads_show_as_dashboard_cards_and_as_a_menu_shortcut_with_count(): void
+    {
+        $this->lead();
+        $this->lead(['name' => 'João Souza', 'external_id' => 'x2', 'status' => 'contacted']);
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('Maria da Silva')->assertDontSee('João Souza')->assertSee('class="dash-lead"', false);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertOk()->assertSee('nav-shortcuts', false)->assertSee('<b class="nav-count">1</b>', false)->assertDontSee('Falta pagar');
+    }
+
     public function test_attendant_logs_in_straight_to_leads(): void
     {
         $this->post(route('authenticate'), ['email' => 'ana@example.test', 'password' => 'Example123!!!'])->assertRedirect(route('leads.index'));

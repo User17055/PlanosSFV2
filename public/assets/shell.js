@@ -54,6 +54,11 @@
     closeSidebar();
     menus.forEach(menu => { if (menu.open) { menu.open = false; menu.querySelector('summary')?.focus(); } });
   });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('[data-cta-close]')) return;
+    document.documentElement.classList.add('cta-closed');
+    try { localStorage.setItem('sf-cta-closed', '1'); } catch (e) {}
+  });
   // "/" leva direto para a busca, como no campo do topo mostra.
   document.addEventListener('keydown', event => {
     const el = document.activeElement;
