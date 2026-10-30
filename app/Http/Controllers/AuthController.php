@@ -62,7 +62,7 @@ class AuthController extends Controller
         $role=$request->user()->role;
         // Um destino guardado antes do login (ex.: /painel) só vale se o perfil pode abri-lo; senão o cliente cairia num 403.
         if (! $this->roleCanOpen($role,(string)$request->session()->get('url.intended',''))) $request->session()->forget('url.intended');
-        return redirect()->intended($role === 'customer' ? $customerDestination : route('dashboard'));
+        return redirect()->intended($role === 'customer' ? $customerDestination : route($role === 'attendant' ? 'leads.index' : 'dashboard'));
     }
 
     private function roleCanOpen(string $role,string $url): bool

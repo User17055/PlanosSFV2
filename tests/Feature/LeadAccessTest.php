@@ -1,0 +1,81 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\{Franchise,Lead,User};
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/** O perfil "Atendimento" só enxerga a tela de Leads; o resto do sistema fica fechado para ele. */
+class LeadAccessTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Franchise $unit;
+    private User $attendant;
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->unit = Franchise::create(['name' => 'Canal central', 'code' => 'CENTRAL', 'active' => true]);
+        $this->admin = User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'Example123!!!', 'role' => 'central_admin', 'active' => true]);
+        $this->attendant = User::create(['name' => 'Ana Atendimento', 'email' => 'ana@example.test', 'password' => 'Example123!!!', 'role' => 'attendant', 'active' => true, 'franchise_id' => $this->unit->id]);
+        $this->attendant->franchises()->sync([$this->unit->id => ['active' => true]]);
+    }
+
+    private function lead(array $over = []): Lead
+    {
+        return Lead::create($over + ['originating_franchise_id' => $this->unit->id, 'name' => 'Maria da Silva', 'phone' => '5518999990000', 'campaign' => 'Outubro']);
+    }
+
+    public function test_attendant_works_the_lead_list_with_whatsapp_message_search_and_status(): void
+    {
+        $maria = $this->lead();
+        $this->lead(['name' => 'João Souza', 'phone' => '18988887777', 'external_id' => 'x2']);
+        $page = $this->actingAs($this->attendant)->get(route('leads.index'))->assertOk();
+        $page->assertSee('(18) 99999-0000')->assertSee('text=Ol%C3%A1%2C%20Maria%21', false)->assertDontSee('Rede e acessos')->assertDontSee('Tutores e pets');
+        $this->actingAs($this->attendant)->get(route('leads.index', ['q' => 'souza']))->assertSee('João Souza')->assertDontSee('Maria da Silva');
+        $this->actingAs($this->attendant)->get(route('leads.index', ['q' => '99999']))->assertSee('Maria da Silva')->assertDontSee('João Souza');
+        $this->actingAs($this->attendant)->post(route('leads.update', $maria), ['status' => 'contacted'])->assertRedirect();
+        $this->assertSame($this->attendant->id, $maria->fresh()->handled_by);
+        $this->actingAs($this->attendant)->get(route('leads.index', ['situacao' => 'contacted']))->assertSee('Maria da Silva')->assertDontSee('João Souza');
+    }
+
+    public function test_attendant_is_kept_out_of_everything_else(): void
+    {
+        $this->actingAs($this->attendant);
+        foreach (['dashboard', 'customers.index', 'proposals.index', 'finance.index', 'catalog.index', 'commissions.index', 'reports.index', 'employees.index', 'integrations.index', 'management.index', 'attribution_links.index'] as $name) {
+            $this->get(route($name))->assertRedirect(route('leads.index'));
+        }
+        $this->get('/')->assertRedirect(route('leads.index'));
+        $this->post(route('proposals.store'), [])->assertForbidden();
+        $this->post(route('employees.store'), [])->assertForbidden();
+    }
+
+    public function test_attendant_logs_in_straight_to_leads(): void
+    {
+        $this->post(route('authenticate'), ['email' => 'ana@example.test', 'password' => 'Example123!!!'])->assertRedirect(route('leads.index'));
+    }
+
+    public function test_only_test_leads_can_be_deleted_and_only_by_admins(): void
+    {
+        $real = $this->lead();
+        $test = $this->lead(['name' => '<test lead: dummy data for full_name>', 'source' => 'teste', 'phone' => null, 'external_id' => 't1']);
+        $this->actingAs($this->attendant)->post(route('leads.destroy', $test))->assertForbidden();
+        $this->actingAs($this->admin)->post(route('leads.destroy', $real))->assertUnprocessable();
+        $this->actingAs($this->admin)->post(route('leads.destroy', $test))->assertRedirect();
+        $this->assertDatabaseMissing('leads', ['id' => $test->id]);
+        $this->assertDatabaseHas('leads', ['id' => $real->id]);
+    }
+
+    public function test_admin_can_create_an_attendant_access_in_both_forms(): void
+    {
+        $this->actingAs($this->admin)->post(route('employees.store'), ['name' => 'Bia Atendimento', 'email' => 'bia@example.test', 'password' => 'Example123!!!', 'password_confirmation' => 'Example123!!!',
+            'active' => 1, 'role' => 'attendant', 'franchise_ids' => [$this->unit->id]])->assertRedirect(route('employees.index'));
+        $this->assertSame('attendant', User::where('email', 'bia@example.test')->value('role'));
+        $this->actingAs($this->admin)->post(route('management.users.store'), ['name' => 'Carla Atendimento', 'email' => 'carla@example.test', 'password' => 'Example123!!!',
+            'role' => 'attendant', 'franchise_ids' => [$this->unit->id]])->assertRedirect();
+        $this->assertSame('attendant', User::where('email', 'carla@example.test')->value('role'));
+    }
+}

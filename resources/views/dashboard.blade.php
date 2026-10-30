@@ -11,7 +11,7 @@ $clearGeo=fn($changes)=>route('dashboard',array_merge($filters,$changes));
 $dashboardData=['series'=>array_values($series),'geo'=>$geo,'state'=>$uf,'city'=>$filters['city'],'neighborhood'=>$filters['neighborhood'],'states'=>\App\Services\Reports\DashboardService::STATES,'mapUrl'=>url('/painel/malha'),'neighborhoodUrl'=>url('/painel/bairros'),'assets'=>asset('assets/maps')];
 @endphp
 <div class="dashboard-workspace">
-<div class="page-heading analytics-heading"><div><h1>{{ $isSales?'Meus resultados':'Visão geral' }}</h1><p>Vendas, recebimentos e planos ativos no período escolhido.</p></div><div class="analytics-heading-actions">@if(in_array(auth()->user()->role,['central_admin','manager','sales']))<a class="button button-primary" href="{{ route('proposals.create') }}">@include('components.icon',['name'=>'plus']) Nova contratação</a>@endif<a class="button button-secondary" href="{{ route('dashboard.export',$filters) }}">@include('components.icon',['name'=>'download']) Exportar resumo</a></div></div>
+<div class="page-heading analytics-heading"><div><h1>{{ $isSales?'Meus resultados':'Oi, '.(collect(preg_split('/\s+/',trim(auth()->user()->name)))->first(fn($word)=>!str_ends_with($word,'.')) ?? 'equipe').'!' }}</h1><p>Vendas, recebimentos e planos ativos.</p></div><div class="analytics-heading-actions">@if(in_array(auth()->user()->role,['central_admin','manager','sales']))<a class="button button-primary" href="{{ route('proposals.create') }}">@include('components.icon',['name'=>'plus']) Nova contratação</a>@endif<a class="button button-secondary" href="{{ route('dashboard.export',$filters) }}">@include('components.icon',['name'=>'download']) Exportar resumo</a></div></div>
 
 <form class="card analytics-filters" method="GET" id="dashboard-filters" action="{{ route('dashboard') }}">
 <label class="field">De<input type="date" name="date_from" required value="{{ $filters['date_from'] }}" max="{{ $generatedAt->toDateString() }}"></label>
@@ -31,7 +31,7 @@ $dashboardData=['series'=>array_values($series),'geo'=>$geo,'state'=>$uf,'city'=
 </div></details>
 </form>
 <div class="analytics-context"><span class="analytics-badge {{ $filters['data_mode']==='real'?'is-active':'' }}">{{ $filters['data_mode']==='real'?'Dados reais':'Base demonstrativa' }}</span><span>{{ \Carbon\CarbonImmutable::parse($filters['date_from'])->format('d/m/Y') }} — {{ \Carbon\CarbonImmutable::parse($filters['date_to'])->format('d/m/Y') }}</span><span>Atualizado {{ $generatedAt->format('d/m/Y H:i') }} · Brasília</span></div>
-@if($filters['data_mode']==='demo')<div class="alert alert-warning"><div>Você está consultando exclusivamente os registros demonstrativos. Eles não compõem os indicadores de dados reais.</div></div>@endif
+@if($filters['data_mode']==='demo')<div class="alert alert-warning"><div>Só dados de demonstração. Eles não entram nos números reais.</div></div>@endif
 
 <nav class="workspace-nav dashboard-section-nav" aria-label="Dashboard"><a href="#resumo">Resumo</a><a href="#carteira">Carteira e previsão</a><a href="#territorio">Território</a><a href="#produtos">Planos</a><a href="#origem">Origem e indicação</a><a href="#cancelamentos">Cancelamentos</a></nav>
 <div class="analytics-kpis" id="resumo">

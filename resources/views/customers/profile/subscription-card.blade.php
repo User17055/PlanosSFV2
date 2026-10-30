@@ -14,7 +14,7 @@ $documentAction=$subscription->isTerminal()?'Ver histórico':($subscription->doc
 <dialog id="cancel-{{ $subscription->id }}" class="modal" @if((int)$cancelErrorId===(int)$subscription->id) data-profile-reopen @endif><form method="POST" action="{{ route('subscriptions.cancel',$subscription) }}">@csrf<input type="hidden" name="profile_cancel_subscription_id" value="{{ $subscription->id }}">
 <div class="modal-heading"><h2>{{ $subscription->category==='package'?'Cancelar pacote':'Cancelar plano' }}</h2><button type="button" class="icon-button" data-dialog-close aria-label="Fechar">@include('components.icon',['name'=>'close'])</button></div><p>{{ $subscription->productVersion->name }} · {{ $subscription->pet->name }}</p>
 @if((int)$cancelErrorId===(int)$subscription->id)<div class="alert alert-danger" role="alert">Confira o motivo informado para continuar.</div>@endif
-<div class="alert alert-warning"><div>O histórico, os débitos e os documentos serão preservados. Uma nova contratação terá novas carências e saldos próprios.</div></div>
+<div class="alert alert-warning"><div>Histórico e documentos ficam guardados. Nova contratação começa com carências novas.</div></div>
 <label class="field">Motivo <span>*</span><textarea name="reason" required minlength="5" maxlength="1000" rows="3">{{ (int)$cancelErrorId===(int)$subscription->id?old('reason'):'' }}</textarea></label><div class="form-actions"><button type="button" class="button button-secondary" data-dialog-close>Voltar</button><button class="button button-danger">Confirmar cancelamento</button></div>
 </form></dialog>
 @endif

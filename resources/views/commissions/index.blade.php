@@ -9,7 +9,7 @@ $count=fn($status)=>(int) data_get($totals,$status.'.total',0);
 $channels=['site'=>'Site','link'=>'Link individual','presential'=>'Presencial'];
 $statusLabels=\App\Models\Commission::STATUSES;
 @endphp
-<div class="page-heading"><div><h1>{{ $isSales ? 'Minhas comissões' : 'Comissões' }}</h1><p>Comissão sobre o primeiro pagamento confirmado. Contratações sem uma pessoa da equipe identificada ficam registradas, sem pagamento automático.</p></div></div>
+<div class="page-heading"><div><h1>{{ $isSales ? 'Minhas comissões' : 'Comissões' }}</h1><p>Paga sobre a 1ª parcela confirmada. Venda sem vendedor identificado não gera comissão automática.</p></div></div>
 
 <div class="metrics-grid">
 <div class="metric-card"><div class="metric-top"><span>A pagar</span><span class="metric-icon tone-ochre">@include('components.icon',['name'=>'wallet'])</span></div><div class="metric-value">{{ $money($sum('payable')) }}</div><span class="metric-detail"><span class="small-dot ochre"></span>{{ $count('payable') }} comissão(ões) liberada(s)</span></div>

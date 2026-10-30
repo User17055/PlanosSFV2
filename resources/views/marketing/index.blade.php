@@ -3,7 +3,7 @@
 @section('content')
 @php $sourceLabels=['unknown'=>'Não informado','direct'=>'Acesso direto','referral'=>'Indicação','shared_link'=>'Link compartilhado','instagram'=>'Instagram','facebook'=>'Facebook','google'=>'Google','other'=>'Outra origem']; @endphp
 <div class="page-heading"><div><h1>Links de divulgação</h1><p>Cada link mostra de onde veio a contratação.</p></div>@if(in_array(auth()->user()->role,['central_admin','manager']))<a class="button button-secondary" href="{{ route('reports.index') }}">Ver relatórios @include('components.icon',['name'=>'arrow'])</a>@endif</div>
-<div class="alert alert-info">@include('components.icon',['name'=>'info'])<div><strong>Links de divulgação podem ser compartilhados com várias pessoas.</strong><p>O link individual de uma proposta continua exclusivo do tutor. Os acessos registrados abaixo não representam pessoas únicas, aceites ou pagamentos.</p></div></div>
+<div class="alert alert-info">@include('components.icon',['name'=>'info'])<div><strong>Este link vale para várias pessoas.</strong><p>Acesso não é venda: conta toda visita.</p></div></div>
 <section class="card form-card"><details @if($marketingLinks->isEmpty()) open @endif><summary class="card-heading"><div><h2>Criar link de divulgação</h2><p>Defina a origem, o responsável e a franquia antes de compartilhar.</p></div><span class="button button-primary button-small">Novo link</span></summary>
 <form method="POST" action="{{ route('attribution_links.store') }}">@csrf<div class="form-grid">
 <label class="field">Nome do link <span>*</span><input name="name" required maxlength="120" value="{{ old('name') }}" placeholder="Ex.: Instagram · Campanha de outubro"></label>

@@ -4,7 +4,7 @@ use App\Http\Controllers\{AuthController, CatalogController, ContractController,
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/',fn(Request $r)=>$r->user()?redirect()->route($r->user()->role==='customer'?'portal':'dashboard'):redirect()->route('login'))->name('home');
+Route::get('/',fn(Request $r)=>$r->user()?redirect()->route(['customer'=>'portal','attendant'=>'leads.index'][$r->user()->role] ?? 'dashboard'):redirect()->route('login'))->name('home');
 Route::get('/planos',fn()=>redirect()->away(config('site_portal.public_url').'/planos-saude/'))->middleware(\App\Http\Middleware\CaptureAcquisition::class)->name('sales');
 Route::get('/contratar/{code}',[CatalogController::class,'subscribe'])->middleware(\App\Http\Middleware\CaptureAcquisition::class)->name('sales.subscribe');
 Route::get('/enderecos/cep/{zip}',\App\Http\Controllers\PostalAddressController::class)->middleware('throttle:30,1')->name('addresses.postal');
@@ -29,8 +29,9 @@ Route::post('/webhooks/vindi',function(Request $request) {
 Route::post('/webhooks/leads/{token}',[\App\Http\Controllers\LeadController::class,'intake'])->middleware('throttle:120,1')->name('webhooks.leads');
 
 Route::middleware(['auth','active'])->group(function () {
-    Route::get('/leads',[\App\Http\Controllers\LeadController::class,'index'])->middleware('role:central_admin,manager,sales,operator')->name('leads.index');
-    Route::post('/leads/{lead}',[\App\Http\Controllers\LeadController::class,'update'])->middleware(['role:central_admin,manager,sales,operator','throttle:60,1'])->name('leads.update');
+    Route::get('/leads',[\App\Http\Controllers\LeadController::class,'index'])->middleware('role:central_admin,manager,sales,operator,attendant')->name('leads.index');
+    Route::post('/leads/{lead}',[\App\Http\Controllers\LeadController::class,'update'])->middleware(['role:central_admin,manager,sales,operator,attendant','throttle:60,1'])->name('leads.update');
+    Route::post('/leads/{lead}/excluir',[\App\Http\Controllers\LeadController::class,'destroy'])->middleware(['role:central_admin,manager','throttle:30,1'])->name('leads.destroy');
     Route::post('/sair',[AuthController::class,'logout'])->name('logout');
     Route::get('/l/{token}/contrato',[\App\Http\Controllers\MarketingLinkController::class,'contractPreview'])->middleware('role:central_admin,manager,sales')->name('attribution_links.contract-preview');
     Route::get('/l/{token}/contrato/pdf',[\App\Http\Controllers\MarketingLinkController::class,'contractPreviewPdf'])->middleware('role:central_admin,manager,sales')->name('attribution_links.contract-preview-pdf');

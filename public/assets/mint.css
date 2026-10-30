@@ -1702,3 +1702,27 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 /* Leads: filtros por situação */
 .tab-links{display:flex;gap:6px 16px;flex-wrap:wrap}
 .tab-links .text-button.active{font-weight:700;text-decoration:underline}
+
+/* Leads: contadores clicáveis, linha de lead novo e ações em coluna */
+.lead-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.lead-stat{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--line,#e3e8ef);border-radius:12px;background:#fff;color:inherit;text-decoration:none}
+.lead-stat strong{font-size:24px;line-height:1.1}
+.lead-stat span{font-size:13px;opacity:.75}
+.lead-stat.active{border-color:#14264b;box-shadow:0 0 0 1px #14264b inset}
+.lead-stat-new strong{color:#b7791f}
+.lead-table tr.lead-new td:first-child{box-shadow:3px 0 0 #f0b429 inset}
+.lead-table td small{display:block}
+.lead-whats{margin-bottom:4px}
+.lead-actions form{display:inline-block;margin:0 10px 4px 0}
+@media(max-width:720px){.lead-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Painel da equipe: os mesmos títulos grandes e divertidos da área do cliente (Bricolage Grotesque). O texto segue em Poppins. */
+html body.admin-body :is(h1,h2),html body.admin-body .metric-value,html body.admin-body .lead-stat strong{font-family:'Bricolage Grotesque','Poppins',sans-serif;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+html body.admin-body .page-heading h1{font-size:clamp(32px,3.6vw,46px)}
+html body.admin-body .page-heading p{margin-top:8px;font-size:17px}
+html body.admin-body .card-heading h2{font-size:24px}
+html body.admin-body .metric-value{font-size:34px}
+html body.admin-body .lead-stat strong{font-size:32px}
+@media(max-width:520px){html body.admin-body .page-heading h1{font-size:30px}html body.admin-body .metric-value{font-size:28px}}
+body.admin-body .dashboard-workspace .analytics-kpi .metric-value{font-size:32px;font-weight:800}
+body.admin-body .dashboard-workspace .portfolio-insights .metric-value{font-size:28px;font-weight:800}

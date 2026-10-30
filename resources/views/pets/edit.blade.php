@@ -16,7 +16,7 @@
 <label class="field">Nascimento<input type="date" name="birth_date" value="{{ old('birth_date',$pet->birth_date?->format('Y-m-d')) }}" max="{{ now('America/Sao_Paulo')->format('Y-m-d') }}"></label>
 @if($isCustomer)<input type="hidden" name="reason" value="Atualização feita pelo próprio tutor no portal.">@else<label class="field span-2">Motivo da atualização <span>*</span><textarea name="reason" required minlength="5" maxlength="1000" rows="3" placeholder="Descreva a correção ou atualização realizada">{{ old('reason') }}</textarea></label>@endif
 </div>
-@unless($isCustomer)<div class="alert alert-info compact-alert">@include('components.icon',['name'=>'lock'])<div>Os dados aceitos nos contratos anteriores serão preservados. A atualização cadastral é auditada e não transfere benefícios ou troca o pet coberto.</div></div>@endunless
+@unless($isCustomer)<div class="alert alert-info compact-alert">@include('components.icon',['name'=>'lock'])<div>Contratos já assinados não mudam. Não dá para trocar o pet coberto por aqui.</div></div>@endunless
 <div class="form-actions"><a class="button button-secondary" href="{{ $returnUrl }}">Voltar</a><button class="button button-primary">@include('components.icon',['name'=>'check']) {{ $isCustomer?'Salvar':'Salvar atualização' }}</button></div>
 </section>
 

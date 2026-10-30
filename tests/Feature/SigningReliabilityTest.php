@@ -133,7 +133,7 @@ class SigningReliabilityTest extends TestCase
         $this->actingAs($this->owner)->get(route('proposals.preview-pdf',$proposal))->assertOk();
         $this->get(route('proposals.preview-pdf',$proposal))->assertOk();
         $proposal->update(['expires_at'=>now()->subMinute()]);
-        $this->get(route('proposals.show',$proposal))->assertOk()->assertSee('Esta proposta expirou.')->assertDontSee('name="signer_name"',false);
+        $this->get(route('proposals.show',$proposal))->assertOk()->assertSee('Proposta vencida.')->assertDontSee('name="signer_name"',false);
     }
 
     public function test_consumed_invitation_reopens_only_for_authenticated_owner(): void

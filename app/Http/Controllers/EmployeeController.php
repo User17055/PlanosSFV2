@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
-    public const ROLES=['sales'=>'Vendas','manager'=>'Gestão da unidade','operator'=>'Recepção','finance'=>'Financeiro','central_admin'=>'Administração central'];
+    public const ROLES=['sales'=>'Vendas','manager'=>'Gestão da unidade','operator'=>'Recepção','finance'=>'Financeiro','attendant'=>'Atendimento (só leads)','central_admin'=>'Administração central'];
 
     public function index(Request $request,DashboardService $dashboard)
     {

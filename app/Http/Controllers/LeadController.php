@@ -71,11 +71,29 @@ class LeadController extends Controller
 
     public function index(Request $request, AccessService $access)
     {
+        $request->validate(['q' => 'nullable|string|max:80', 'situacao' => 'nullable|in:'.implode(',', array_keys(Lead::STATUSES))]);
         $status = $request->query('situacao');
+        $q = trim((string) $request->query('q'));
         $query = $access->scope(Lead::query(), $request->user())->with('handler');
+        if ($q !== '') {
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $digits = preg_replace('/\D/', '', $q);
+            $query->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('email', 'like', $like)
+                ->when(strlen($digits) >= 4, fn ($p) => $p->orWhere('phone', 'like', '%'.$digits.'%')));
+        }
+        // Os contadores seguem a busca, mas não o filtro de situação, para os botões mostrarem quantos há em cada uma.
         $counts = (clone $query)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
-        $leads = $query->when(isset(Lead::STATUSES[$status]), fn ($q) => $q->where('status', $status))->orderByDesc('id')->paginate(20)->withQueryString();
-        return view('leads.index', compact('leads', 'counts', 'status'));
+        $leads = $query->when($status, fn ($w) => $w->where('status', $status))->orderByDesc('id')->paginate(20)->withQueryString();
+        return view('leads.index', compact('leads', 'counts', 'status', 'q'));
+    }
+
+    /** Só lead de teste (o do Facebook) pode ser apagado; lead real fica no histórico. */
+    public function destroy(Request $request, Lead $lead, AccessService $access)
+    {
+        $access->franchise($request->user(), (int) $lead->originating_franchise_id);
+        abort_unless($lead->source === 'teste', 422, 'Só leads de teste podem ser apagados.');
+        $lead->delete();
+        return back()->with('success', 'Lead de teste apagado.');
     }
 
     public function update(Request $request, Lead $lead, AccessService $access)

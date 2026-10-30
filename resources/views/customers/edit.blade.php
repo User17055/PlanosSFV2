@@ -22,7 +22,7 @@ $currentAddress=$formattedAddress ?? (is_array($customer->address)?collect($cust
 @else<div class="span-2">@include('components.customer-acquisition',['acquisitionCustomer'=>$customer])</div>
 <label class="field span-2">Motivo da atualização <span>*</span><textarea name="reason" required minlength="5" maxlength="1000" rows="3" placeholder="Ex.: atualização do telefone e endereço de contato">{{ old('reason') }}</textarea></label>@endif
 </div>
-@if($isCustomer)<p class="fine-print">Os contratos já assinados continuam com os dados da época da assinatura.</p>@else<div class="alert alert-info compact-alert">@include('components.icon',['name'=>'lock'])<div>Os contratos assinados preservam os dados e as condições do momento do aceite. Esta atualização não reescreve documentos históricos.</div></div>@endif
+@if($isCustomer)<p class="fine-print">Os contratos já assinados continuam com os dados da época da assinatura.</p>@else<div class="alert alert-info compact-alert">@include('components.icon',['name'=>'lock'])<div>Contratos já assinados não mudam.</div></div>@endif
 <div class="form-actions"><a class="button button-secondary" href="{{ $returnUrl }}">Voltar</a><button class="button button-primary">@include('components.icon',['name'=>'check']) {{ $isCustomer?'Salvar':'Salvar atualização' }}</button></div>
 </section>
 @unless($isCustomer)<aside><div class="info-card"><span class="info-card-icon">@include('components.icon',['name'=>'heart'])</span><h3>Manter contato também é cuidar.</h3><p>Dados corretos ajudam a acompanhar sua jornada e a localizar o mesmo cadastro em toda a rede.</p><hr><p>O histórico contratual e financeiro permanece vinculado ao titular original.</p></div></aside>@endunless

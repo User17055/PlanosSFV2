@@ -25,7 +25,7 @@ class DashboardAnalyticsTest extends TestCase
         Carbon::setTestNow('2026-10-22 15:00:00'); CarbonImmutable::setTestNow('2026-10-22 15:00:00');
         config(['plans.demo'=>true]);
         $this->unit=Franchise::create(['name'=>'Unidade A','code'=>'A','active'=>true]);
-        $this->admin=User::factory()->create(['role'=>'central_admin','active'=>true]);
+        $this->admin=User::factory()->create(['name'=>'Dra. Admin Teste','role'=>'central_admin','active'=>true]);
         $this->seller=User::factory()->create(['role'=>'sales','active'=>true,'franchise_id'=>$this->unit->id]);
         $this->manager=User::factory()->create(['role'=>'manager','active'=>true]);
         $this->seller->franchises()->attach($this->unit->id,['active'=>true]);
@@ -77,7 +77,7 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame(0,$report['summary']['sold_count']);
         $this->assertSame(3500,$report['summary']['received_cents']);
         $this->assertSame(3500,array_sum(array_column($report['series'],'received_cents')));
-        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<h1>Visão geral</h1>',false);
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<h1>Oi, Admin!</h1>',false);
     }
 
     public function test_geography_deduplicates_tutors_and_filters_neighborhood_without_rewriting_snapshots(): void

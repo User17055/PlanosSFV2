@@ -4,12 +4,12 @@
 <div class="page-heading"><div><h1>Financeiro</h1><p>Faturas e pagamentos de cada contrato.</p></div><span class="badge badge-amber">@include('components.icon',['name'=>'clock']) Vindi em homologação</span></div>
 
 <div class="metrics-grid three-metrics">
-@foreach([['received_cents','Recebido no período','wallet','green','Pagamentos integralmente confirmados'],['pending_cents','Em aberto','clock','blue','Faturas aguardando pagamento'],['overdue_cents','Saldo vencido','alert','ochre','Valores que podem bloquear benefícios']] as [$metricKey,$metricLabel,$metricIcon,$metricTone,$metricDetail])
+@foreach([['received_cents','Recebido no período','wallet','green','Pagas por inteiro'],['pending_cents','Em aberto','clock','blue','Esperando pagamento'],['overdue_cents','Saldo vencido','alert','ochre','Pode bloquear benefícios']] as [$metricKey,$metricLabel,$metricIcon,$metricTone,$metricDetail])
 <div class="metric-card"><div class="metric-top"><span>{{ $metricLabel }}</span><span class="metric-icon tone-{{ $metricTone }}">@include('components.icon',['name'=>$metricIcon])</span></div><div class="metric-value">R$ {{ number_format(data_get($stats ?? [],$metricKey,0)/100,2,',','.') }}</div><span class="metric-detail">{{ $metricDetail }}</span></div>
 @endforeach
 </div>
 
-<div class="alert alert-warning">@include('components.icon',['name'=>'info'])<div><strong>O pagamento deve ser confirmado na origem.</strong><p>Retorno de checkout e comprovante enviado pelo navegador não ativam o plano. Recebimentos demonstrativos têm referência própria e não representam conciliação real com a Vindi.</p></div></div>
+<div class="alert alert-warning">@include('components.icon',['name'=>'info'])<div><strong>Só a Vindi confirma pagamento.</strong><p>Comprovante enviado pelo navegador não ativa o plano.</p></div></div>
 
 <form method="GET" action="{{ route('finance.index') }}" class="filter-bar">
 <div class="search-input">@include('components.icon',['name'=>'search'])<input name="q" value="{{ request('q') }}" aria-label="Buscar fatura ou tutor" placeholder="Buscar tutor ou referência de cobrança..."></div>
@@ -20,7 +20,7 @@
 </form>
 
 <section class="card finance-records" aria-labelledby="finance-records-title">
-<div class="card-heading"><div><h2 id="finance-records-title">Faturas e pagamentos</h2><p>Informações e ações de cada cobrança, reunidas no mesmo registro.</p></div></div>
+<div class="card-heading"><div><h2 id="finance-records-title">Faturas e pagamentos</h2><p>Cada cobrança em um só lugar.</p></div></div>
 @forelse($invoices as $invoice)
 @php
     $overdue = !in_array($invoice->status,['paid','cancelled','refunded']) && $invoice->due_at->isPast() && $invoice->paid_cents<$invoice->amount_cents;
@@ -58,7 +58,7 @@
 
 @foreach($invoices as $invoice)
 @if(!in_array($invoice->status,['paid','cancelled','refunded']) && in_array(auth()->user()->role,['central_admin','finance']) && config('plans.demo') && Route::has('finance.confirm'))
-<dialog class="modal" id="payment-{{ $invoice->id }}"><form method="POST" action="{{ route('finance.confirm',$invoice) }}">@csrf<div class="modal-heading"><h2>Recebimento demonstrativo</h2><button class="icon-button" type="button" data-dialog-close aria-label="Fechar">@include('components.icon',['name'=>'close'])</button></div><p>{{ $invoice->customer->name }} · Fatura #{{ $invoice->id }}</p><div class="alert alert-warning"><div>Esta operação pertence ao ambiente demonstrativo. Não simula confirmação automática da Vindi nem substitui a homologação financeira.</div></div><label class="field">Referência da transação <span>*</span><input name="reference" required minlength="5" placeholder="DEMO-TRANSACAO-001"></label><input type="hidden" name="amount_cents" value="{{ $invoice->amount_cents-$invoice->paid_cents }}"><label class="check-label"><input type="checkbox" required><span>Conferi o recebimento demonstrativo de R$ {{ number_format(($invoice->amount_cents-$invoice->paid_cents)/100,2,',','.') }} e compreendo que a ação será auditada.</span></label><div class="form-actions"><button type="button" class="button button-secondary" data-dialog-close>Voltar</button><button class="button button-primary">Registrar confirmação demo</button></div></form></dialog>
+<dialog class="modal" id="payment-{{ $invoice->id }}"><form method="POST" action="{{ route('finance.confirm',$invoice) }}">@csrf<div class="modal-heading"><h2>Recebimento demonstrativo</h2><button class="icon-button" type="button" data-dialog-close aria-label="Fechar">@include('components.icon',['name'=>'close'])</button></div><p>{{ $invoice->customer->name }} · Fatura #{{ $invoice->id }}</p><div class="alert alert-warning"><div>Só para demonstração. Não confirma pagamento na Vindi.</div></div><label class="field">Referência da transação <span>*</span><input name="reference" required minlength="5" placeholder="DEMO-TRANSACAO-001"></label><input type="hidden" name="amount_cents" value="{{ $invoice->amount_cents-$invoice->paid_cents }}"><label class="check-label"><input type="checkbox" required><span>Conferi o recebimento demonstrativo de R$ {{ number_format(($invoice->amount_cents-$invoice->paid_cents)/100,2,',','.') }} e compreendo que a ação será auditada.</span></label><div class="form-actions"><button type="button" class="button button-secondary" data-dialog-close>Voltar</button><button class="button button-primary">Registrar confirmação demo</button></div></form></dialog>
 @endif
 @endforeach
 @endsection
