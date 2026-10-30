@@ -2,12 +2,14 @@
 
 namespace App\Services\Domain;
 
+use App\Models\ContractDocument;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Pet;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Contracts\ContractService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -103,6 +105,10 @@ class FinancialService
         }, 3);
         if ($result->status === 'paid') {
             app(ContactVerificationService::class)->requestAfterPayment($invoice->customer_id);
+            $contract = ContractDocument::where('subscription_id', $invoice->subscription_id)->where('kind', 'final_contract')->where('status', 'valid')->latest('version')->first();
+            if ($contract) {
+                app(ContractService::class)->sendCustomerCopy($contract);
+            }
         }
         foreach (Subscription::where('customer_id', $invoice->customer_id)->whereNotIn('status', Subscription::TERMINAL)->get() as $subscription) {
             app(ActivationService::class)->activate($subscription);

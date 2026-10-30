@@ -1698,3 +1698,7 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 
 /* Sem foto: o desenho do gato ou do cachorro no lugar da letra */
 .pet-avatar-species{display:block;object-fit:contain;object-position:center bottom;padding:4px;border-radius:50%;background:#e4f0cc}
+
+/* Leads: filtros por situação */
+.tab-links{display:flex;gap:6px 16px;flex-wrap:wrap}
+.tab-links .text-button.active{font-weight:700;text-decoration:underline}

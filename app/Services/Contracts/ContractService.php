@@ -156,11 +156,15 @@ class ContractService
         return $document->fresh();
     }
 
-    /** Emails the signed copy once per document. A mail failure never undoes the signature. */
+    /** Emails the signed copy once per document, only after the first payment. A mail failure never undoes the signature. */
     public function sendCustomerCopy(ContractDocument $document): bool
     {
-        $email = $document->subscription?->customer?->email;
+        $subscription = $document->subscription;
+        $email = $subscription?->customer?->email;
         if ($document->kind !== 'final_contract' || $document->status !== 'valid' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+        if (! $subscription->activated_at && ! $subscription->invoices()->where('is_initial', true)->where('status', 'paid')->exists()) {
             return false;
         }
         if (! ContractDocument::whereKey($document->id)->whereNull('customer_notified_at')->update(['customer_notified_at' => now()])) {

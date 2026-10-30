@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // Leads dos anúncios (Pluga): o código vai no endereço do webhook; sem ele o recebimento fica desligado.
+    'leads' => [
+        'token' => env('LEADS_WEBHOOK_TOKEN'),
+        'franchise_code' => env('LEADS_FRANCHISE_CODE', 'CENTRAL'),
+    ],
+
 ];

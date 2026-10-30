@@ -18,11 +18,11 @@ class ContractCopy extends Notification
         $subscription=$this->document->subscription;
         $snapshot=$subscription->contract_snapshot;
         $bytes=Storage::disk(config('integrations.contracts.disk','local'))->get($this->document->storage_path);
-        return (new MailMessage)->subject('Seu contrato assinado · São Francisco')->greeting('Olá, '.data_get($snapshot,'customer.name',$subscription->customer->name).'!')
-            ->line('Sua assinatura foi registrada. Enviamos em anexo a cópia do contrato de '.data_get($snapshot,'product.name').' para '.data_get($snapshot,'pet.name').'.')
-            ->line('O contrato também fica disponível na sua área do cliente.')
-            ->action('Acessar a área do cliente',config('site_portal.public_url').'/area-do-cliente')
-            ->line('A ativação depende da confirmação do primeiro pagamento e das demais condições do contrato.')
+        $site=config('site_portal.public_url');
+        return (new MailMessage)->subject('Seu contrato assinado · São Francisco')
+            ->view(['emails.contract-copy','emails.contract-copy-text'],[
+                'name'=>explode(' ',trim(data_get($snapshot,'customer.name',$subscription->customer->name)))[0],
+                'plan'=>data_get($snapshot,'product.name'),'pet'=>data_get($snapshot,'pet.name'),'site'=>$site,'url'=>$site.'/area-do-cliente'])
             ->attachData($bytes,'contrato-'.$subscription->number.'.pdf',['mime'=>'application/pdf']);
     }
 }

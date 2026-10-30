@@ -26,7 +26,11 @@ Route::post('/webhooks/vindi',function(Request $request) {
     return response()->json(['received'=>true,'event_id'=>$event->id],202);
 })->middleware('throttle:120,1')->name('webhooks.vindi');
 
+Route::post('/webhooks/leads/{token}',[\App\Http\Controllers\LeadController::class,'intake'])->middleware('throttle:120,1')->name('webhooks.leads');
+
 Route::middleware(['auth','active'])->group(function () {
+    Route::get('/leads',[\App\Http\Controllers\LeadController::class,'index'])->middleware('role:central_admin,manager,sales,operator')->name('leads.index');
+    Route::post('/leads/{lead}',[\App\Http\Controllers\LeadController::class,'update'])->middleware(['role:central_admin,manager,sales,operator','throttle:60,1'])->name('leads.update');
     Route::post('/sair',[AuthController::class,'logout'])->name('logout');
     Route::get('/l/{token}/contrato',[\App\Http\Controllers\MarketingLinkController::class,'contractPreview'])->middleware('role:central_admin,manager,sales')->name('attribution_links.contract-preview');
     Route::get('/l/{token}/contrato/pdf',[\App\Http\Controllers\MarketingLinkController::class,'contractPreviewPdf'])->middleware('role:central_admin,manager,sales')->name('attribution_links.contract-preview-pdf');

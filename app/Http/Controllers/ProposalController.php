@@ -6,7 +6,7 @@ use App\Models\{Customer, Franchise, Pet, Proposal, ProductVersion, Subscription
 use App\Services\AccessService;
 use App\Services\Contracts\{ContractService,SigningEvidence};
 use App\Services\Domain\{ProposalService, CancellationService};
-use App\Services\Attribution\{AttributionService,MarketingLinkService};
+use App\Services\Attribution\{AttributionService,MarketingLinkService,TrackingSanitizer};
 use Illuminate\Http\Request;
 
 class ProposalController extends Controller
@@ -17,7 +17,17 @@ class ProposalController extends Controller
     {
         $query = $request->user()->role === 'customer' ? Proposal::where('customer_id',$request->user()->customer_id) : $this->access->scope(Proposal::query(),$request->user());
         if ($request->filled('status')) $query->where('status',$request->string('status')->toString());
-        $proposals = $query->with(['customer','pet','productVersion.product','originatingFranchise'])->latest()->paginate(15)->withQueryString();
+        if ($request->user()->role !== 'customer') {
+            $filters=$request->validate(['q'=>'nullable|string|max:80','channel'=>'nullable|in:site,link,presential','origem'=>'nullable|in:'.implode(',',array_keys(TrackingSanitizer::sourceLabels())),'etapa'=>'nullable|in:'.implode(',',array_keys(Proposal::STAGES))]);
+            if (filled($filters['q']??null)) {
+                $like='%'.addcslashes($filters['q'],'%_\\').'%';
+                $query->where(fn($w)=>$w->where('number','like',$like)->orWhereHas('customer',fn($c)=>$c->where('name','like',$like))->orWhereHas('pet',fn($p)=>$p->where('name','like',$like)));
+            }
+            if (filled($filters['channel']??null)) $query->where('channel',$filters['channel']);
+            if (filled($filters['origem']??null)) $query->where('acquisition_source',$filters['origem']);
+            if (filled($filters['etapa']??null)) $query->inStage($filters['etapa']);
+        }
+        $proposals = $query->with(['customer','pet','productVersion.product','originatingFranchise','subscription.invoices'])->latest()->paginate(15)->withQueryString();
         return view('proposals.index',compact('proposals'));
     }
 

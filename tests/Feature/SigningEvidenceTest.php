@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Customer,Franchise,Pet,Product,ProductVersion,Proposal,User};
+use App\Models\{Customer,Franchise,Invoice,Pet,Product,ProductVersion,Proposal,User};
 use App\Notifications\{ContractCopy,ProposalLink};
 use App\Services\Contracts\OriginalWordContract;
-use App\Services\Domain\ProposalService;
+use App\Services\Domain\{FinancialService,ProposalService};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\{Notification,Storage};
@@ -74,9 +74,18 @@ class SigningEvidenceTest extends TestCase
         $this->assertSameIgnoringKeyOrder(['screen'=>'412x915','platform'=>'Android','mobile'=>true,'timezone'=>'America/Sao_Paulo'],$evidence['device']);
         $this->postJson(route('proposals.regenerate-contract',$proposal))->assertOk()->assertJsonPath('ready',true);
         $this->postJson(route('proposals.regenerate-contract',$proposal))->assertOk();
+        Notification::assertSentOnDemandTimes(ContractCopy::class,0);
+        $document=$proposal->subscription->documents()->sole();
+        $this->assertNull($document->customer_notified_at,'The signed copy is emailed only after the first payment.');
+        $subscription=$proposal->subscription;
+        $invoice=Invoice::create(['subscription_id'=>$subscription->id,'customer_id'=>$subscription->customer_id,'originating_franchise_id'=>$subscription->originating_franchise_id,
+            'amount_cents'=>8600,'due_at'=>now()->addDay(),'is_initial'=>true]);
+        $paid=['status'=>'paid','paid_cents'=>8600,'paid_at'=>now()->toIso8601String(),'reference'=>'vindi:test-1','provider_updated_at'=>now()->toIso8601String()];
+        app(FinancialService::class)->applyVerifiedInvoice($invoice,$paid);
+        app(FinancialService::class)->applyVerifiedInvoice($invoice->fresh(),$paid);
         Notification::assertSentOnDemandTimes(ContractCopy::class,1);
         Notification::assertSentOnDemand(ContractCopy::class,fn($notification,$channels,AnonymousNotifiable $notifiable)=>$notifiable->routes['mail']==='titular@example.test');
-        $this->assertNotNull($proposal->subscription->documents()->sole()->customer_notified_at);
+        $this->assertNotNull($document->fresh()->customer_notified_at);
         $this->get(route('proposals.show',$proposal))->assertOk();
         $this->assertFalse(session()->has('checkout_after_signing.'.$proposal->id),'The payment redirect is offered once the contract is ready.');
     }
@@ -98,7 +107,7 @@ class SigningEvidenceTest extends TestCase
         $this->get(route('proposals.show',$proposal))->assertOk()->assertSee('Foto do titular');
         $this->actingAs($this->owner)->get(route('proposals.selfie',$proposal))->assertForbidden();
         $this->actingAs($this->admin)->postJson(route('proposals.regenerate-contract',$proposal))->assertOk()->assertJsonPath('ready',true);
-        Notification::assertSentOnDemandTimes(ContractCopy::class,1);
+        Notification::assertSentOnDemandTimes(ContractCopy::class,0);
         $this->actingAs($this->owner)->get(route('portal.pet',$proposal->pet_id))->assertOk()->assertSee('Baixar contrato');
     }
 
