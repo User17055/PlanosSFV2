@@ -1718,6 +1718,7 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 /* Leads: abas Lista/Painel e o painel (barras por dia e ranking de origem) */
 .workspace-nav a.active{background:var(--primary-strong);color:#fff}
 .lead-tabs{position:static}
+.area-hint{display:block;margin:0 0 8px;color:var(--text-3)}
 .lead-period{margin:-6px 0 14px}
 .lead-stat-converted strong{color:#3d7a14}
 .lead-days{display:flex;align-items:flex-end;gap:3px;height:140px}

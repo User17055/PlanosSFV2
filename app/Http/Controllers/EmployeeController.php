@@ -7,6 +7,7 @@ use App\Services\Reports\DashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeController extends Controller
 {
@@ -62,11 +63,20 @@ class EmployeeController extends Controller
             'monthly_sales_target'=>'nullable|decimal:0,2|min:0|max:10000000',
             'active'=>'required|boolean','role'=>['required',Rule::in(array_keys(self::ROLES))],
             'franchise_ids'=>'required|array|min:1','franchise_ids.*'=>['required','integer','distinct',Rule::exists('franchises','id')->where('active',true)],
+            'areas'=>'nullable|array','areas.*'=>['string',Rule::in(array_keys(User::AREAS))],
         ]);
-        if($employee->id===$request->user()->id) abort_unless($data['role']===$employee->role && (bool)$data['active']===$employee->active && collect($data['franchise_ids'])->map(fn($id)=>(int)$id)->sort()->values()->all()===$employee->franchises()->wherePivot('active',true)->pluck('franchises.id')->sort()->values()->all(),422,'Outro administrador deve alterar seu perfil, situação ou unidades.');
+        // Telas liberadas: só as que o perfil permite. Tudo marcado vira null (o perfil inteiro, inclusive telas que vierem depois).
+        // Quem edita a si mesmo não vê a lista (o campo areas_shown não vem) e fica como está.
+        $self=$employee->id===$request->user()->id;
+        $roleAreas=User::areasFor($data['role']);
+        $picked=$request->has('areas_shown') && !$self;
+        $areas=$picked ? array_values(array_intersect($roleAreas,$data['areas']??[])) : $employee->areas;
+        if($picked && $areas===[]) throw ValidationException::withMessages(['areas'=>'Marque pelo menos uma tela.']);
+        if($areas===$roleAreas) $areas=null;
+        if($self) abort_unless($data['role']===$employee->role && (bool)$data['active']===$employee->active && collect($data['franchise_ids'])->map(fn($id)=>(int)$id)->sort()->values()->all()===$employee->franchises()->wherePivot('active',true)->pluck('franchises.id')->sort()->values()->all(),422,'Outro administrador deve alterar seu perfil, situação ou unidades.');
         $created=!$employee->exists;
-        DB::transaction(function()use($request,$employee,$data,$created){
-            $attributes=collect($data)->except(['franchise_ids','monthly_sales_target','password','password_confirmation'])->all();
+        DB::transaction(function()use($request,$employee,$data,$created,$areas){
+            $attributes=collect($data)->except(['franchise_ids','monthly_sales_target','password','password_confirmation','areas'])->all()+['areas'=>$areas];
             if(!empty($data['password'])) $attributes['password']=$data['password'];
             $attributes['monthly_sales_target_cents']=(int)round(((float)($data['monthly_sales_target']??0))*100);
             $attributes['franchise_id']=$data['franchise_ids'][0];

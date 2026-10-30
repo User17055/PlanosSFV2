@@ -13,7 +13,7 @@ class DashboardController extends Controller
     {
         $user=$request->user();
         $filters=$dashboard->filters($user,$request->query());
-        $recentLeads=in_array($user->role,['central_admin','manager','sales','operator'],true) ? $access->scope(Lead::where('status','new'),$user)->latest('id')->limit(3)->get() : collect();
+        $recentLeads=in_array($user->role,['central_admin','manager','sales','operator'],true) && $user->canOpen('leads') ? $access->scope(Lead::where('status','new'),$user)->latest('id')->limit(3)->get() : collect();
         return response()->view('dashboard',$dashboard->report($user,$filters)+['recentLeads'=>$recentLeads])->header('Cache-Control','private, no-store');
     }
 
