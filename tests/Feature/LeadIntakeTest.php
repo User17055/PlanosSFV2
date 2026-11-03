@@ -76,4 +76,50 @@ class LeadIntakeTest extends TestCase
         $this->assertSame($admin->id, $lead->fresh()->handled_by);
         $this->actingAs($admin)->post('/leads/'.$lead->id, ['status' => 'qualquer'])->assertSessionHasErrors('status');
     }
+
+    public function test_form_questions_with_other_names_still_become_a_lead(): void
+    {
+        $this->send(['Nome completo' => 'Maria da Silva', 'Qual o seu WhatsApp?' => '(18) 99999-0000', 'Espécie do Pet' => 'Gato', 'E-mail' => 'maria@example.test'])->assertCreated();
+        $lead = Lead::sole();
+        $this->assertSame('Maria da Silva', $lead->name);
+        $this->assertSame('18999990000', $lead->phone);
+        $this->assertSame('maria@example.test', $lead->email);
+        $this->assertSame(['especie_do_pet' => 'Gato'], $lead->extra);
+    }
+
+    public function test_nested_payload_is_read(): void
+    {
+        $this->send(['lead' => ['nome' => 'Ana', 'telefone' => '18977776666'], 'origem' => ['campanha' => 'Outubro']])->assertCreated();
+        $lead = Lead::sole();
+        $this->assertSame(['Ana', '18977776666', 'Outubro'], [$lead->name, $lead->phone, $lead->campaign]);
+    }
+
+    public function test_repeated_id_with_another_contact_is_a_new_lead_not_a_resend(): void
+    {
+        $this->send(['id' => 'form-fixo', 'nome' => 'Ana', 'telefone' => '18911111111'])->assertCreated();
+        $this->send(['id' => 'form-fixo', 'nome' => 'Bia', 'telefone' => '18922222222'])->assertCreated();
+        $this->send(['id' => 'form-fixo', 'nome' => 'Bia', 'telefone' => '18922222222'])->assertOk()->assertJsonPath('duplicate', true);
+        $this->send(['id' => 'form-fixo', 'nome' => 'Ana', 'telefone' => '18911111111'])->assertOk()->assertJsonPath('duplicate', true);
+        $this->assertSame(['Ana', 'Bia'], Lead::orderBy('id')->pluck('name')->all());
+    }
+
+    public function test_refused_delivery_shows_field_names_to_admins_but_never_the_values(): void
+    {
+        $this->send(['nome' => 'Segredo da Silva', 'contato_preferido' => 'manhã'])->assertUnprocessable();
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        foreach (['leads.index', 'leads.dashboard'] as $route) {
+            $this->actingAs($admin)->get(route($route))->assertOk()->assertSee('contato_preferido')->assertDontSee('Segredo da Silva')->assertDontSee('manhã');
+        }
+        $attendant = User::factory()->create(['role' => 'attendant', 'active' => true]);
+        $this->actingAs($attendant)->get(route('leads.index'))->assertOk()->assertDontSee('contato_preferido');
+    }
+
+    public function test_panel_warns_admin_when_receiving_is_turned_off(): void
+    {
+        config(['services.leads.token' => '']);
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        $this->actingAs($admin)->get(route('leads.index'))->assertSee('Recebimento desligado');
+        config(['services.leads.token' => 'segredo-de-teste']);
+        $this->actingAs($admin)->get(route('leads.index'))->assertDontSee('Recebimento desligado');
+    }
 }

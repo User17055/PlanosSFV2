@@ -44,6 +44,7 @@ CONTRACT_REQUIRE_ANTIVIRUS=true
 CONTRACT_CLAMD_SOCKET=tcp://127.0.0.1:3310
 VINDI_ENABLED=false
 VINDI_ALLOW_CREATION=false
+LEADS_WEBHOOK_TOKEN=INJETAR_PELO_COFRE
 ```
 
 Os valores ilustrativos não devem ser usados como segredos. Configurar e testar SMTP para confirmação do contato. Ativar a política comercial somente após aprovação. Não carregar os usuários/planos demonstrativos em produção. MFA e recuperação segura da equipe precisam ser concluídos antes da entrada em operação.

@@ -16,6 +16,12 @@ class Lead extends DomainModel
         return $this->belongsTo(User::class, 'handled_by');
     }
 
+    /** O Pluga pode mandar o id numérico da campanha, que não diz nada na tela; o fim do número ainda separa uma campanha da outra. */
+    public function campaignLabel(): string
+    {
+        return ctype_digit((string) $this->campaign) ? 'Campanha nº …'.substr($this->campaign, -6) : ($this->campaign ?: 'Anúncio');
+    }
+
     /** Link do WhatsApp: só dígitos, com o 55 do Brasil quando vier sem, e a mensagem já escrita. */
     public function whatsappUrl(?string $message = null): ?string
     {

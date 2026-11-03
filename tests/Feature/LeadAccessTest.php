@@ -74,6 +74,41 @@ class LeadAccessTest extends TestCase
         $this->actingAs($this->attendant)->get(route('leads.dashboard', ['dias' => 5]))->assertSessionHasErrors('dias');
     }
 
+    public function test_new_leads_come_first_and_the_menu_count_is_never_stale(): void
+    {
+        $this->lead(['name' => 'Antigo Novo', 'external_id' => 'a1']);
+        $this->lead(['name' => 'Recente Chamado', 'external_id' => 'a2', 'status' => 'contacted']);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSeeInOrder(['Antigo Novo', 'Recente Chamado'])->assertSee('<b class="nav-count">1</b>', false);
+        $this->lead(['name' => 'Chegou Agora', 'external_id' => 'a3']);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('<b class="nav-count">2</b>', false);
+    }
+
+    public function test_panel_lists_who_waits_longest_and_compares_with_the_previous_period(): void
+    {
+        $older = $this->lead(['name' => 'Espera Muito', 'external_id' => 'b1']);
+        $older->forceFill(['created_at' => now()->subDays(40)])->saveQuietly();
+        $this->lead(['name' => 'Espera Pouco', 'external_id' => 'b2']);
+        $this->lead(['name' => 'Já Chamada', 'external_id' => 'b3', 'status' => 'contacted']);
+        $page = $this->actingAs($this->attendant)->get(route('leads.dashboard'))->assertOk();
+        $page->assertSeeInOrder(['Esperando há mais tempo', 'Espera Muito', 'Espera Pouco'])->assertDontSee('Já Chamada')->assertSee('+100% sobre os 30 dias anteriores');
+    }
+
+    public function test_numeric_campaign_id_never_shows_as_a_long_number(): void
+    {
+        $this->lead(['campaign' => '120253596157660216', 'external_id' => 'c1']);
+        foreach (['leads.index', 'leads.dashboard'] as $route) {
+            $this->actingAs($this->attendant)->get(route($route))->assertSee('Campanha nº …660216')->assertDontSee('120253596157660216');
+        }
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertSee('Campanha nº …660216')->assertDontSee('120253596157660216');
+    }
+
+    public function test_panel_works_with_no_leads_at_all(): void
+    {
+        foreach ([7, 30, 90] as $days) {
+            $this->actingAs($this->admin)->get(route('leads.dashboard', ['dias' => $days]))->assertOk()->assertSee('Nenhum lead recebido ainda')->assertSee('Ninguém esperando.');
+        }
+    }
+
     public function test_attendant_logs_in_straight_to_leads(): void
     {
         $this->post(route('authenticate'), ['email' => 'ana@example.test', 'password' => 'Example123!!!'])->assertRedirect(route('leads.index'));

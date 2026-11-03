@@ -7,7 +7,7 @@
   $$('[data-dialog-open]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.dialogOpen)?.showModal()));
   $$('[data-dialog-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog')?.close()));
   $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } }));
-  $$('[data-confirm]').forEach(button => button.addEventListener('click', event => { if (!window.confirm(button.dataset.confirm)) event.preventDefault(); }));
+  document.addEventListener('click', event => { const button = event.target.closest('[data-confirm]'); if (button && !window.confirm(button.dataset.confirm)) event.preventDefault(); });
   $$('[data-copy-target]').forEach(button => button.addEventListener('click', async () => { const input = document.getElementById(button.dataset.copyTarget); if (!input) return; try { await navigator.clipboard.writeText(input.value); toast('Link copiado. Compartilhe com o tutor.'); } catch { input.select(); toast('Selecione e copie o link exibido.'); } }));
   $$('[data-toggle-password]').forEach(button => button.addEventListener('click', () => { const input = document.getElementById(button.dataset.togglePassword); if (!input) return; const show = input.type === 'password'; input.type = show ? 'text' : 'password'; button.textContent = show ? 'Ocultar' : 'Mostrar'; button.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha'); }));
   $$('[data-mask="cpf"]').forEach(input => input.addEventListener('input', () => { const v = input.value.replace(/\D/g, '').slice(0, 11); input.value = v.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'); }));
@@ -150,7 +150,8 @@
     select.addEventListener('change', updateSuffix); updateSuffix();
   });
   // No celular, tabelas viram cartões: cada célula recebe o título da sua coluna (estilos em theme.css).
-  $$('table').forEach(table => {
+  // As tabelas de leads são trocadas ao vivo, depois deste passo: o formato delas no celular fica todo no CSS.
+  $$('table:not([data-no-stack])').forEach(table => {
     const headers = $$('thead th', table).map(th => th.textContent.trim());
     if (!headers.length) return;
     table.classList.add('is-stackable');
