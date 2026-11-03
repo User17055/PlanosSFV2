@@ -103,6 +103,14 @@ jobs:
       - name: Allow trigger creation by the database owner
         run: mysql -h 127.0.0.1 -uroot -proot -e "SET GLOBAL log_bin_trust_function_creators = 1"
 
+      # A VPS converte o contrato Word → PDF pelo LibreOffice (24.2, pacote do Ubuntu 24.04). Sem ele aqui,
+      # o caminho de produção nunca seria exercitado; os jobs SQLite seguem sem, testando a recusa.
+      - name: Install LibreOffice Writer (Word → PDF, igual à VPS)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libreoffice-writer-nogui
+          soffice --version
+
       - name: Execute tests
         run: vendor/bin/phpunit
 
