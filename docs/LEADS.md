@@ -82,7 +82,7 @@ Cuidados que evitam perder dados:
 
 O teste do Facebook prova a conexão, e um envio real prova os campos.
 
-1. **Conexão:** envie um lead pela ferramenta de teste do Facebook. Ele aparece na lista com a etiqueta "Teste" e fica fora do painel.
+1. **Conexão:** envie um lead pela ferramenta de teste do Facebook. Ele aparece na lista marcado como "Lead de teste" e fica fora do painel.
 2. **Limpeza:** peça a um administrador ou gerente para clicar em "Apagar teste".
 3. **Campos:** preencha o formulário real com um telefone seu e abra `/leads`.
 4. **Conferência:** veja se nome, botão de WhatsApp, e-mail, campanha, anúncio e dados do pet estão no lugar certo.
@@ -119,7 +119,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Quem atendeu | Leads pela última pessoa que mudou a situação | Não mostra quem atendeu antes dela |
 
-A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, com selo "Chamar logo" a partir de 1 hora e "Atrasado" a partir de 24 horas. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando há..." muda de cor a partir de 1 hora e de novo a partir de 24 horas. Cada lead mostra só o próximo passo: novo tem "Já chamei" e "Sem interesse"; em contato tem "Virou cliente" e "Sem interesse"; os encerrados têm "Reabrir". O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
 
 ## Acesso
 

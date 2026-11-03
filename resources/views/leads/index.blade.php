@@ -2,42 +2,50 @@
 @section('title','Leads')
 @section('content')
 @php
-$badge=['new'=>'badge-amber','contacted'=>'badge-blue','converted'=>'badge-green','lost'=>'badge-gray'];
+$canUpdate=auth()->user()->canUse('leads.update');
 $canDelete=in_array(auth()->user()->role,['central_admin','manager']) && auth()->user()->canUse('leads.destroy');
-$labels=['idade_do_pet'=>'Idade do pet','especie_do_pet'=>'Espécie do pet','formulario'=>'Formulário','anuncio'=>'Anúncio'];
-// O primeiro de cada grupo é o próximo passo natural e vira o botão principal.
-$actions=['new'=>['contacted'=>'Chamei','converted'=>'Virou cliente','lost'=>'Sem interesse'],'contacted'=>['converted'=>'Virou cliente','lost'=>'Sem interesse','new'=>'Voltar para novo'],'converted'=>['contacted'=>'Reabrir'],'lost'=>['contacted'=>'Reabrir']];
+$filters=['new'=>'Para chamar','contacted'=>'Em contato','converted'=>'Viraram cliente','lost'=>'Sem interesse'];
+// Só o próximo passo de cada situação: a pessoa não precisa escolher entre muitos botões.
+$actions=['new'=>['contacted'=>'Já chamei','lost'=>'Sem interesse'],'contacted'=>['converted'=>'Virou cliente','lost'=>'Sem interesse'],'converted'=>['contacted'=>'Reabrir'],'lost'=>['contacted'=>'Reabrir']];
 $keep=fn(array $extra=[])=>array_filter($extra+['q'=>$q]);
+$words=fn($value)=>str_replace('_',' ',$value);
 @endphp
-<div class="page-heading"><div><h1>Leads</h1><p>Quem pediu contato pelos anúncios. Chame pelo WhatsApp e marque como foi.</p></div>@include('leads.live-status')</div>
-<div class="lead-toolbar">
-<nav class="workspace-nav lead-tabs" aria-label="Leads"><a class="active" aria-current="page" href="{{ route('leads.index') }}">Lista</a><a href="{{ route('leads.dashboard') }}">Painel</a></nav>
-<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@if($status)<input type="hidden" name="situacao" value="{{ $status }}">@endif<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Nome, telefone ou e-mail..."></div><button class="button button-secondary">Buscar</button></form>
+<div class="page-heading lead-heading">
+<div><h1>Leads</h1><p>{!! $canUpdate ? 'Chame no WhatsApp, clique em <b>Já chamei</b> e depois marque o resultado.' : 'Quem pediu contato pelos anúncios.' !!}</p></div>
+<div class="lead-heading-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.dashboard') }}">Ver painel</a>
+<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@if($status)<input type="hidden" name="situacao" value="{{ $status }}">@endif<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Nome, telefone ou e-mail..."></div></form></div>
 </div>
 <div data-live>
+<div class="lead-topline">
+<nav class="lead-filters" aria-label="Filtrar por situação">
+<a class="{{ !$status ? 'active' : '' }}" @if(!$status) aria-current="true" @endif href="{{ route('leads.index',$keep()) }}">Todos <b>{{ $counts->sum() }}</b></a>
+@foreach($filters as $value=>$label)<a class="{{ $status===$value ? 'active' : '' }}" @if($status===$value) aria-current="true" @endif href="{{ route('leads.index',$keep(['situacao'=>$value])) }}">{{ $label }} <b>{{ $counts[$value] ?? 0 }}</b></a>@endforeach
+</nav>
 @include('leads.intake-status')
-<div class="lead-stats" role="group" aria-label="Filtrar por situação">
-<a class="lead-stat {{ !$status ? 'active' : '' }}" @if(!$status) aria-current="true" @endif href="{{ route('leads.index',$keep()) }}"><strong>{{ $counts->sum() }}</strong><span>Todos</span></a>
-@foreach(\App\Models\Lead::STATUSES as $value=>$label)<a class="lead-stat lead-stat-{{ $value }} {{ $status===$value ? 'active' : '' }} {{ ($counts[$value] ?? 0) ? 'has-items' : '' }}" @if($status===$value) aria-current="true" @endif href="{{ route('leads.index',$keep(['situacao'=>$value])) }}"><strong>{{ $counts[$value] ?? 0 }}</strong><span>{{ $label }}</span></a>@endforeach
 </div>
-<section class="card"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Lead</th><th>Contato</th><th>Origem</th><th>Chegou</th><th>Situação</th></tr></thead><tbody>
+<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Quem</th><th>Detalhes</th><th>Situação</th><th>O que fazer</th></tr></thead><tbody>
 @forelse($leads as $lead)
 @php
-$arrived=$lead->created_at->timezone('America/Sao_Paulo');
-$hours=$lead->status==='new' ? $lead->created_at->diffInHours(now()) : 0;
 $extra=$lead->extra ?? [];
-$origin=array_intersect_key($extra,array_flip(['anuncio','formulario']));
+$details=collect([$lead->pet_name ? 'Pet: '.$lead->pet_name : null,isset($extra['especie_do_pet']) ? \Illuminate\Support\Str::ucfirst($words($extra['especie_do_pet'])) : null])->filter()
+    ->merge(collect($extra)->except(['especie_do_pet','anuncio','formulario'])->map(fn($value,$key)=>\Illuminate\Support\Str::ucfirst($words($key)).': '.$words($value))->values());
+// O nome do anúncio diz mais que o número da campanha.
+$from=collect([ctype_digit((string) $lead->campaign) ? null : $lead->campaign,$extra['anuncio'] ?? null])->filter()->implode(' · ') ?: $lead->campaignLabel();
+$hours=$lead->created_at->diffInHours(now());
+$active=in_array($lead->status,['new','contacted'],true);
 @endphp
-<tr class="lead-row {{ $lead->status==='new' ? 'lead-new' : '' }}" data-lead-id="{{ $lead->id }}">
-<td data-label="Lead"><div class="lead-person"><span class="lead-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($lead->name,0,1)) }}</span><div><strong>{{ $lead->name }}</strong>@if($lead->source==='teste') <span class="badge badge-gray">Teste</span>@endif
-<div class="lead-facts">@if($lead->pet_name)<span>Pet: {{ $lead->pet_name }}</span>@endif @foreach(array_diff_key($extra,$origin) as $key=>$value)<span>{{ $labels[$key] ?? ucfirst(str_replace('_',' ',$key)) }}: {{ str_replace('_',' ',$value) }}</span>@endforeach</div></div></div></td>
-<td data-label="Contato">@if($lead->whatsappUrl())<a class="button button-small lead-whats {{ in_array($lead->status,['new','contacted'],true) ? 'button-primary' : 'button-secondary lead-whats-quiet' }}" href="{{ $lead->whatsappUrl($lead->greeting()) }}" target="_blank" rel="noopener">@include('components.icon',['name'=>'phone']) WhatsApp</a><small>{{ $lead->phoneLabel() }}</small>@elseif($lead->phone)<strong>{{ $lead->phone }}</strong>@else<small>Sem telefone</small>@endif @if($lead->email)<small><a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a></small>@endif</td>
-<td data-label="Origem">@if($lead->campaign || !$origin)<strong class="lead-origin">{{ $lead->campaignLabel() }}</strong>@endif @foreach($origin as $key=>$value)<small>{{ $labels[$key] }}: {{ $value }}</small>@endforeach</td>
-<td data-label="Chegou"><strong>{{ $arrived->locale('pt_BR')->diffForHumans() }}</strong><small>{{ $arrived->format('d/m/Y H:i') }}</small>@if($hours>=24)<span class="badge badge-red">Atrasado</span>@elseif($hours>=1)<span class="badge badge-amber">Chamar logo</span>@endif</td>
-<td data-label="Situação" class="lead-state"><span class="badge {{ $badge[$lead->status] ?? 'badge-gray' }}">{{ \App\Models\Lead::STATUSES[$lead->status] ?? $lead->status }}</span>@if($lead->handler)<small>{{ $lead->handler->name }}@if($lead->contacted_at) · {{ $lead->contacted_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}@endif</small>@endif
-<div class="lead-actions">@foreach(auth()->user()->canUse('leads.update') ? ($actions[$lead->status] ?? []) : [] as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="{{ $loop->first ? 'button button-secondary button-small' : 'text-button' }}">{{ $label }}</button></form>@endforeach @if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif</div></td>
+<tr data-lead-id="{{ $lead->id }}">
+<td><strong>{{ $lead->name }}</strong>@if($lead->source==='teste')<small>Lead de teste</small>@endif @if($lead->phone)<small>{{ $lead->phoneLabel() }}</small>@endif @if($lead->email)<small><a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a></small>@endif</td>
+<td>@if($details->isNotEmpty()){{ $details->implode(' · ') }}@endif<small @if(isset($extra['formulario'])) title="Formulário: {{ $extra['formulario'] }}" @endif>{{ $from }}</small></td>
+<td>@if($lead->status==='new')<strong class="{{ $hours>=24 ? 'is-late' : ($hours>=1 ? 'is-soon' : '') }}">Esperando {{ $lead->created_at->locale('pt_BR')->diffForHumans() }}</strong><small>Chegou {{ $lead->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</small>@else<strong class="is-{{ $lead->status }}" title="Chegou {{ $lead->created_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }}">{{ \App\Models\Lead::STATUSES[$lead->status] ?? $lead->status }}</strong>@if($lead->handler)<small>Por {{ $lead->handler->name }}@if($lead->contacted_at) · {{ $lead->contacted_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}@endif</small>@endif @endif</td>
+<td><div class="lead-actions">
+@if($lead->whatsappUrl())<a class="{{ $lead->status==='new' ? 'button button-primary button-small lead-whats' : ($active ? 'button button-secondary button-small lead-whats lead-whats-quiet' : 'text-button') }}" href="{{ $lead->whatsappUrl($lead->greeting()) }}" target="_blank" rel="noopener">@if($active)@include('components.icon',['name'=>'phone'])@endif WhatsApp</a>
+@elseif($lead->email && $active)<a class="button button-secondary button-small lead-whats lead-whats-quiet" href="mailto:{{ $lead->email }}">Enviar e-mail</a>@endif
+@foreach($canUpdate ? ($actions[$lead->status] ?? []) : [] as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="{{ $active && $loop->first ? 'button button-secondary button-small' : 'text-button' }}">{{ $label }}</button></form>@endforeach
+@if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif
+</div></td>
 </tr>
-@empty<tr><td colspan="5"><div class="empty-state">@include('components.icon',['name'=>'phone'])<strong>{{ ($q || $status) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status) ? 'Limpe a busca ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
+@empty<tr><td colspan="4"><div class="empty-state"><strong>{{ ($q || $status) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status) ? 'Limpe a busca ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
 </tbody></table></div><div class="pagination-wrapper">{{ $leads->links() }}</div></section>
 </div>
 @endsection

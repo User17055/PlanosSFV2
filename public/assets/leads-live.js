@@ -106,7 +106,7 @@
   };
   const seen = () => { unseen = 0; document.title = pageTitle; };
 
-  // Botões da tela (Chamei, Virou cliente...): salvam sem recarregar nem perder a posição na lista.
+  // Botões da tela (Já chamei, Virou cliente...): salvam sem recarregar nem perder a posição na lista.
   document.addEventListener('submit', async event => {
     const form = event.target;
     if (!root.contains(form) || form.method !== 'post') return;

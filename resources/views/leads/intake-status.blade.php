@@ -6,7 +6,7 @@ $refusedAt=$intake['refused'] ? \Illuminate\Support\Carbon::createFromTimestamp(
 $state=$intake['off'] ? 'off' : ($refusedAt || ($quiet && $intake['admin']) ? 'warn' : ($last ? 'ok' : 'idle'));
 @endphp
 <div class="lead-intake lead-intake-{{ $state }}" data-last-lead="{{ $last?->id }}">
-@include('components.icon',['name'=>$state==='ok' ? 'check' : ($state==='idle' ? 'phone' : 'alert')])
+@if(in_array($state,['warn','off'],true))@include('components.icon',['name'=>'alert'])@endif
 <div>
 <strong>{{ $last ? 'Último lead recebido '.$ago($last->created_at) : 'Nenhum lead recebido ainda' }}</strong>
 @if($intake['off'])<p><b>Recebimento desligado:</b> falta configurar <code>LEADS_WEBHOOK_TOKEN</code> neste servidor. Enquanto isso, nenhum lead do Pluga entra.</p>@endif

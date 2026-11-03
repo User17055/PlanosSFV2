@@ -90,11 +90,13 @@ class JobRoleTest extends TestCase
         $this->get(route('dashboard'))->assertRedirect(route('leads.index'));
         $this->get(route('finance.index'))->assertRedirect(route('leads.index'));
         $this->get(route('reports.export'))->assertRedirect(route('leads.index'));
-        $this->post(route('leads.update', 1), ['status' => 'contacted'])->assertForbidden();
-        $this->post(route('subscriptions.cancel', 1))->assertForbidden();
-        // O cargo nunca vai além do nível.
-        $this->get(route('management.index'))->assertForbidden();
-        $this->get(route('employees.roles.index'))->assertForbidden();
+        $lead = \App\Models\Lead::create(['originating_franchise_id' => $this->unit->id, 'name' => 'Maria da Silva', 'phone' => '5518999990000']);
+        $this->post(route('leads.update', $lead), ['status' => 'contacted'])->assertForbidden();
+        $this->post(route('leads.destroy', $lead))->assertForbidden();
+        $this->assertDatabaseHas('leads', ['id' => $lead->id, 'status' => $lead->fresh()->status]);
+        // O cargo nunca vai além do nível: telas só da administração central também ficam fechadas.
+        $this->get(route('management.index'))->assertRedirect(route('leads.index'));
+        $this->get(route('employees.roles.index'))->assertRedirect(route('leads.index'));
     }
 
     public function test_tutor_file_hides_invoices_without_finance_and_shows_them_with_it(): void

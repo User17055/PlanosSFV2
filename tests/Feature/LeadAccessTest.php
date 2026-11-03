@@ -93,6 +93,20 @@ class LeadAccessTest extends TestCase
         $page->assertSeeInOrder(['Esperando há mais tempo', 'Espera Muito', 'Espera Pouco'])->assertDontSee('Já Chamada')->assertSee('+100% sobre os 30 dias anteriores');
     }
 
+    public function test_list_shows_only_the_next_step_of_each_lead(): void
+    {
+        $lead = $this->lead(['external_id' => 'p1', 'campaign' => '120253596157660216', 'extra' => ['anuncio' => 'Plano Outubro', 'especie_do_pet' => 'cachorro']]);
+        $list = fn () => $this->actingAs($this->attendant)->get(route('leads.index'));
+
+        // O nome do anúncio diz mais que o número da campanha.
+        $list()->assertSee('Esperando')->assertSee('Cachorro')->assertSee('Plano Outubro')->assertDontSee('Campanha nº')
+            ->assertSee('Já chamei</button>', false)->assertDontSee('Virou cliente</button>', false);
+        $lead->update(['status' => 'contacted']);
+        $list()->assertSee('Virou cliente</button>', false)->assertSee('Sem interesse</button>', false)->assertDontSee('Já chamei</button>', false);
+        $lead->update(['status' => 'converted']);
+        $list()->assertSee('Reabrir</button>', false)->assertDontSee('Sem interesse</button>', false);
+    }
+
     public function test_numeric_campaign_id_never_shows_as_a_long_number(): void
     {
         $this->lead(['campaign' => '120253596157660216', 'external_id' => 'c1']);
