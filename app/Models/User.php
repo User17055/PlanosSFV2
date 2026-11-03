@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'areas', 'franchise_id', 'customer_id', 'active', 'email_verified_at', 'employee_code', 'phone', 'job_title', 'hired_at', 'monthly_sales_target_cents'])]
+#[Fillable(['name', 'email', 'password', 'role', 'areas', 'job_role_id', 'franchise_id', 'customer_id', 'active', 'email_verified_at', 'employee_code', 'phone', 'job_title', 'hired_at', 'monthly_sales_target_cents'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -46,7 +46,19 @@ class User extends Authenticatable
 
     public function canOpen(string $area): bool
     {
+        if ($this->job_role_id && isset(self::AREAS[$area])) return (bool) $this->jobRole?->allows($area.'.view');
         return ! isset(self::AREAS[$area]) || $this->areas === null || in_array($area, $this->areas, true);
+    }
+
+    public function jobRole()
+    {
+        return $this->belongsTo(JobRole::class);
+    }
+
+    /** Com cargo, vale só o que ele libera. Sem cargo, quem decide é o perfil, nas rotas. */
+    public function canUse(string $route): bool
+    {
+        return ! $this->job_role_id || (bool) $this->jobRole?->allowsRoute($route);
     }
 
     public function franchise()

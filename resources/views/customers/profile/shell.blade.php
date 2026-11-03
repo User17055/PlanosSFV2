@@ -1,6 +1,6 @@
 @php
-$canEdit=in_array(auth()->user()->role,['central_admin','manager','sales'],true);
-$canFinance=in_array(auth()->user()->role,['central_admin','manager','finance'],true);
+$canEdit=in_array(auth()->user()->role,['central_admin','manager','sales'],true) && auth()->user()->canUse('customers.update');
+$canFinance=in_array(auth()->user()->role,['central_admin','manager','finance'],true) && auth()->user()->canUse('finance.index');
 $state=data_get($financialState,'status','pending');
 $customerErrors=$errors->getBag('customerEdit')->any();
 $currentAddress=\App\Services\CustomerAddress::display($customer->address);

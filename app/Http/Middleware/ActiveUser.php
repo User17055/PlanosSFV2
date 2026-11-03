@@ -25,6 +25,12 @@ class ActiveUser
         }
         // Telas desmarcadas no cadastro do funcionário: abrir volta para a primeira tela liberada; gravar é recusado.
         $user = $request->user();
+        // Cargo: rota sem opção marcada fica fechada. Abrir volta para a primeira tela liberada; gravar é recusado.
+        if ($user?->job_role_id && ! $request->routeIs('logout') && ! $user->canUse((string) $request->route()->getName())) {
+            $home = collect(User::areasFor($user->role))->first(fn ($key) => $user->canOpen($key));
+            abort_unless($request->isMethod('GET') && $home, 403, 'Seu cargo não permite esta opção.');
+            return redirect()->route($home === 'dashboard' ? 'dashboard' : $home.'.index');
+        }
         if ($user?->areas !== null) {
             $area = collect(User::AREAS)->search(fn ($area) => $request->routeIs(...$area[1]));
             if ($area !== false && ! $user->canOpen($area)) {

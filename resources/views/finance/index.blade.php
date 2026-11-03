@@ -25,7 +25,7 @@
 @php
     $overdue = !in_array($invoice->status,['paid','cancelled','refunded']) && $invoice->due_at->isPast() && $invoice->paid_cents<$invoice->amount_cents;
     $showPaymentLink = $invoice->payment_url && !in_array($invoice->status,['paid','cancelled','refunded']);
-    $showDemoReceipt = !in_array($invoice->status,['paid','cancelled','refunded']) && config('plans.demo',false) && in_array(auth()->user()->role,['central_admin','finance']) && Route::has('finance.confirm');
+    $showDemoReceipt = !in_array($invoice->status,['paid','cancelled','refunded']) && config('plans.demo',false) && auth()->user()->canUse('finance.confirm') && in_array(auth()->user()->role,['central_admin','finance']) && Route::has('finance.confirm');
     $financeDate = fn($date) => $date?->copy()->timezone('America/Sao_Paulo')->format('d/m/Y');
 @endphp
 <article class="finance-record" aria-labelledby="invoice-title-{{ $invoice->id }}">
@@ -57,7 +57,7 @@
 </section>
 
 @foreach($invoices as $invoice)
-@if(!in_array($invoice->status,['paid','cancelled','refunded']) && in_array(auth()->user()->role,['central_admin','finance']) && config('plans.demo') && Route::has('finance.confirm'))
+@if(!in_array($invoice->status,['paid','cancelled','refunded']) && in_array(auth()->user()->role,['central_admin','finance']) && auth()->user()->canUse('finance.confirm') && config('plans.demo') && Route::has('finance.confirm'))
 <dialog class="modal" id="payment-{{ $invoice->id }}"><form method="POST" action="{{ route('finance.confirm',$invoice) }}">@csrf<div class="modal-heading"><h2>Recebimento demonstrativo</h2><button class="icon-button" type="button" data-dialog-close aria-label="Fechar">@include('components.icon',['name'=>'close'])</button></div><p>{{ $invoice->customer->name }} · Fatura #{{ $invoice->id }}</p><div class="alert alert-warning"><div>Só para demonstração. Não confirma pagamento na Vindi.</div></div><label class="field">Referência da transação <span>*</span><input name="reference" required minlength="5" placeholder="DEMO-TRANSACAO-001"></label><input type="hidden" name="amount_cents" value="{{ $invoice->amount_cents-$invoice->paid_cents }}"><label class="check-label"><input type="checkbox" required><span>Conferi o recebimento demonstrativo de R$ {{ number_format(($invoice->amount_cents-$invoice->paid_cents)/100,2,',','.') }} e compreendo que a ação será auditada.</span></label><div class="form-actions"><button type="button" class="button button-secondary" data-dialog-close>Voltar</button><button class="button button-primary">Registrar confirmação demo</button></div></form></dialog>
 @endif
 @endforeach

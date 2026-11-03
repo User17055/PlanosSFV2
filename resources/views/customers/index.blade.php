@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-heading">
     <div><h1>Tutores e pets</h1><p>Busque um tutor e abra a ficha para ver os pets, os planos e os pagamentos.</p></div>
-    @if(in_array(auth()->user()->role,['central_admin','manager','sales']))
+    @if(in_array(auth()->user()->role,['central_admin','manager','sales']) && auth()->user()->canUse('customers.create'))
         <a class="button button-primary" href="{{ route('customers.create') }}">@include('components.icon',['name'=>'plus']) Novo tutor e pet</a>
     @endif
 </div>

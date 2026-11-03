@@ -75,6 +75,12 @@ Route::middleware(['auth','active'])->group(function () {
         Route::post('/funcionarios',[\App\Http\Controllers\EmployeeController::class,'store'])->middleware('role:central_admin')->name('employees.store');
         Route::get('/funcionarios/{employee}/editar',[\App\Http\Controllers\EmployeeController::class,'edit'])->middleware('role:central_admin')->name('employees.edit');
         Route::post('/funcionarios/{employee}',[\App\Http\Controllers\EmployeeController::class,'update'])->middleware('role:central_admin')->name('employees.update');
+        Route::get('/cargos',[\App\Http\Controllers\JobRoleController::class,'index'])->middleware('role:central_admin')->name('employees.roles.index');
+        Route::get('/cargos/novo',[\App\Http\Controllers\JobRoleController::class,'create'])->middleware('role:central_admin')->name('employees.roles.create');
+        Route::post('/cargos',[\App\Http\Controllers\JobRoleController::class,'store'])->middleware('role:central_admin')->name('employees.roles.store');
+        Route::get('/cargos/{jobRole}/editar',[\App\Http\Controllers\JobRoleController::class,'edit'])->middleware('role:central_admin')->name('employees.roles.edit');
+        Route::post('/cargos/{jobRole}',[\App\Http\Controllers\JobRoleController::class,'update'])->middleware('role:central_admin')->name('employees.roles.update');
+        Route::post('/cargos/{jobRole}/excluir',[\App\Http\Controllers\JobRoleController::class,'destroy'])->middleware('role:central_admin')->name('employees.roles.destroy');
         Route::get('/clientes',[CustomerController::class,'index'])->name('customers.index');
         Route::get('/clientes/novo',[CustomerController::class,'create'])->middleware('role:central_admin,manager,sales')->name('customers.create');
         Route::post('/clientes',[CustomerController::class,'store'])->middleware('role:central_admin,manager,sales')->name('customers.store');

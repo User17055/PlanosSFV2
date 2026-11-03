@@ -120,6 +120,7 @@ Use PHPUnit diretamente neste Windows: `artisan test` pode iniciar outro process
 - [Operação, VPS, backup e restauração](docs/OPERACAO.md)
 - [Contratos técnicos das integrações](docs/INTEGRACOES.md)
 - [Rotas e serviços internos](docs/ENDPOINTS.md)
+- [Leads dos anúncios](docs/LEADS.md)
 - [Decisões pendentes](docs/DECISOES_PENDENTES.md)
 - [Roteiro de homologação](docs/HOMOLOGACAO.md)
 - [Nginx](docs/ops/nginx.conf) e [Supervisor](docs/ops/supervisor.conf)

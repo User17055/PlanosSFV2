@@ -2,7 +2,7 @@
 @section('title','Relatórios comerciais')
 @section('content')
 <div class="reports-scope">
-<div class="page-heading report-heading"><div><h1>Relatórios</h1><p>Contratações por origem, unidade e vendedor. Use os filtros e exporte em CSV.</p></div><a class="button button-primary" href="{{ route('reports.export', array_filter($filters, fn($value)=>$value!==null)) }}">@include('components.icon',['name'=>'download']) Exportar CSV</a></div>
+<div class="page-heading report-heading"><div><h1>Relatórios</h1><p>Contratações por origem, unidade e vendedor. Use os filtros e exporte em CSV.</p></div>@if(auth()->user()->canUse('reports.export'))<a class="button button-primary" href="{{ route('reports.export', array_filter($filters, fn($value)=>$value!==null)) }}">@include('components.icon',['name'=>'download']) Exportar CSV</a>@endif</div>
 
 <section class="card report-filter" aria-label="Filtros do relatório"><div class="report-filter-heading"><div><h2>Selecione o que deseja acompanhar</h2><p>O período considera a criação das propostas. Datas e horários seguem Brasília.</p></div><span class="report-scope">@include('components.icon',['name'=>'shield']) {{ auth()->user()->role==='central_admin'?'Visão de toda a rede':'Somente suas unidades autorizadas' }}</span></div>
 <form action="{{ route('reports.index') }}" method="GET"><div class="report-filters">

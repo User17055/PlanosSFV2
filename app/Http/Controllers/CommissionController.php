@@ -44,7 +44,7 @@ class CommissionController extends Controller
             'rows' => $rows, 'totals' => $totals, 'filters' => $filters, 'beneficiaries' => $beneficiaries, 'franchises' => $franchises,
             'rates' => $user->role === 'central_admin' ? $commissions->currentRates() : collect(),
             'sourceLabels' => TrackingSanitizer::sourceLabels(),
-            'canPay' => in_array($user->role, ['central_admin', 'finance'], true),
+            'canPay' => in_array($user->role, ['central_admin', 'finance'], true) && $user->canUse('commissions.pay'),
         ]);
     }
 

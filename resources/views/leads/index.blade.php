@@ -3,7 +3,7 @@
 @section('content')
 @php
 $badge=['new'=>'badge-amber','contacted'=>'badge-blue','converted'=>'badge-green','lost'=>'badge-gray'];
-$canDelete=in_array(auth()->user()->role,['central_admin','manager']);
+$canDelete=in_array(auth()->user()->role,['central_admin','manager']) && auth()->user()->canUse('leads.destroy');
 $labels=['idade_do_pet'=>'Idade do pet','especie_do_pet'=>'Espécie do pet','formulario'=>'Formulário','anuncio'=>'Anúncio'];
 // O primeiro de cada grupo é o próximo passo natural e vira o botão principal.
 $actions=['new'=>['contacted'=>'Chamei','converted'=>'Virou cliente','lost'=>'Sem interesse'],'contacted'=>['converted'=>'Virou cliente','lost'=>'Sem interesse','new'=>'Voltar para novo'],'converted'=>['contacted'=>'Reabrir'],'lost'=>['contacted'=>'Reabrir']];
@@ -35,7 +35,7 @@ $origin=array_intersect_key($extra,array_flip(['anuncio','formulario']));
 <td data-label="Origem">@if($lead->campaign || !$origin)<strong class="lead-origin">{{ $lead->campaignLabel() }}</strong>@endif @foreach($origin as $key=>$value)<small>{{ $labels[$key] }}: {{ $value }}</small>@endforeach</td>
 <td data-label="Chegou"><strong>{{ $arrived->locale('pt_BR')->diffForHumans() }}</strong><small>{{ $arrived->format('d/m/Y H:i') }}</small>@if($hours>=24)<span class="badge badge-red">Atrasado</span>@elseif($hours>=1)<span class="badge badge-amber">Chamar logo</span>@endif</td>
 <td data-label="Situação" class="lead-state"><span class="badge {{ $badge[$lead->status] ?? 'badge-gray' }}">{{ \App\Models\Lead::STATUSES[$lead->status] ?? $lead->status }}</span>@if($lead->handler)<small>{{ $lead->handler->name }}@if($lead->contacted_at) · {{ $lead->contacted_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}@endif</small>@endif
-<div class="lead-actions">@foreach($actions[$lead->status] ?? [] as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="{{ $loop->first ? 'button button-secondary button-small' : 'text-button' }}">{{ $label }}</button></form>@endforeach @if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif</div></td>
+<div class="lead-actions">@foreach(auth()->user()->canUse('leads.update') ? ($actions[$lead->status] ?? []) : [] as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="{{ $loop->first ? 'button button-secondary button-small' : 'text-button' }}">{{ $label }}</button></form>@endforeach @if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif</div></td>
 </tr>
 @empty<tr><td colspan="5"><div class="empty-state">@include('components.icon',['name'=>'phone'])<strong>{{ ($q || $status) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status) ? 'Limpe a busca ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
 </tbody></table></div><div class="pagination-wrapper">{{ $leads->links() }}</div></section>

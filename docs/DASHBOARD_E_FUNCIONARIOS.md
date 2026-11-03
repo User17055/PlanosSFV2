@@ -22,6 +22,16 @@ O cadastro online e os formulários de tutor permitem informar como a pessoa con
 
 Em `/funcionarios`, administração, gestão e financeiro consultam a equipe autorizada, vendas de planos do mês, meta, saldo de comissões a pagar e comissões pagas no mês. Somente a administração central cria e edita funcionários. O cadastro inclui matrícula única, cargo, telefone, admissão, e-mail, senha, perfil e unidades. A senha é armazenada por hash e nunca entra no log de auditoria. A desativação usa o controle existente de sessões. Não há exclusão do histórico de vendas ou comissões. As regras de cálculo continuam na tela de comissões por plano: valor fixo ou percentual do primeiro pagamento confirmado.
 
+### Cargos e permissões
+
+Em `/cargos`, a administração central cria cargos e escolhe, por tópico, o que cada um pode ver e fazer. Depois, atribui o cargo no cadastro do funcionário.
+
+- **Nível de acesso:** todo cargo parte de um perfil (vendas, gestão, recepção, financeiro ou atendimento). O cargo só restringe esse nível, nunca vai além dele, e o nível também define os dados que a pessoa vê. Administração central não pode ser nível de cargo.
+- **Bloqueio:** a regra vale no servidor (`ActiveUser`). Abrir uma tela não liberada leva à primeira tela permitida; gravar é recusado. Rota nova que a equipe alcança precisa entrar em `JobRole::OPTIONS`; o teste `JobRoleTest` falha se ela ficar de fora.
+- **Limite do modelo:** como o cargo não ultrapassa o nível, não dá para juntar o que nenhum perfil tem junto. Assinar exige gestão ou vendas, e confirmar recebimento exige financeiro, então um mesmo cargo não faz as duas coisas.
+- **Financeiro fora da tela de Financeiro:** sem "Ver faturas e pagamentos", a ficha do tutor esconde faturas e valores. A situação (regular ou bloqueado) continua visível, porque orienta o atendimento. A Visão geral mostra valores, então deve ficar desmarcada em cargos que não podem vê-los.
+- **Sem cargo:** o funcionário segue o perfil e a lista "O que pode abrir", como antes.
+
 ## Geografia
 
 Os mapas mostram somente a carteira do sistema, não uma estimativa de pessoas com planos de outras empresas. A intensidade do azul aumenta continuamente conforme a quantidade de planos ativos por localidade, em relação ao maior total no mapa exibido. Áreas sem planos ficam cinza. Os totais de tutores são contados separadamente, sem duplicar quem tem mais de um pet. Endereços atuais do cadastro determinam a localização; snapshots dos contratos permanecem intactos. Bairro foi acrescentado ao cadastro público e aos formulários administrativos. Endereços ausentes não recebem coordenadas ou bairros presumidos.

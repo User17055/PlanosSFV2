@@ -1393,11 +1393,11 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .portal-photo-btn .icon{width:13px;height:13px}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 /* Menu lateral do tutor */
-.sidebar-customer .nav-group-label{padding:16px 26px 6px}
-.sidebar-customer .nav-link{margin:2px 12px;padding:11px 14px;border-radius:10px}
-.sidebar-customer .nav-link:hover{background:rgba(255,255,255,.06)}
-.sidebar-customer .nav-link.active{background:rgba(255,255,255,.1);font-weight:600}
-.sidebar-customer .nav-link.active .icon{color:#b9dc7c}
+.sidebar .nav-group-label{padding:16px 26px 6px}
+.sidebar .nav-link{margin:2px 12px;padding:11px 14px;border-radius:10px}
+.sidebar .nav-link:hover{background:rgba(255,255,255,.06)}
+.sidebar .nav-link.active{background:rgba(255,255,255,.1);font-weight:600}
+.sidebar .nav-link.active .icon{color:#b9dc7c}
 .nav-badge{margin-left:auto;min-width:22px;padding:1px 7px;border-radius:999px;background:#f00;color:#fff;font-size:12px;font-weight:700;text-align:center}
 .sidebar-help{display:flex;flex-direction:column;gap:4px;margin:0 12px 12px;padding:14px;border:1px solid var(--chrome-line);border-radius:12px;background:rgba(255,255,255,.05)}
 .sidebar-help strong{font-size:14px;font-weight:600;color:#fff}
@@ -1405,7 +1405,7 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .sidebar-emergency{margin-top:8px;padding:8px 10px;border-radius:8px;background:#f00;color:#fff;font-size:13px;font-weight:700;text-align:center;white-space:nowrap}
 .sidebar-emergency:hover{filter:brightness(1.1)}
 .sidebar-collapsed .nav-badge,.sidebar-collapsed .sidebar-help{display:none}
-.sidebar-collapsed .sidebar-customer .nav-link{margin:2px 8px;padding:12px 0}
+@media(min-width:1025px){.sidebar-collapsed .sidebar .nav-link{margin:2px 8px;padding:12px 0}}
 /* Faturas */
 .portal-invoice-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:8px}
 .portal-invoice-summary .card{display:flex;flex-direction:column;gap:4px;padding:18px 22px}
@@ -1597,8 +1597,8 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .plan-card-body .portal-note{margin:0}
 .plan-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 /* Menu do tutor: sem a barra verde no item ativo */
-.sidebar-customer .nav-link.active{box-shadow:none}
-.admin-body .sidebar.sidebar-customer .nav-link.active:before,.sidebar-customer .nav-link.active:before{content:none;display:none}
+.sidebar .nav-link.active{box-shadow:none}
+.admin-body .sidebar .nav-link.active:before{content:none;display:none}
 .pet-pay-strip.is-ok{border-left:1px solid var(--line)}
 .portal-invoice-view{margin-left:14px;white-space:nowrap}
 /* Foto do pet à esquerda, mesclada no card (o card mantém o tamanho) */
@@ -1880,43 +1880,30 @@ body.admin-body.theme-dash{--body-bg:#f5f6f8;--chrome:#fff;--chrome-2:#fff;--chr
 .theme-dash .topbar .icon-button{color:var(--text-3)}
 .theme-dash .topbar .icon-button:hover{background:#f0f1f4;color:var(--text)}
 .theme-dash .branch-name{color:var(--text)}.theme-dash .branch-name small{color:var(--text-3)}
-.theme-dash .topbar-search{background:#f5f6f8;border:1px solid var(--line);border-radius:14px}
-.theme-dash .topbar-search:focus-within{background:#fff;border-color:#9aa3b5}
-.theme-dash .topbar-search input{color:var(--text)}
-.theme-dash .topbar-search input::placeholder,.theme-dash .topbar-search .icon{color:var(--text-3)}
-.topbar-kbd{display:grid;place-items:center;min-width:24px;height:24px;border:1px solid #dfe2e8;border-radius:7px;background:#fff;color:#6b7280;font:12px/1 var(--font)}
+.topbar-kbd{display:grid;place-items:center;min-width:24px;height:24px;border:1px solid rgba(255,255,255,.2);border-radius:7px;color:rgba(255,255,255,.65);font:12px/1 var(--font)}
 .topbar-search:focus-within .topbar-kbd{display:none}
 .theme-dash .topbar-portal{color:var(--text-2)}.theme-dash .topbar-portal:hover{background:#f0f1f4;color:var(--text)}
 .theme-dash .user-menu>summary:hover,.theme-dash .user-menu[open]>summary{background:#f0f1f4}
 .theme-dash .user-menu-name{color:var(--text)}
 .theme-dash .user-menu-name small,.theme-dash .user-menu>summary>.icon{color:var(--text-3)}
-/* menu lateral branco, com pílula no item ativo */
-.theme-dash .sidebar{background:#fff;color:var(--text);border-right:1px solid var(--chrome-line);box-shadow:none}
-.theme-dash .sidebar-scroll{padding:14px 12px 10px;scrollbar-color:#d4d8df transparent}
-.theme-dash .main-nav .nav-group-label{display:none}
-.theme-dash .nav-group+.nav-group{margin-top:6px;padding-top:6px;border-top:1px solid var(--chrome-line)}
-.theme-dash .nav-link{margin:0;padding:6px 12px;gap:12px;border:1px solid transparent;border-radius:12px;color:#4b5563}
-.theme-dash .nav-link .icon{color:#8b97a8}
-.theme-dash .nav-link:hover{background:#f3f6fa;color:var(--text)}
-.theme-dash .nav-link:hover .icon{color:var(--primary)}
-/* item ativo nas cores da marca: azul claro + barrinha verde na borda do menu */
-.theme-dash .nav-link.active{background:#eaf2fa;color:#14264b;font-weight:600;box-shadow:none}
-.theme-dash .nav-link.active .icon{color:var(--primary)}
-.theme-dash .nav-link.active::before{content:"";display:block;position:absolute;left:-12px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:#7cc242}
-.theme-dash .sidebar-bottom{padding:6px 12px 10px;border-top:1px solid var(--chrome-line)}
+/* menu lateral igual ao do tutor; o tema branco troca --chrome no body, então o menu volta para o azul-marinho aqui. A equipe tem mais itens: linhas um pouco mais baixas para caber sem rolar tanto. */
+.theme-dash .sidebar{--chrome:#14264b;--chrome-line:rgba(255,255,255,.08)}
+.theme-dash .sidebar .nav-group-label{padding:12px 26px 4px}
+.theme-dash .sidebar .nav-link{padding:8px 14px}
+@media(min-width:1025px){.sidebar-collapsed .theme-dash .sidebar .nav-link{padding:10px 0}}
+.sidebar .topbar-search:focus-within{border-color:#b9dc7c}
 /* atalhos em "pastas" coloridas, com contador */
-.nav-shortcuts{margin-top:6px;padding-top:6px;border-top:1px solid var(--chrome-line)}
-.nav-shortcuts .nav-group-label{display:block;padding:4px 12px 2px;color:var(--text-3)}
+.nav-shortcuts{margin-top:6px}
 .nav-shortcut .folder{flex:none}
 .nav-count{margin-left:auto;min-width:22px;padding:1px 7px;border-radius:99px;background:#eceef2;color:var(--text-2);font-size:12px;font-weight:600;text-align:center}
 .nav-shortcut .nav-count{background:color-mix(in srgb,var(--c) 18%,#fff);color:color-mix(in srgb,var(--c) 65%,#000)}
 .sidebar-collapsed .nav-shortcuts .nav-group-label,.sidebar-collapsed .nav-count{display:none}
 /* cartão de chamada no pé do menu */
-.sidebar-cta{display:flex;flex-direction:column;gap:10px;margin-bottom:10px;padding:16px;border:1px solid var(--line);border-radius:16px;background:#fafafb}
-.sidebar-cta-ico{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text-2)}
-.sidebar-cta strong{font-size:17px;font-weight:500;color:var(--text)}
-.sidebar-cta .button{justify-content:center;width:100%;border:1px solid #14264b;border-radius:12px;background:#14264b;color:#fff}
-.sidebar-cta .button:hover{background:#1d3566}
+.sidebar-cta{display:flex;flex-direction:column;gap:10px;margin:0 12px 10px;padding:16px;border:1px solid var(--chrome-line);border-radius:12px;background:rgba(255,255,255,.05)}
+.sidebar-cta-ico{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--chrome-line);border-radius:12px;background:rgba(255,255,255,.08);color:#b9dc7c}
+.sidebar-cta strong{font-size:17px;font-weight:500;color:#fff}
+.sidebar-cta .button{justify-content:center;width:100%;border:1px solid #83ac38;border-radius:12px;background:#83ac38;color:#122657}
+.sidebar-cta .button:hover{background:#94bd45}
 .sidebar-collapsed .sidebar-cta{display:none}
 @media(max-height:1039px){.sidebar-cta{display:none}}
 /* cartões, botões e campos */
@@ -1963,13 +1950,13 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .sidebar-head{display:flex;flex-direction:column;gap:10px;padding:12px 12px 4px}
 .sidebar-brand{display:flex;align-items:center;padding:6px 8px 2px}
 .sidebar-brand-text{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;line-height:1.2}
-.sidebar-brand-text strong{max-width:100%;overflow:hidden;font-family:'Bricolage Grotesque',var(--font);font-size:22px;font-weight:700;letter-spacing:-.02em;color:#14264b;text-overflow:ellipsis;white-space:nowrap}
-.sidebar-brand-text small{max-width:100%;overflow:hidden;padding:2px 9px 2px 8px;border-radius:99px;background:#eef7e6;color:#3d6b17;font-size:11.5px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-brand-text strong{max-width:100%;overflow:hidden;font-family:'Bricolage Grotesque',var(--font);font-size:22px;font-weight:700;letter-spacing:-.02em;color:#fff;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-brand-text small{max-width:100%;overflow:hidden;padding:2px 9px 2px 8px;border-radius:99px;background:rgba(185,220,124,.14);color:#b9dc7c;font-size:11.5px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
 .sidebar-brand-text small::before{content:"";display:inline-block;width:6px;height:6px;margin:0 6px 1px 0;border-radius:50%;background:#7cc242;vertical-align:middle}
 .sidebar .topbar-search{width:100%;max-width:none;margin:0}
 .sidebar-cta{position:relative}
-.sidebar-cta-close{position:absolute;top:8px;right:10px;width:26px;height:26px;border:0;border-radius:8px;background:none;color:#9aa1ad;font-size:20px;line-height:1;cursor:pointer}
-.sidebar-cta-close:hover{background:#eceef2;color:var(--text)}
+.sidebar-cta-close{position:absolute;top:8px;right:10px;width:26px;height:26px;border:0;border-radius:8px;background:none;color:rgba(255,255,255,.6);font-size:20px;line-height:1;cursor:pointer}
+.sidebar-cta-close:hover{background:rgba(255,255,255,.1);color:#fff}
 .cta-closed .sidebar-cta{display:none}
 .sidebar-collapsed .sidebar-brand-text,.sidebar-collapsed .sidebar .topbar-search{display:none}
 .sidebar-collapsed .sidebar-brand{display:none}
@@ -1980,3 +1967,10 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
   .theme-dash .topbar-brand,.theme-dash .branch-name{display:none}
 }
 @media(max-width:1024px){.sidebar-brand{display:none}.sidebar-head{padding:14px 12px 0}.sidebar .topbar-search{display:flex}}
+/* Cargos: opções agrupadas por tópico */
+.permission-topics{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:10px}
+.permission-topic{padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.permission-topic[hidden]{display:none}
+.permission-topic>strong{display:block;margin-bottom:4px;font-size:14px;color:var(--text)}
+.permission-topic .check-label[hidden]{display:none}
+[data-without-job-role][hidden]{display:none}

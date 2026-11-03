@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{AuditLog, Franchise, User};
+use App\Models\{AuditLog, Franchise, JobRole, User};
 use App\Services\Reports\DashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +16,7 @@ class EmployeeController extends Controller
     public function index(Request $request,DashboardService $dashboard)
     {
         $request->validate(['q'=>'nullable|string|max:150','active'=>'nullable|in:0,1']);
-        $query=$dashboard->employees($request->user())->with('franchises');
+        $query=$dashboard->employees($request->user())->with(['franchises','jobRole']);
         if($request->filled('q')) $query->where(fn($q)=>$q->where('name','like','%'.$request->input('q').'%')->orWhere('email','like','%'.$request->input('q').'%')->orWhere('employee_code','like','%'.$request->input('q').'%'));
         if($request->filled('active')) $query->where('active',$request->boolean('active'));
         $employees=$query->orderBy('name')->paginate(12)->withQueryString();
@@ -37,13 +37,13 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        return view('employees.form',['employee'=>new User(['role'=>'sales','active'=>true]),'roles'=>self::ROLES,'franchises'=>Franchise::where('active',true)->orderBy('name')->get()]);
+        return view('employees.form',['employee'=>new User(['role'=>'sales','active'=>true]),'roles'=>self::ROLES,'jobRoles'=>JobRole::orderBy('name')->get(),'franchises'=>Franchise::where('active',true)->orderBy('name')->get()]);
     }
 
     public function edit(User $employee)
     {
         abort_if($employee->role==='customer',404);
-        return view('employees.form',['employee'=>$employee->load('franchises'),'roles'=>self::ROLES,'franchises'=>Franchise::where('active',true)->orderBy('name')->get()]);
+        return view('employees.form',['employee'=>$employee->load('franchises'),'roles'=>self::ROLES,'jobRoles'=>JobRole::orderBy('name')->get(),'franchises'=>Franchise::where('active',true)->orderBy('name')->get()]);
     }
 
     public function store(Request $request) { return $this->save($request,new User); }
@@ -64,16 +64,21 @@ class EmployeeController extends Controller
             'active'=>'required|boolean','role'=>['required',Rule::in(array_keys(self::ROLES))],
             'franchise_ids'=>'required|array|min:1','franchise_ids.*'=>['required','integer','distinct',Rule::exists('franchises','id')->where('active',true)],
             'areas'=>'nullable|array','areas.*'=>['string',Rule::in(array_keys(User::AREAS))],
+            'job_role_id'=>['nullable','integer',Rule::exists('job_roles','id')],
         ]);
+        // Com cargo, o perfil é o nível do cargo e as telas são as dele.
+        $jobRole=empty($data['job_role_id'])?null:JobRole::find($data['job_role_id']);
+        $data['job_role_id']=$jobRole?->id;
+        if($jobRole) $data['role']=$jobRole->base_role;
         // Telas liberadas: só as que o perfil permite. Tudo marcado vira null (o perfil inteiro, inclusive telas que vierem depois).
         // Quem edita a si mesmo não vê a lista (o campo areas_shown não vem) e fica como está.
         $self=$employee->id===$request->user()->id;
         $roleAreas=User::areasFor($data['role']);
-        $picked=$request->has('areas_shown') && !$self;
-        $areas=$picked ? array_values(array_intersect($roleAreas,$data['areas']??[])) : $employee->areas;
+        $picked=$request->has('areas_shown') && !$self && !$jobRole;
+        $areas=$jobRole ? null : ($picked ? array_values(array_intersect($roleAreas,$data['areas']??[])) : $employee->areas);
         if($picked && $areas===[]) throw ValidationException::withMessages(['areas'=>'Marque pelo menos uma tela.']);
         if($areas===$roleAreas) $areas=null;
-        if($self) abort_unless($data['role']===$employee->role && (bool)$data['active']===$employee->active && collect($data['franchise_ids'])->map(fn($id)=>(int)$id)->sort()->values()->all()===$employee->franchises()->wherePivot('active',true)->pluck('franchises.id')->sort()->values()->all(),422,'Outro administrador deve alterar seu perfil, situação ou unidades.');
+        if($self) abort_unless($data['role']===$employee->role && $data['job_role_id']===$employee->job_role_id && (bool)$data['active']===$employee->active && collect($data['franchise_ids'])->map(fn($id)=>(int)$id)->sort()->values()->all()===$employee->franchises()->wherePivot('active',true)->pluck('franchises.id')->sort()->values()->all(),422,'Outro administrador deve alterar seu perfil, situação ou unidades.');
         $created=!$employee->exists;
         DB::transaction(function()use($request,$employee,$data,$created,$areas){
             $attributes=collect($data)->except(['franchise_ids','monthly_sales_target','password','password_confirmation','areas'])->all()+['areas'=>$areas];

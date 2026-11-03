@@ -77,7 +77,7 @@ class CustomerController extends Controller
         $customer->load(['pets'=>fn($q)=>$q->orderBy('name'),'subscriptions'=>fn ($q)=>$restrict($q)->with(['productVersion.product','productVersion.benefitRules','contractDocuments','documents','pet','invoices','cancellationRequest','originatingFranchise']), 'proposals'=>fn ($q)=>$restrict($q)->with(['productVersion.product','pet'])->latest(), 'invoices'=>$restrict]);
         $financialState = $financial->customerStatus($customer);
         if($request->user()->role!=='central_admin') $financialState['overdue_cents']=null;
-        if(!in_array($request->user()->role,['central_admin','manager','finance'],true)) $customer->setRelation('invoices',collect());
+        if(!in_array($request->user()->role,['central_admin','manager','finance'],true) || !$request->user()->canUse('finance.index')) $customer->setRelation('invoices',collect());
         $eligibilities=[];
         foreach($customer->subscriptions as $subscription) {
             foreach($subscription->productVersion->benefitRules as $rule) $eligibilities[$subscription->id][$rule->id]=$eligibility->benefit($subscription,$rule,$request->user()->franchise_id);

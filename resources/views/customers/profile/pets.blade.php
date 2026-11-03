@@ -25,7 +25,7 @@
             <div class="workspace-pet-header">
                 
                 <div><h3>{{ $pet->name }}</h3><p>{{ ['dog'=>'Cão','cat'=>'Gato','canine'=>'Cão','feline'=>'Gato'][$pet->species] ?? $pet->species }}{{ $pet->breed?' · '.$pet->breed:'' }}</p><small>{{ $pet->birth_date?'Nascimento: '.$pet->birth_date->format('d/m/Y'):'Nascimento não informado' }}{{ $pet->microchip?' · Microchip: '.$pet->microchip:'' }}</small></div>
-                @if($petCurrent || $petProposal || $canEdit)<a class="button button-primary button-small" href="{{ $petActionUrl }}">{{ $petActionLabel }} @include('components.icon',['name'=>'arrow'])</a>@endif
+                @if($petCurrent || $petProposal || ($canEdit && auth()->user()->canUse('proposals.create')))<a class="button button-primary button-small" href="{{ $petActionUrl }}">{{ $petActionLabel }} @include('components.icon',['name'=>'arrow'])</a>@endif
             </div>
             @if($petContracts->isNotEmpty())
             <div class="workspace-pet-summary"><strong>Planos e pacotes deste pet</strong>
@@ -34,7 +34,7 @@
             </div>
             @else<p class="fine-print">Nenhum contrato disponível para este pet no seu acesso.</p>@endif
             @if($canEdit)
-            @if($petCurrent || $petProposal)<p class="profile-pet-new-product"><a class="text-link" href="{{ route('proposals.create',['customer_id'=>$customer->id,'pet_id'=>$pet->id]) }}">Ver opções para outra contratação →</a></p>@endif
+            @if(($petCurrent || $petProposal) && auth()->user()->canUse('proposals.create'))<p class="profile-pet-new-product"><a class="text-link" href="{{ route('proposals.create',['customer_id'=>$customer->id,'pet_id'=>$pet->id]) }}">Ver opções para outra contratação →</a></p>@endif
             <details id="editar-pet-{{ $pet->id }}" class="workspace-details" @if($errors->getBag($petBag)->any() || request('edit')==='pet-'.$pet->id) open @endif>
                 <summary>@include('components.icon',['name'=>'edit']) Editar dados de {{ $pet->name }}</summary>
                 <form method="POST" action="{{ route('pets.update',$pet) }}">
