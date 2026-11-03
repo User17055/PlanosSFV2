@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Services\Contracts\{ContractService, HealthPlanInstaller, SourceContractRenderer};
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\Process\ExecutableFinder;
 use Tests\TestCase;
 
 class HealthPlanImportTest extends TestCase
@@ -29,9 +30,11 @@ class HealthPlanImportTest extends TestCase
             $this->assertStringContainsString('CLÁUSULA PRIMEIRA',$html);
             $this->assertStringNotContainsString('Texto integral contratado',$html);
             $this->assertStringNotContainsString('Condições congeladas e benefícios',$html);
-            // Word → PDF só existe no Windows (Microsoft Word); fora dele a geração tem de ser recusada (docs/DECISOES_PENDENTES.md).
-            if (PHP_OS_FAMILY==='Windows') $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
-            else $this->assertThrows(fn()=>app(ContractService::class)->templatePdf($version),\RuntimeException::class,'Configure a conversão nativa de Word para PDF');
+            // Word → PDF: no Windows pelo Microsoft Word, fora dele pelo LibreOffice (soffice, instalado na VPS e no job MySQL do CI).
+            // Sem conversor nenhum, a geração tem de falhar com erro, nunca devolver um PDF vazio.
+            $hasConverter=PHP_OS_FAMILY==='Windows' || (new ExecutableFinder)->find(config('plans.libreoffice_bin','soffice'))!==null;
+            if ($hasConverter) $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
+            else $this->assertThrows(fn()=>app(ContractService::class)->templatePdf($version),\RuntimeException::class);
         }
         $this->assertSame([5200,8600,28200,33000],array_map(fn($v)=>$v->price_cents,$versions));
         $this->assertStringContainsString('plano Master',$versions[3]->contract_template);
