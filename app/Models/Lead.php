@@ -56,6 +56,16 @@ class Lead extends DomainModel
         return count($logos) === 1 ? ['label' => ucfirst($logos[0]), 'logos' => $logos] : ['label' => 'Facebook ou Instagram', 'logos' => ['facebook', 'instagram']];
     }
 
+    /** Nome da origem no filtro da lista: "Instagram Stories" entra em "Instagram". */
+    public function originGroup(): string
+    {
+        $origin = $this->origin();
+        if (! $origin) {
+            return 'Sem origem';
+        }
+        return count($origin['logos']) === 1 ? ucfirst($origin['logos'][0]) : $origin['label'];
+    }
+
     /** Link do WhatsApp: só dígitos, com o 55 do Brasil quando vier sem, e a mensagem já escrita. */
     public function whatsappUrl(?string $message = null): ?string
     {

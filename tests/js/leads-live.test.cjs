@@ -12,7 +12,7 @@ function setup(responses,firstLead=1,href='http://x/leads',search=null) {
  const clock={now:0,tick:null,cleared:false,fetches:0,urls:[]};
  class FakeDate extends Date{static now(){return clock.now;}}
  class DOMParser{parseFromString(html){return {querySelector:sel=>sel==='[data-live]'&&html!=='login'?{innerHTML:html,childNodes:[],querySelector:lastLead(Number(html))}:null};}}
- const document={title:'Leads',hidden:false,activeElement:null,querySelector:sel=>({'[data-live]':root,'[data-live-status]':status,'[data-live-search]':search})[sel]??null,getElementById:()=>toast,addEventListener:(name,fn)=>(handlers[name]??=[]).push(fn)};
+ const document={title:'Leads',hidden:false,activeElement:null,querySelectorAll:()=>[],querySelector:sel=>({'[data-live]':root,'[data-live-status]':status,'[data-live-search]':search})[sel]??null,getElementById:()=>toast,addEventListener:(name,fn)=>(handlers[name]??=[]).push(fn)};
  vm.runInNewContext(source,{document,DOMParser,Date:FakeDate,URL,window:{},location:{href,origin:'http://x',pathname:'/leads'},history:{pushState(){}},Number,Math,String,Error,getSelection:()=>'',addEventListener(){},
   fetch:async url=>{clock.fetches++;clock.urls.push(url);return {ok:true,text:async()=>responses.shift()};},setInterval:fn=>{clock.tick=fn;return 7;},clearInterval:()=>{clock.cleared=true;},setTimeout(){},clearTimeout(){}});
  return {root,clock,status,toast,swaps,handlers,document,settle:()=>new Promise(done=>setImmediate(done))};

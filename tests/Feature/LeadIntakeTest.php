@@ -154,6 +154,36 @@ class LeadIntakeTest extends TestCase
         $this->actingAs($attendant)->get(route('leads.index'))->assertOk()->assertDontSee('contato_preferido');
     }
 
+    public function test_list_shows_only_problems_and_panel_keeps_the_last_lead_line(): void
+    {
+        $this->send(['nome' => 'Ana', 'telefone' => '18911111111'])->assertCreated();
+        Lead::query()->update(['created_at' => now()->subDays(5)]);
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        // O id continua na página, porque é por ele que a lista avisa quando chega um lead novo.
+        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertDontSee('Último lead recebido')->assertDontSee('histórico do Pluga')->assertSee('data-last-lead="'.Lead::sole()->id.'"', false);
+        $this->actingAs($admin)->get(route('leads.dashboard'))->assertOk()->assertSee('Último lead recebido')->assertSee('histórico do Pluga');
+    }
+
+    public function test_list_filters_by_where_the_lead_came_from(): void
+    {
+        $this->send(['nome' => 'Ana Insta', 'telefone' => '18911111111', 'plataforma' => 'instagram_stories'])->assertCreated();
+        $this->send(['nome' => 'Bia Campanha', 'telefone' => '18922222222', 'campanha' => '[Plano] - [Feed IG]'])->assertCreated();
+        $this->send(['nome' => 'Cris Face', 'telefone' => '18933333333', 'plataforma' => 'fb'])->assertCreated();
+        $this->send(['nome' => 'Davi Sem', 'telefone' => '18944444444'])->assertCreated();
+        Lead::where('name', 'Bia Campanha')->update(['status' => 'contacted']);
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        $list = fn (array $query = []) => $this->actingAs($admin)->get(route('leads.index', $query))->assertOk();
+
+        $list()->assertSee('Filtros')->assertSee('De onde veio')->assertSeeInOrder(['Instagram', '<b>2</b>', 'Facebook', '<b>1</b>', 'Google', '<b>0</b>', 'Facebook ou Instagram', '<b>1</b>'], false);
+        $list(['origem' => 'Instagram'])->assertSee('Ana Insta')->assertSee('Bia Campanha')->assertDontSee('Cris Face')->assertDontSee('Davi Sem')->assertSee('limpar filtros');
+        $list(['origem' => 'Facebook ou Instagram'])->assertSee('Davi Sem')->assertDontSee('Ana Insta');
+        $list(['origem' => 'Google'])->assertDontSee('data-lead-id=', false)->assertSee('Nenhum lead com esse filtro.');
+        // O filtro soma com a aba e com a busca, e as abas mostram só o que ele deixou passar.
+        $list(['origem' => 'Instagram', 'situacao' => 'contacted'])->assertSee('Bia Campanha')->assertDontSee('Ana Insta');
+        $list(['origem' => 'Instagram', 'q' => 'Ana'])->assertSee('Ana Insta')->assertDontSee('Bia Campanha');
+        $this->actingAs($admin)->get(route('leads.index', ['origem' => str_repeat('x', 61)]))->assertSessionHasErrors('origem');
+    }
+
     public function test_panel_warns_admin_when_receiving_is_turned_off(): void
     {
         config(['services.leads.token' => '']);

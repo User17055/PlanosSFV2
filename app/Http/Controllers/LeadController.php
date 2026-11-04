@@ -99,7 +99,8 @@ class LeadController extends Controller
 
     public function index(Request $request, AccessService $access)
     {
-        $request->validate(['q' => 'nullable|string|max:80', 'situacao' => 'nullable|in:'.implode(',', array_keys(Lead::STATUSES))]);
+        $request->validate(['q' => 'nullable|string|max:80', 'situacao' => 'nullable|in:'.implode(',', array_keys(Lead::STATUSES)), 'origem' => 'nullable|string|max:60']);
+        $origin = $request->query('origem');
         $status = $request->query('situacao');
         $q = trim((string) $request->query('q'));
         $query = $access->scope(Lead::query(), $request->user())->with('handler');
@@ -109,11 +110,17 @@ class LeadController extends Controller
             $query->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('email', 'like', $like)
                 ->when(strlen($digits) >= 4, fn ($p) => $p->orWhere('phone', 'like', '%'.$digits.'%')));
         }
+        // shortcut: separa as origens em memória, com a mesma regra da tela; troque por uma coluna própria se passar de ~20 mil leads.
+        $origins = (clone $query)->get(['id', 'campaign', 'extra', 'source'])->groupBy(fn ($lead) => $lead->originGroup());
+        $originOptions = collect(['Instagram' => 0, 'Facebook' => 0, 'Google' => 0])->merge($origins->map->count());
+        if ($origin) {
+            $query->whereIn('id', ($origins[$origin] ?? collect())->pluck('id'));
+        }
         // Os contadores seguem a busca, mas não o filtro de situação, para os botões mostrarem quantos há em cada uma.
         $counts = (clone $query)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
         // Quem ainda não foi chamado fica no topo, mesmo em "Todos": lead novo não pode se perder no meio do histórico.
         $leads = $query->when($status, fn ($w) => $w->where('status', $status))->orderByRaw("case when status = 'new' then 0 else 1 end")->orderByDesc('id')->paginate(20)->withQueryString();
-        return view('leads.index', compact('leads', 'counts', 'status', 'q') + ['intake' => $this->intakeStatus($request->user(), $access)]);
+        return view('leads.index', compact('leads', 'counts', 'status', 'q', 'origin', 'originOptions') + ['intake' => $this->intakeStatus($request->user(), $access)]);
     }
 
     /** Painel dos leads: de onde vieram, quantos a equipe chamou e quantos viraram cliente. Lead de teste fica de fora. */

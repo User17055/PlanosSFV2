@@ -1,16 +1,19 @@
 @php
+// Na lista, só aparecem problemas em que um lead pode se perder; o painel mostra também quando chegou o último.
+$problemsOnly=$problemsOnly ?? false;
 $last=$intake['last'];
 $ago=fn($date)=>$date->locale('pt_BR')->diffForHumans();
 $quiet=$last && $last->created_at->lt(now()->subDays(2));
 $refusedAt=$intake['refused'] ? \Illuminate\Support\Carbon::createFromTimestamp($intake['refused']['at']) : null;
-$state=$intake['off'] ? 'off' : ($refusedAt || ($quiet && $intake['admin']) ? 'warn' : ($last ? 'ok' : 'idle'));
+$warnQuiet=$quiet && $intake['admin'] && !$problemsOnly;
+$state=$intake['off'] ? 'off' : ($refusedAt || $warnQuiet ? 'warn' : ($last ? 'ok' : 'idle'));
 @endphp
-<div class="lead-intake lead-intake-{{ $state }}" data-last-lead="{{ $last?->id }}">
+<div class="lead-intake lead-intake-{{ $state }}" data-last-lead="{{ $last?->id }}" @if($problemsOnly && !in_array($state,['warn','off'],true)) hidden @endif>
 @if(in_array($state,['warn','off'],true))@include('components.icon',['name'=>'alert'])@endif
 <div>
-<strong>{{ $last ? 'Último lead recebido '.$ago($last->created_at) : 'Nenhum lead recebido ainda' }}</strong>
+@unless($problemsOnly)<strong>{{ $last ? 'Último lead recebido '.$ago($last->created_at) : 'Nenhum lead recebido ainda' }}</strong>@endunless
 @if($intake['off'])<p><b>Recebimento desligado:</b> falta configurar <code>LEADS_WEBHOOK_TOKEN</code> neste servidor. Enquanto isso, nenhum lead do Pluga entra.</p>@endif
 @if($refusedAt)<p><b>Um envio foi recusado {{ $ago($refusedAt) }}</b> porque veio sem telefone nem e-mail reconhecível. Campos recebidos: {{ implode(', ',$intake['refused']['fields']) ?: 'nenhum' }}. Confira o mapeamento da automação no Pluga.</p>@endif
-@if($quiet && $intake['admin'] && !$intake['off'])<p>Se os anúncios estão ativos, confira no histórico do Pluga se os envios estão chegando.</p>@endif
+@if($warnQuiet && !$intake['off'])<p>Se os anúncios estão ativos, confira no histórico do Pluga se os envios estão chegando.</p>@endif
 </div>
 </div>

@@ -152,6 +152,11 @@
     show(id, open);
   });
 
+  // O menu de filtros fecha ao clicar fora dele.
+  document.addEventListener('click', event => {
+    document.querySelectorAll('.lead-filter-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; });
+  });
+
   // Filtros, paginação e período dentro da mesma tela; link para outra tela segue normal.
   document.addEventListener('click', event => {
     const link = event.target.closest?.('[data-live] a[href]');

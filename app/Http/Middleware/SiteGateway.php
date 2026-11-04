@@ -15,7 +15,8 @@ class SiteGateway
         $key=(string)config('site_portal.key');
         abort_unless(config('site_portal.enabled') && strlen($key)>=32,503,'A contratação online está em preparação.');
         abort_unless(hash_equals($key,(string)$request->header('X-Site-Key')),401,'Acesso não autorizado.');
-        abort_if(strlen($request->getContent())>65536,413,'Formulário excede o tamanho permitido.');
+        // O desenho da assinatura passa de 64 KB em telas de alta resolução; o aceite valida o tamanho dele (até 300 mil caracteres).
+        abort_if(strlen($request->getContent())>($request->is('*/proposals/*/accept')?400000:65536),413,'Formulário excede o tamanho permitido.');
         $identity=$request->is('*/account-check','*/verification-resend') ? $request->header('X-Portal-IP',$request->ip())
             : ($request->bearerToken() ?: ($request->input('email') ?: $request->header('X-Portal-IP',$request->ip())));
         $bucket='site-api:'.hash('sha256',$request->path().'|'.strtolower((string)$identity));

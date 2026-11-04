@@ -153,6 +153,24 @@ class SitePortalApiTest extends TestCase
         $this->assertDatabaseCount('cancellation_requests',1);
     }
 
+    public function test_large_drawn_signature_can_be_sent_but_other_routes_keep_the_small_limit(): void
+    {
+        $result=$this->registered(); $id=$result['proposal_id']; $headers=$this->headers($result['token']);
+        $proposal=$this->getJson('/api/site/v1/proposals/'.$id,$headers)->assertOk()->json();
+        $this->get('/api/site/v1/proposals/'.$id.'/pdf',$headers)->assertOk();
+        // Um traço longo em tela de alta resolução gera um PNG bem maior que o de um desenho simples.
+        $image=imagecreatetruecolor(220,150);
+        for($y=0;$y<150;$y++) for($x=0;$x<220;$x++) imagesetpixel($image,$x,$y,imagecolorallocate($image,mt_rand(0,180),mt_rand(0,180),mt_rand(0,180)));
+        ob_start(); imagepng($image); $signature='data:image/png;base64,'.base64_encode(ob_get_clean()); imagedestroy($image);
+        $this->assertGreaterThan(65536,strlen($signature)); $this->assertLessThan(300000,strlen($signature));
+
+        $this->postJson('/api/site/v1/proposals/'.$id.'/accept',['accepted'=>1,'signer_name'=>'Tutor do site','fingerprint'=>$proposal['fingerprint'],'signature_data'=>$signature],$headers)->assertOk();
+        $this->assertDatabaseCount('subscriptions',1);
+
+        $this->postJson('/api/site/v1/proposals/'.$id.'/accept',['signature_data'=>str_repeat('a',400001)],$headers)->assertStatus(413);
+        $this->postJson('/api/site/v1/account-check',['email'=>str_repeat('a',65537)],$this->headers())->assertStatus(413);
+    }
+
     public function test_another_customer_cannot_read_a_proposal_or_download_a_document(): void
     {
         $result=$this->registered();

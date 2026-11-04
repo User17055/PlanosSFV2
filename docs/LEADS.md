@@ -103,7 +103,7 @@ O lead de teste do Facebook entra mesmo sem telefone reconhecido, então sozinho
 | 429 | HTML com `Retry-After` (testado com `Accept: */*`) | Mais de 120 envios em um minuto | Espere um minuto e confira se o lead entrou |
 | 500 ou 503 | Página de erro | Falha ou manutenção no sistema | Acione o responsável e informe o horário |
 
-A faixa no topo de `/leads` mostra quando chegou o último lead. Administradores e gerentes também veem nela o último envio recusado, com os nomes dos campos recebidos, por até 7 dias.
+O painel em `/leads/painel` mostra quando chegou o último lead e avisa administradores e gerentes depois de 2 dias sem leads. Na lista e no painel, eles também veem o último envio recusado, com os nomes dos campos recebidos, por até 7 dias.
 
 ## Como ler os resultados
 
@@ -121,7 +121,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Quem atendeu | Leads pela última pessoa que mudou a situação | Não mostra quem atendeu antes dela |
 
-A busca da lista procura em todos os leads, por nome, telefone ou e-mail, mesmo com uma aba aberta. A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome com o telefone, anúncio, o próximo passo a origem em selos redondos e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários, o link "Abrir WhatsApp" e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+A busca da lista procura em todos os leads, por nome, telefone ou e-mail, mesmo com uma aba aberta. O botão "Filtros" separa os leads por origem, com a mesma regra da logo mostrada na linha. A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome com o telefone, anúncio, o próximo passo a origem em selos redondos e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários, o link "Abrir WhatsApp" e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
 
 ## Acesso
 

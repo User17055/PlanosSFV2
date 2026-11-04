@@ -7,12 +7,27 @@ $canDelete=in_array(auth()->user()->role,['central_admin','manager']) && auth()-
 $filters=['new'=>'Para chamar','contacted'=>'Em contato','converted'=>'Viraram cliente','lost'=>'Sem interesse'];
 // Só o próximo passo de cada situação: a pessoa não precisa escolher entre muitos botões.
 $actions=['new'=>['contacted'=>'Já chamei','lost'=>'Sem interesse'],'contacted'=>['converted'=>'Virou cliente','lost'=>'Sem interesse'],'converted'=>['contacted'=>'Reabrir'],'lost'=>['contacted'=>'Reabrir']];
-$keep=fn(array $extra=[])=>array_filter($extra+['q'=>$q]);
+$keep=fn(array $extra=[])=>array_filter($extra+['q'=>$q,'origem'=>$origin]);
 $saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->format($format);
 @endphp
 <div class="lead-head lead-black">
 <div class="lead-head-top"><h1>Leads</h1><div class="lead-head-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.dashboard') }}">Ver painel</a></div></div>
-<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search><div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Pesquise por nome, telefone ou e-mail"></div></form>
+<div class="lead-head-tools">
+<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@if($origin)<input type="hidden" name="origem" value="{{ $origin }}">@endif<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Pesquise por nome, telefone ou e-mail"></div></form>
+<details class="lead-filter-menu">
+<summary>@include('components.icon',['name'=>'filter'])Filtros @if($origin)<b>{{ $origin }}</b>@endif</summary>
+<div class="lead-filter-panel">
+<h3>De onde veio</h3>
+@foreach($originOptions as $name=>$total)
+@php
+$logo=in_array($name,['Instagram','Facebook','Google'],true) ? mb_strtolower($name) : null;
+@endphp
+<a class="{{ $origin===$name ? 'active' : '' }}" @if($origin===$name) aria-current="true" @endif href="{{ route('leads.index',array_filter(['q'=>$q,'situacao'=>$status,'origem'=>$origin===$name ? null : $name])) }}">@if($logo)<img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="" width="16" height="16">@endif{{ $name }}<b>{{ $total }}</b></a>
+@endforeach
+</div>
+</details>
+@if($origin)<a class="text-link lead-filter-clear" href="{{ route('leads.index',array_filter(['q'=>$q,'situacao'=>$status])) }}">limpar filtros</a>@endif
+</div>
 </div>
 <div data-live class="lead-black">
 <div class="lead-topline">
@@ -20,7 +35,7 @@ $saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->for
 <a class="{{ !$status ? 'active' : '' }}" @if(!$status) aria-current="true" @endif href="{{ route('leads.index',$keep()) }}">Todos <b>{{ $counts->sum() }}</b></a>
 @foreach($filters as $value=>$label)<a class="{{ $status===$value ? 'active' : '' }}" @if($status===$value) aria-current="true" @endif href="{{ route('leads.index',$keep(['situacao'=>$value])) }}"><span><i class="lead-dot is-{{ $value }}"></i>{{ $label }}</span> <b>{{ $counts[$value] ?? 0 }}</b></a>@endforeach
 </nav>
-@include('leads.intake-status')
+@include('leads.intake-status',['problemsOnly'=>true])
 </div>
 <section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Nº</th><th>Chegou</th><th>Contato</th><th>Nome</th><th class="lead-phone">Telefone</th><th>Anúncio</th><th aria-label="Próximo passo"></th><th class="lead-origin-head">Origem</th><th aria-label="Situação"></th></tr></thead><tbody>
 @forelse($leads as $lead)
@@ -61,7 +76,7 @@ $contact=$lead->phoneLabel() ?: $lead->email;
 @foreach($rest as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="text-button">{{ $label }}</button></form>@endforeach
 @if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif
 </div>@endif</td></tr>
-@empty<tr><td colspan="9"><div class="empty-state"><strong>{{ ($q || $status) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status) ? 'Limpe a busca ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
+@empty<tr><td colspan="9"><div class="empty-state"><strong>{{ ($q || $status || $origin) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status || $origin) ? 'Limpe a busca ou os filtros, ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
 </tbody></table></div><div class="pagination-wrapper">{{ $leads->links() }}</div></section>
 </div>
 @endsection
