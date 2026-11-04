@@ -168,6 +168,8 @@
       const url = new URL(location.href);
       const q = search.elements.q.value.trim();
       if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+      // A busca olha todos os leads: procurar com uma aba aberta escondia quem estava nas outras.
+      url.searchParams.delete('situacao');
       url.searchParams.delete('page');
       return url.href;
     };

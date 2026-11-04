@@ -5,16 +5,16 @@ const {readFileSync}=require('node:fs');
 const source=readFileSync('public/assets/leads-live.js','utf8');
 
 // A resposta é só o id do último lead; 'login' simula a sessão encerrada, sem a área ao vivo.
-function setup(responses,firstLead=1) {
+function setup(responses,firstLead=1,href='http://x/leads',search=null) {
  const swaps=[],handlers={},status={hidden:true,className:'',lastElementChild:{textContent:''}},toast={textContent:'',classList:{add(){},remove(){}}};
  const lastLead=id=>sel=>sel==='[data-last-lead]'?{dataset:{lastLead:String(id)}}:null;
  const root={querySelector:lastLead(firstLead),querySelectorAll:()=>[],contains:()=>false,replaceChildren:()=>swaps.push(1)};
- const clock={now:0,tick:null,cleared:false,fetches:0};
+ const clock={now:0,tick:null,cleared:false,fetches:0,urls:[]};
  class FakeDate extends Date{static now(){return clock.now;}}
  class DOMParser{parseFromString(html){return {querySelector:sel=>sel==='[data-live]'&&html!=='login'?{innerHTML:html,childNodes:[],querySelector:lastLead(Number(html))}:null};}}
- const document={title:'Leads',hidden:false,activeElement:null,querySelector:sel=>({'[data-live]':root,'[data-live-status]':status})[sel]??null,getElementById:()=>toast,addEventListener:(name,fn)=>(handlers[name]??=[]).push(fn)};
- vm.runInNewContext(source,{document,DOMParser,Date:FakeDate,URL,window:{},location:{href:'http://x/leads',origin:'http://x',pathname:'/leads'},history:{pushState(){}},Number,Math,String,Error,getSelection:()=>'',addEventListener(){},
-  fetch:async()=>{clock.fetches++;return {ok:true,text:async()=>responses.shift()};},setInterval:fn=>{clock.tick=fn;return 7;},clearInterval:()=>{clock.cleared=true;},setTimeout(){},clearTimeout(){}});
+ const document={title:'Leads',hidden:false,activeElement:null,querySelector:sel=>({'[data-live]':root,'[data-live-status]':status,'[data-live-search]':search})[sel]??null,getElementById:()=>toast,addEventListener:(name,fn)=>(handlers[name]??=[]).push(fn)};
+ vm.runInNewContext(source,{document,DOMParser,Date:FakeDate,URL,window:{},location:{href,origin:'http://x',pathname:'/leads'},history:{pushState(){}},Number,Math,String,Error,getSelection:()=>'',addEventListener(){},
+  fetch:async url=>{clock.fetches++;clock.urls.push(url);return {ok:true,text:async()=>responses.shift()};},setInterval:fn=>{clock.tick=fn;return 7;},clearInterval:()=>{clock.cleared=true;},setTimeout(){},clearTimeout(){}});
  return {root,clock,status,toast,swaps,handlers,document,settle:()=>new Promise(done=>setImmediate(done))};
 }
 
@@ -76,4 +76,12 @@ test('clicar em link ou botão da linha não abre os dados',()=>{
  page.root.querySelector=sel=>sel==='[data-lead-more="5"]'?more:null;
  page.handlers.click.forEach(fn=>fn({target:{closest:sel=>sel==='[data-live] [data-lead-id]'?row:(sel==='a,form'?{}:null)}}));
  assert.equal(more.hidden,true);
+});
+
+test('a busca procura em todos os leads, mesmo com uma aba aberta',async()=>{
+ const listeners={};
+ const search={elements:{q:{value:' Ana '}},addEventListener:(name,fn)=>{listeners[name]=fn;}};
+ const page=setup(['1'],1,'http://x/leads?situacao=contacted&page=2',search);
+ listeners.submit({preventDefault(){}});await page.settle();
+ assert.deepEqual(page.clock.urls,['http://x/leads?q=Ana']);
 });

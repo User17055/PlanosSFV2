@@ -1714,7 +1714,7 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .lead-heading-side .filter-bar{margin:0}
 .lead-heading-side .search-input{width:300px;min-width:0;flex:none}
 .lead-live{display:flex;flex-basis:100%;order:1;align-items:center;justify-content:flex-end;gap:7px;font-size:13px;color:var(--text-3)}
-.lead-live[hidden]{display:none}
+.lead-live[hidden],.lead-live.is-live{display:none}
 .lead-live i{width:7px;height:7px;border-radius:50%;background:#83ac38}
 .lead-live.is-offline i,.lead-live.is-paused i{background:#dfb81c}
 .lead-live.is-ended i{background:#e85656}
@@ -1738,14 +1738,14 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .lead-intake-off>.icon{color:var(--danger-text)}
 
 /* Leads: lista */
-body:has(.lead-list),body:has(.lead-list) .main-content{--body-bg:#fbfaf7;background:#fbfaf7}
+body:has(.lead-list),body:has(.lead-list) .main-content{--body-bg:#fff;background:#fff}
 .theme-dash .card.lead-list{padding:0;border:0;border-radius:0;background:none;box-shadow:none}
 .card.lead-list>.table-scroll{margin:0}
 .card.lead-list>.table-scroll th:first-child,.card.lead-list>.table-scroll td:first-child{padding-left:6px}
 .card.lead-list>.table-scroll th:last-child,.card.lead-list>.table-scroll td:last-child{padding-right:6px}
 .lead-head{margin-bottom:14px}
 .lead-head-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;margin-bottom:12px}
-.lead-head-top h1{font-size:21px;font-weight:600;letter-spacing:0}
+html body.admin-body .lead-black h1{font-family:var(--font);font-size:26px;font-weight:500;letter-spacing:0}
 .lead-head-side{display:flex;align-items:center;gap:20px}
 .lead-head-side .text-link{font-size:14px;white-space:nowrap}
 .lead-head .lead-live{flex-basis:auto;order:0}
@@ -1753,41 +1753,42 @@ body:has(.lead-list),body:has(.lead-list) .main-content{--body-bg:#fbfaf7;backgr
 .lead-head .search-input{width:100%;max-width:460px}
 .lead-head .search-input input{border-radius:8px}
 /* Preto só em títulos e subtítulos; as linhas dos leads ficam na cor normal do sistema. */
-.lead-black h1,.lead-black .lead-filters a,.lead-black .lead-table th,.lead-black .lead-more-grid h3{color:#333}
-.lead-black .lead-table th{font-weight:500}
+.lead-black h1,.lead-black .lead-filters a,.lead-black .lead-table th,.lead-black .lead-more-grid h3{color:#3a3a3a}
+.lead-black .lead-table th{font-size:14px;font-weight:500}
 .lead-black .lead-topline{margin-bottom:4px}
 .lead-black .lead-filters{flex:1 1 100%;gap:0;border-bottom:1px solid var(--line)}
-.lead-black .lead-filters a{display:flex;min-width:96px;flex-direction:column;align-items:center;margin-bottom:-1px;padding:4px 18px 7px;border-bottom:2px solid transparent;font-size:14.5px;line-height:1.35;text-transform:lowercase}
-.lead-black .lead-filters a.active{border-color:#333;font-weight:500}
+.lead-black .lead-filters a{display:flex;min-width:96px;flex-direction:column;align-items:center;margin-bottom:-1px;padding:4px 18px 7px;border-bottom:2px solid transparent;font-size:15.5px;font-weight:400;line-height:1.35;text-transform:lowercase}
+.lead-black .lead-filters a.active{border-color:#3a3a3a;font-weight:500}
 .lead-black .lead-filters span{display:inline-flex;align-items:center;gap:6px}
 .lead-filters .lead-dot{width:8px;height:8px}
-.lead-black .lead-filters b{margin:0;font-weight:400;color:#333}
-.lead-table{width:100%;font-size:13.5px}
+.lead-black .lead-filters b{margin:0;font-weight:400;color:#3a3a3a}
+.lead-table{width:100%;font-size:14.5px}
 .lead-table th{white-space:nowrap}
 .lead-table th,.lead-rank th{font-size:13px;font-weight:400;color:var(--text-3);border-bottom-color:var(--line)}
 .lead-table th,.lead-table td{padding:9px 12px 9px 0}
 .lead-table th:last-child,.lead-table td:last-child{padding-right:10px}
-.lead-table td{vertical-align:middle;overflow-wrap:break-word;color:var(--text-2)}
+.lead-table td{vertical-align:middle;overflow-wrap:break-word;color:#3b4a5c}
 .lead-table tbody tr:hover{background:none}
-.lead-table td strong{font-size:13.5px;font-weight:400;color:var(--text)}
-.lead-table td small{margin-top:3px;font-size:13px;color:var(--text-3)}
+.lead-table td strong{font-size:14.5px;font-weight:400;color:inherit}
+.lead-table td small{margin-top:3px;font-size:13.5px;color:var(--text-3)}
 .lead-num{width:1%;white-space:nowrap}
 .lead-nowrap{width:1%;white-space:nowrap}
 .lead-nowrap .is-soon{color:var(--warning-text)}
 .lead-nowrap .is-late{color:var(--danger-text)}
 .lead-name{min-width:130px}
 .lead-tags{width:27%;max-width:0}
-.lead-tag{display:flex;width:fit-content;max-width:100%;align-items:center;padding:1px 10px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;line-height:1.5;color:var(--text-3)}
+.lead-tag{display:flex;width:fit-content;max-width:100%;align-items:center;padding:1px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;line-height:1.5;color:var(--text-3)}
 .lead-tag span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .lead-step{width:1%;white-space:nowrap}
 .lead-step>div{display:flex;align-items:center;justify-content:flex-end;gap:8px}
 .lead-step form{margin:0}
-.lead-step .button-small{min-height:28px;padding:0 10px;font-size:12.5px}
+.lead-step .button-small{min-height:30px;padding:0 11px;font-size:13.5px}
 .lead-corner{width:1%;white-space:nowrap}
 .lead-corner>div{display:flex;align-items:center;justify-content:flex-end;gap:10px}
-.lead-origin{display:flex;gap:6px}
+.lead-origin{display:flex;min-width:74px;justify-content:center;gap:6px}
+.lead-origin-head{text-align:center}
 .lead-origin-cell{width:1%;white-space:nowrap}
-.lead-logo{display:grid;flex:none;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;background:#fff;font-size:12px;line-height:1;color:var(--text-2)}
+.lead-logo{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1);font-size:12px;line-height:1;color:var(--text-2)}
 .lead-logo img{display:block}
 .lead-dot{display:inline-block;flex:none;width:10px;height:10px;border-radius:50%;background:#8a94a3}
 .lead-dot.is-new{background:#1e88e5}
@@ -1800,16 +1801,16 @@ body:has(.lead-list),body:has(.lead-list) .main-content{--body-bg:#fbfaf7;backgr
 .lead-table tr[data-lead-id]{cursor:pointer}
 .lead-table tr[data-lead-id].is-open td{border-bottom-color:transparent}
 .lead-table tr[hidden]{display:none}
-.lead-toggle{display:grid;flex:none;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:#f1f0ec;color:var(--text-3);cursor:pointer}
+.lead-toggle{display:grid;flex:none;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:#f2f2f2;color:var(--text-3);cursor:pointer}
 .lead-toggle:hover{background:#eee;color:var(--text)}
 .lead-toggle .icon{width:15px;height:15px;transition:transform .15s}
 .lead-toggle[aria-expanded=true] .icon{transform:rotate(180deg)}
 .lead-more-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px 32px;padding:16px 20px;border-radius:12px;background:#f7f7f7}
-.lead-more-grid h3{margin:0 0 8px;font-size:13.5px;font-weight:500;color:var(--text)}
+.lead-more-grid h3{margin:0 0 8px;font-size:14.5px;font-weight:500;color:var(--text)}
 .lead-more-grid dl{margin:0}
-.lead-more-grid dl>div{display:flex;gap:10px;padding:2px 0;font-size:13.5px}
+.lead-more-grid dl>div{display:flex;gap:10px;padding:2px 0;font-size:14px}
 .lead-more-grid dt{flex:0 0 124px;font-weight:400;color:var(--text-3)}
-.lead-more-grid dd{min-width:0;margin:0;overflow-wrap:anywhere;color:var(--text-2)}
+.lead-more-grid dd{min-width:0;margin:0;overflow-wrap:anywhere;color:#3b4a5c}
 .lead-more .lead-actions{margin-top:12px}
 .lead-whats{white-space:nowrap}
 .theme-dash .lead-whats.lead-whats-quiet{border-color:var(--line-2);background:#fff;color:var(--text)}
@@ -1899,10 +1900,11 @@ a.lead-stat:hover span{text-decoration:underline;text-underline-offset:2px}
 .lead-step>div{justify-content:flex-start}
 .card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-nowrap{width:auto;padding-right:14px}
 .card.lead-list>.table-scroll .lead-table td.lead-corner{position:absolute;top:8px;right:0;width:auto;padding:0}
-.card.lead-list>.table-scroll .lead-table td.lead-origin-cell{position:absolute;top:13px;right:66px;width:auto;padding:0}
+.card.lead-list>.table-scroll .lead-table td.lead-origin-cell{position:absolute;top:11px;right:66px;width:auto;padding:0}
 .lead-step .button-small{min-height:40px;padding:0 14px;font-size:13.5px}
 .lead-toggle{width:40px;height:40px}
 .lead-tags{max-width:none}
+.lead-origin{min-width:0;justify-content:flex-end}
 .lead-table tr.lead-more{padding:0 0 12px;border-top:0}
 .lead-more-grid{padding:12px 14px}
 .lead-actions{gap:8px 14px}

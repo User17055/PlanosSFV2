@@ -12,7 +12,7 @@ $saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->for
 @endphp
 <div class="lead-head lead-black">
 <div class="lead-head-top"><h1>Leads</h1><div class="lead-head-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.dashboard') }}">Ver painel</a></div></div>
-<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@if($status)<input type="hidden" name="situacao" value="{{ $status }}">@endif<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Pesquise por nome, telefone ou e-mail"></div></form>
+<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search><div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Pesquise por nome, telefone ou e-mail"></div></form>
 </div>
 <div data-live class="lead-black">
 <div class="lead-topline">
@@ -22,7 +22,7 @@ $saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->for
 </nav>
 @include('leads.intake-status')
 </div>
-<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Nº</th><th>Chegou</th><th>Contato</th><th>Nome</th><th class="lead-phone">Telefone</th><th>Anúncio</th><th aria-label="Próximo passo"></th><th>Origem</th><th aria-label="Situação"></th></tr></thead><tbody>
+<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Nº</th><th>Chegou</th><th>Contato</th><th>Nome</th><th class="lead-phone">Telefone</th><th>Anúncio</th><th aria-label="Próximo passo"></th><th class="lead-origin-head">Origem</th><th aria-label="Situação"></th></tr></thead><tbody>
 @forelse($leads as $lead)
 @php
 $extra=$lead->extra ?? [];
@@ -48,7 +48,7 @@ $contact=$lead->phoneLabel() ?: $lead->email;
 <td class="lead-step"><div>
 @foreach($step as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="button button-secondary button-small">{{ $label }}</button></form>@endforeach
 </div></td>
-<td class="lead-origin-cell">@if($origin)<span class="lead-origin" title="Veio de: {{ $origin['label'] }}">@forelse($origin['logos'] as $logo)<span class="lead-logo"><img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="{{ ucfirst($logo) }}" width="18" height="18"></span>@empty<span class="lead-logo" role="img" aria-label="{{ $origin['label'] }}">{{ mb_strtoupper(mb_substr($origin['label'],0,1)) }}</span>@endforelse</span>@endif</td>
+<td class="lead-origin-cell">@if($origin)<span class="lead-origin" title="Veio de: {{ $origin['label'] }}">@forelse($origin['logos'] as $logo)<span class="lead-logo"><img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="{{ ucfirst($logo) }}" width="17" height="17"></span>@empty<span class="lead-logo" role="img" aria-label="{{ $origin['label'] }}">{{ mb_strtoupper(mb_substr($origin['label'],0,1)) }}</span>@endforelse</span>@endif</td>
 <td class="lead-corner"><div>
 <i class="lead-dot is-{{ $lead->status }}" role="img" aria-label="{{ $statusLabel }}" title="{{ $statusLabel }}"></i>
 <button type="button" class="lead-toggle" data-lead-toggle aria-expanded="false" aria-controls="lead-more-{{ $lead->id }}" aria-label="Ver dados de {{ $lead->name }}">@include('components.icon',['name'=>'down'])</button>
