@@ -3,8 +3,8 @@ $words=fn($value)=>\Illuminate\Support\Str::ucfirst(str_replace('_',' ',$value))
 $when=fn($date)=>$date?->timezone('America/Sao_Paulo')->format('d/m/Y H:i');
 $answers=collect($extra)->except(['anuncio','formulario',...\App\Models\Lead::CHANNEL_FIELDS])->mapWithKeys(fn($value,$key)=>[$key==='especie_do_pet' ? 'Espécie' : $words($key)=>$words($value)])->all();
 $groups=[
-    'De onde veio'=>['Rede'=>$channel ?? 'Não informada','Campanha'=>ctype_digit((string) $lead->campaign) ? null : $lead->campaign,'Anúncio'=>$extra['anuncio'] ?? null,'Formulário'=>$extra['formulario'] ?? null],
-    'Dados do formulário'=>['Pet'=>$lead->pet_name]+$answers,
+    'De onde veio'=>['Rede'=>$origin['label'] ?? 'Não informada','Campanha'=>$lead->campaign && !ctype_digit((string) $lead->campaign) ? $lead->campaignLabel() : null,'Anúncio'=>$extra['anuncio'] ?? null,'Formulário'=>$extra['formulario'] ?? null],
+    'Dados do formulário'=>['E-mail'=>$lead->email,'Pet'=>$lead->pet_name]+$answers,
     // O sistema guarda só a última pessoa que mudou a situação, não o histórico.
     'Atendimento'=>['Chegou'=>$when($lead->created_at),'Situação'=>\App\Models\Lead::STATUSES[$lead->status] ?? $lead->status,'Atendido por'=>$lead->handler?->name ?? 'Ninguém ainda','Primeiro contato'=>$when($lead->contacted_at),'Última mudança'=>$lead->handler ? $when($lead->updated_at) : null],
 ];

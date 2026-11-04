@@ -22,7 +22,11 @@ class Lead extends DomainModel
     /** O Pluga pode mandar o id numérico da campanha, que não diz nada na tela; o fim do número ainda separa uma campanha da outra. */
     public function campaignLabel(): string
     {
-        return ctype_digit((string) $this->campaign) ? 'Campanha nº …'.substr($this->campaign, -6) : ($this->campaign ?: 'Anúncio');
+        if (ctype_digit((string) $this->campaign)) {
+            return 'Campanha nº …'.substr($this->campaign, -6);
+        }
+        // O marketing escreve o nome em blocos: "[Plano de Saúde] - [20,00/dia] - [Feed IG]".
+        return preg_replace('/\]\s*-\s*\[/u', ' · ', trim((string) $this->campaign, "[] \t")) ?: 'Anúncio';
     }
 
     /** Rede de onde o lead veio. Pode chegar como sigla ("ig", "fb"); sem o campo fica vazio, porque o anúncio pode ter rodado nas duas redes. */
@@ -34,6 +38,22 @@ class Lead extends DomainModel
         }
         $value = str_replace('_', ' ', $value);
         return ['ig' => 'Instagram', 'fb' => 'Facebook'][mb_strtolower($value)] ?? mb_convert_case($value, MB_CASE_TITLE);
+    }
+
+    /** Origem e logos para a tela. Sem o campo da rede, só se sabe que veio de um formulário do Facebook Lead Ads, que roda nas duas redes. */
+    public function origin(): ?array
+    {
+        $channel = $this->channel();
+        if ($channel) {
+            return ['label' => $channel, 'logos' => array_values(array_filter(['instagram', 'facebook', 'google'], fn ($logo) => str_contains(mb_strtolower($channel), $logo)))];
+        }
+        if ($this->source !== 'facebook_lead_ads') {
+            return null;
+        }
+        // O nome da campanha costuma dizer onde o anúncio roda ("Feed IG"). "Form. Inst." é formulário instantâneo, não Instagram.
+        $text = $this->campaign.' '.($this->extra['anuncio'] ?? '');
+        $logos = array_keys(array_filter(['facebook' => '/\b(fb|facebook)\b/iu', 'instagram' => '/\b(ig|instagram)\b/iu'], fn ($pattern) => preg_match($pattern, $text) === 1));
+        return count($logos) === 1 ? ['label' => ucfirst($logos[0]), 'logos' => $logos] : ['label' => 'Facebook ou Instagram', 'logos' => ['facebook', 'instagram']];
     }
 
     /** Link do WhatsApp: só dígitos, com o 55 do Brasil quando vier sem, e a mensagem já escrita. */

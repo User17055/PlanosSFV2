@@ -56,16 +56,19 @@
     row?.querySelector('[data-lead-toggle]')?.setAttribute('aria-expanded', String(open));
   };
 
+  // Os botões só com ícone se identificam pelo aria-label.
+  const nameOf = item => item.getAttribute('aria-label') || item.textContent.trim();
+
   // Troca o conteúdo mantendo o foco no mesmo botão da mesma linha, para quem navega pelo teclado não voltar ao início.
   const swap = fresh => {
     const focused = document.activeElement;
     const row = focused?.closest?.('[data-lead-id]');
-    const label = focused?.textContent.trim();
+    const label = focused && nameOf(focused);
     root.replaceChildren(...fresh.childNodes);
     opened.forEach(id => show(id, true));
     if (!row) return;
     const again = root.querySelector(`[data-lead-id="${row.dataset.leadId}"]`);
-    [...(again?.querySelectorAll('a,button') ?? [])].find(item => item.textContent.trim() === label)?.focus({ preventScroll: true });
+    [...(again?.querySelectorAll('a,button') ?? [])].find(item => nameOf(item) === label)?.focus({ preventScroll: true });
   };
 
   // Devolve false quando a resposta não é esta tela (a sessão acabou e veio o login).

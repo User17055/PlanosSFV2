@@ -27,31 +27,39 @@ class VindiCustomerImportTest extends TestCase
         Franchise::create(['name' => 'Canal central', 'code' => 'CENTRAL', 'active' => true]);
         Notification::fake();
         // Clientes sem plano vêm antes, para os que interessam caírem na segunda página da Vindi.
-        $filler = array_map(fn ($id) => ['id' => $id, 'name' => 'Sem plano '.$id, 'registry_code' => '52998224725'], range(100, 149));
+        $filler = array_map(fn ($id) => ['id' => $id, 'status' => 'active', 'name' => 'Sem plano '.$id, 'registry_code' => '52998224725'], range(100, 149));
         $this->customers = [...$filler,
-            ['id' => 10, 'name' => 'Maria da Silva', 'registry_code' => '111.444.777-35', 'email' => 'maria@example.test', 'phones' => [['phone_type' => 'landline', 'number' => '551832220000'], ['phone_type' => 'mobile', 'number' => '5518999990000']],
+            ['id' => 10, 'status' => 'active', 'name' => 'Maria da Silva', 'registry_code' => '111.444.777-35', 'email' => 'maria@example.test', 'phones' => [['phone_type' => 'landline', 'number' => '551832220000'], ['phone_type' => 'mobile', 'number' => '5518999990000']],
                 'address' => ['street' => 'Rua A', 'number' => '10', 'additional_details' => 'Casa', 'neighborhood' => 'Centro', 'city' => 'Prudente', 'state' => 'sp', 'zipcode' => '19010000']],
-            ['id' => 11, 'name' => 'Pet Delivery LTDA', 'registry_code' => '09.255.197/0001-84'],
-            ['id' => 12, 'name' => 'Ana Repetida', 'registry_code' => '39053344705'],
-            ['id' => 13, 'name' => 'Ana Repetida 2', 'registry_code' => '390.533.447-05'],
-            ['id' => 14, 'name' => 'Já Existe Aqui', 'registry_code' => '15350946056'],
-            ['id' => 16, 'name' => 'Outro Vinculo', 'registry_code' => '28625587887'],
-            ['id' => 18, 'name' => 'Sem Email', 'registry_code' => '98765432100', 'email' => 'nao-e-email', 'phones' => [], 'address' => null],
-            ['id' => 17, 'name' => 'Só Serviços', 'registry_code' => '74682489070'],
+            ['id' => 11, 'status' => 'active', 'name' => 'Pet Delivery LTDA', 'registry_code' => '09.255.197/0001-84'],
+            ['id' => 12, 'status' => 'active', 'name' => 'Ana Repetida', 'registry_code' => '39053344705'],
+            ['id' => 13, 'status' => 'active', 'name' => 'Ana Repetida 2', 'registry_code' => '390.533.447-05'],
+            ['id' => 14, 'status' => 'active', 'name' => 'Já Existe Aqui', 'registry_code' => '15350946056'],
+            ['id' => 16, 'status' => 'active', 'name' => 'Outro Vinculo', 'registry_code' => '28625587887'],
+            ['id' => 18, 'status' => 'active', 'name' => 'Sem Email', 'registry_code' => '98765432100', 'email' => 'nao-e-email', 'phones' => [], 'address' => null],
+            ['id' => 17, 'status' => 'active', 'name' => 'Só Serviços', 'registry_code' => '74682489070'],
         ];
         Http::preventStrayRequests();
         Http::fake(function ($request) {
             if (++$this->calls === $this->failOn) {
                 return Http::response([], 500);
             }
-            $resource = basename(parse_url($request->url(), PHP_URL_PATH));
+            $path = parse_url($request->url(), PHP_URL_PATH);
+            // A listagem não traz o 15 nem o 19; consultados direto, um está arquivado e o outro, ativo.
+            if (preg_match('~/customers/(\d+)$~', $path, $id)) {
+                return Http::response(['customer' => [
+                    '15' => ['id' => 15, 'status' => 'archived', 'name' => 'Arquivada', 'registry_code' => '12345678909'],
+                    '19' => ['id' => 19, 'status' => 'active', 'name' => 'Fora Da Listagem', 'registry_code' => '12345678909'],
+                ][$id[1]]]);
+            }
+            $resource = basename($path);
             $query = (string) ($request->data()['query'] ?? '');
             $page = (int) ($request->data()['page'] ?? 1);
             $rows = match ($resource) {
                 'plans' => $this->plans,
                 'customers' => $this->customers,
-                // O cliente 10 tem dois pets no plano, e o 15 não aparece entre os ativos; o 17 só tem "Serviços".
-                'subscriptions' => str_contains($query, 'plan_id:1') ? array_map(fn ($id, $subscription) => ['id' => $subscription, 'customer' => ['id' => $id]], [10, 10, 11, 12, 13, 14, 15, 16, 18], range(1, 9))
+                // O cliente 10 tem dois pets no plano; o 17 só tem "Serviços".
+                'subscriptions' => str_contains($query, 'plan_id:1') ? array_map(fn ($id, $subscription) => ['id' => $subscription, 'customer' => ['id' => $id]], [10, 10, 11, 12, 13, 14, 15, 16, 18, 19], range(1, 10))
                     : (str_contains($query, 'plan_id:3') ? [['id' => 90, 'customer' => ['id' => 17]]] : []),
             };
             return Http::response([$resource => array_slice($rows, ($page - 1) * 50, 50)]);
@@ -72,7 +80,7 @@ class VindiCustomerImportTest extends TestCase
     {
         $local = Customer::create(['name' => 'Já Existe Aqui', 'document' => '15350946056']);
         $this->artisan(self::COMMAND)->assertSuccessful()
-            ->expectsOutputToContain('PLANO ECONOMICO')->expectsOutputToContain('Seriam criados: 3 (com e-mail: 1, com telefone: 1, com endereço: 1)')->expectsOutputToContain('Seriam ligados a um cadastro existente: 1')->expectsOutputToContain('Nada foi gravado')->doesntExpectOutputToContain('maria@example.test')->doesntExpectOutputToContain('11144477735');
+            ->expectsOutputToContain('PLANO ECONOMICO')->expectsOutputToContain('Seriam criados: 4 (com e-mail: 1, com telefone: 1, com endereço: 1)')->expectsOutputToContain('Seriam ligados a um cadastro existente: 1')->expectsOutputToContain('Nada foi gravado')->doesntExpectOutputToContain('maria@example.test')->doesntExpectOutputToContain('11144477735');
         $this->assertDatabaseCount('customers', 1);
         $this->assertNull($local->fresh()->vindi_customer_id);
         $this->assertSame(0, AuditLog::count());
@@ -84,9 +92,9 @@ class VindiCustomerImportTest extends TestCase
         $other = Customer::create(['name' => 'Outro Vinculo', 'document' => '28625587887', 'vindi_customer_id' => '999']);
 
         $report = $this->runImport();
-        $this->assertSame(['found' => 8, 'created' => 2, 'linked' => 1, 'existing' => 0], array_intersect_key($report, array_flip(['found', 'created', 'linked', 'existing'])));
+        $this->assertSame(['found' => 9, 'created' => 3, 'linked' => 1, 'existing' => 0], array_intersect_key($report, array_flip(['found', 'created', 'linked', 'existing'])));
         $this->assertSame(['email' => 1, 'phone' => 1, 'address' => 1], $report['filled']);
-        $this->assertSame(['PLANO ECONOMICO' => 9], $report['plans']);
+        $this->assertSame(['PLANO ECONOMICO' => 10], $report['plans']);
         $this->assertSame(['PACOTE BANHO SEMANAL', 'SERVIÇOS', 'TESTE - SEMANAL', 'PLANO teste'], $report['excluded']);
         $this->assertSame(['15'], $report['skipped'][VindiCustomerImport::ARCHIVED]);
         $this->assertSame(['11'], $report['skipped'][VindiCustomerImport::INVALID]);
@@ -107,7 +115,8 @@ class VindiCustomerImportTest extends TestCase
         $this->assertSame('999', $other->fresh()->vindi_customer_id);
         $this->assertDatabaseMissing('customers', ['vindi_customer_id' => '17']);
 
-        $this->assertSame(2, AuditLog::where('action', 'customer.imported_from_vindi')->count());
+        $this->assertSame('19', Customer::where('document', '12345678909')->sole()->vindi_customer_id);
+        $this->assertSame(3, AuditLog::where('action', 'customer.imported_from_vindi')->count());
         $this->assertSame(1, AuditLog::where('action', 'customer.linked_to_vindi')->count());
         Notification::assertNothingSent();
         Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
@@ -118,7 +127,7 @@ class VindiCustomerImportTest extends TestCase
         $this->runImport();
         $before = Customer::count();
         $report = $this->runImport();
-        $this->assertSame([0, 0, 4], [$report['created'], $report['linked'], $report['existing']]);
+        $this->assertSame([0, 0, 5], [$report['created'], $report['linked'], $report['existing']]);
         $this->assertSame($before, Customer::count());
     }
 

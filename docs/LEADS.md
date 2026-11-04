@@ -47,7 +47,7 @@ Telefone ou e-mail é obrigatório. Use os nomes da coluna "Campo recomendado".
 | Nome | `nome` | `name`, `full_name`, `nome_completo` | Vazio vira "Sem nome". A mensagem do WhatsApp usa o primeiro nome. |
 | Id do lead | `lead_id` | `id` | Id de cada lead, não do formulário. Evita duplicar em reenvios. |
 | Campanha | `campanha` | `campaign`, `campaign_name`, `ad_name`, `form_name` | Nome legível. Alimenta "De onde veio". |
-| Rede de origem | `plataforma` | `platform`, `origem`, `canal`, `rede_social` | Aparece na lista, com a logo do Instagram ou do Facebook. `ig` vira Instagram e `fb` vira Facebook; outro valor aparece como veio, sem logo. Sem o campo, a lista não mostra a rede. |
+| Rede de origem | `plataforma` | `platform`, `origem`, `canal`, `rede_social` | Aparece no canto da linha, com a logo do Instagram, do Facebook ou do Google. `ig` vira Instagram e `fb` vira Facebook; outra rede aparece pela inicial. Sem o campo, o sistema procura `IG`, `Instagram`, `FB` ou `Facebook` no nome da campanha e do anúncio; sem nada disso, o canto mostra as logos do Facebook e do Instagram juntas. |
 | Anúncio | `anuncio` | Nenhum | Alimenta "Por anúncio". |
 | Formulário | `formulario` | Nenhum | Aparece nos dados do lead. |
 | Nome do pet | `pet` | `pet_name`, `nome_do_pet`, `nome_pet` | Aparece nos dados do lead. |
@@ -75,7 +75,7 @@ Qualquer outro campo aparece nos dados do lead, até 30 campos de 500 caracteres
 Cuidados que evitam perder dados:
 
 - **Campanha, anúncio e formulário:** não envie `campaign_name`, `ad_name` e `form_name` juntos. O sistema guarda só o primeiro e descarta os outros.
-- **Nome da campanha:** envie o nome, não o id. Um id numérico aparece como "Campanha nº …123456".
+- **Nome da campanha:** envie o nome (`campaign_name`), não o id. Um id numérico aparece como "Campanha nº …123456" e não permite descobrir a rede. Se os dois vierem, fica o nome. Um nome em blocos, como `[Plano de Saúde] - [Feed IG]`, aparece separado por pontos.
 - **Anúncio no painel:** só o nome exato `anuncio` alimenta o relatório. `Nome do anúncio`, por exemplo, aparece nos dados do lead, mas fica fora do painel.
 - **Perguntas parecidas:** sem `telefone`, a resposta de "Você tem WhatsApp?" é tratada como telefone. Uma resposta como "Sim" não tem dígitos e é descartada.
 - **Formulário do Facebook:** deixe o telefone obrigatório. Um envio só com e-mail inválido entra na lista sem nenhum contato.
@@ -121,7 +121,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Quem atendeu | Leads pela última pessoa que mudou a situação | Não mostra quem atendeu antes dela |
 
-A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando há..." muda de cor a partir de 1 hora e de novo a partir de 24 horas. Cada lead mostra só o próximo passo: novo tem "Já chamei" e "Sem interesse"; em contato tem "Virou cliente" e "Sem interesse"; os encerrados têm "Reabrir". Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu e os horários. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome, telefone, anúncio, o próximo passo e, no canto, a origem, o WhatsApp e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
 
 ## Acesso
 

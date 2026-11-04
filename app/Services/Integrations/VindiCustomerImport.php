@@ -11,11 +11,11 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Traz da Vindi o cadastro de quem tem plano ativo. Não cria pet, contrato nem assinatura, e só faz GET na Vindi.
- * Com a base de 11/2026 são cerca de 45 chamadas, abaixo do limite de 120 por minuto. Rodar de novo não duplica.
+ * Com a base de 11/2026 são cerca de 90 chamadas, abaixo do limite de 120 por minuto. Rodar de novo não duplica.
  */
 class VindiCustomerImport
 {
-    public const ARCHIVED = 'Cliente arquivado na Vindi';
+    public const ARCHIVED = 'Cliente inativo ou arquivado na Vindi';
     public const INVALID = 'Sem nome ou com CPF ausente ou inválido, inclusive CNPJ';
     public const REPEATED = 'CPF repetido em mais de um cliente na Vindi';
     public const CONFLICT = 'Conflito com um cadastro que já existe aqui';
@@ -43,8 +43,9 @@ class VindiCustomerImport
             'skipped' => [self::ARCHIVED => [], self::INVALID => [], self::REPEATED => [], self::CONFLICT => []]];
         $byCpf = [];
         foreach (array_map('strval', array_keys($ids)) as $id) {
-            $person = $active[$id] ?? null;
-            if (! $person) {
+            // A listagem deixou de fora clientes ativos (46 em 11/2026), então quem não veio nela é consultado direto.
+            $person = $active[$id] ?? $this->client->customer($id);
+            if (($person['status'] ?? null) !== 'active') {
                 $report['skipped'][self::ARCHIVED][] = $id;
             } elseif (($cpf = $this->validCpf($person)) === null) {
                 $report['skipped'][self::INVALID][] = $id;

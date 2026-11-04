@@ -51,6 +51,13 @@ class LeadController extends Controller
             return null;
         };
         $keys = array_map($keyOf, array_combine(array_keys(self::ALIASES), array_keys(self::ALIASES)));
+        // Vindo o número e o nome da campanha, fica o nome: é ele que diz o plano, a cidade e onde o anúncio roda.
+        foreach (['campaign', 'campanha', 'campaign_name'] as $alias) {
+            if (isset($flat[$alias]) && ! ctype_digit($flat[$alias])) {
+                $keys['campaign'] = $alias;
+                break;
+            }
+        }
         $data = array_map(fn ($key) => $key === null ? null : $flat[$key], $keys);
         $data['phone'] = $data['phone'] ? (preg_replace('/\D/', '', $data['phone']) ?: null) : null;
         // O teste do Facebook manda texto no lugar dos dados ("<test lead: dummy data for phone_number>"): entra marcado como teste, sem exigir contato.

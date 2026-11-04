@@ -93,11 +93,38 @@ class LeadIntakeTest extends TestCase
         $this->send(['nome' => 'Bia', 'telefone' => '18922222222', 'Plataforma' => 'FB'])->assertCreated();
         $this->send(['nome' => 'Cris', 'telefone' => '18933333333', 'origem' => 'instagram_stories'])->assertCreated();
         $this->send(['nome' => 'Davi', 'telefone' => '18944444444'])->assertCreated();
-        $this->assertSame(['Instagram', 'Facebook', 'Instagram Stories', null], Lead::orderBy('id')->get()->map->channel()->all());
+        $this->send(['nome' => 'Eva', 'telefone' => '18955555555', 'origem' => 'Google Ads'])->assertCreated();
+        $this->assertSame(['Instagram', 'Facebook', 'Instagram Stories', null, 'Google Ads'], Lead::orderBy('id')->get()->map->channel()->all());
+        // Sem o campo, a tela diz o que se sabe, sem escolher uma das redes.
+        $this->assertSame(['label' => 'Facebook ou Instagram', 'logos' => ['facebook', 'instagram']], Lead::where('name', 'Davi')->sole()->origin());
 
         $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
         // A rede aparece com a logo e não se repete nos detalhes do lead.
-        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertSee('assets/brand/instagram.svg', false)->assertSee('assets/brand/facebook.svg', false)->assertSee('Instagram Stories')->assertDontSee('Platform:')->assertDontSee('Origem:');
+        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertSee('assets/brand/instagram.svg', false)->assertSee('assets/brand/facebook.svg', false)->assertSee('assets/brand/google.svg', false)->assertSee('assets/brand/whatsapp.png', false)->assertSee('Instagram Stories')->assertDontSee('Platform:')->assertDontSee('Origem:');
+    }
+
+    public function test_campaign_name_wins_over_its_number_and_tells_the_network(): void
+    {
+        $name = '[Plano de Saúde] - [20,00/dia] - [P. Prud] - [M&F] - [Reels, stories e Feed IG] - [Form. Inst.] - [25-54 anos]';
+        $this->send(['nome' => 'Ana', 'telefone' => '18911111111', 'campanha' => '120253596157660216', 'campaign_name' => $name])->assertCreated();
+        $lead = Lead::sole();
+        $this->assertSame($name, $lead->campaign);
+        $this->assertSame('Plano de Saúde · 20,00/dia · P. Prud · M&F · Reels, stories e Feed IG · Form. Inst. · 25-54 anos', $lead->campaignLabel());
+        $this->assertSame(['label' => 'Instagram', 'logos' => ['instagram']], $lead->origin());
+
+        $origin = fn (string $campaign, ?array $extra = null) => (new Lead(['campaign' => $campaign, 'source' => 'facebook_lead_ads', 'extra' => $extra]))->origin()['label'];
+        $this->assertSame('Facebook', $origin('[Feed FB]'));
+        $this->assertSame('Instagram', $origin('Outubro', ['anuncio' => 'Vídeo Instagram']));
+        $this->assertSame('Facebook ou Instagram', $origin('[Feed IG e FB]'));
+        // "Inst." é formulário instantâneo, e "big" tem as letras de IG, mas nada disso aponta a rede.
+        foreach (['[Form. Inst.]', 'Big Friday', '120253596157660216'] as $unknown) {
+            $this->assertSame('Facebook ou Instagram', $origin($unknown), $unknown);
+        }
+        // O campo da rede, quando vem, manda mais que o nome da campanha.
+        $this->assertSame('Facebook', (new Lead(['campaign' => '[Feed IG]', 'source' => 'facebook_lead_ads', 'extra' => ['platform' => 'fb']]))->origin()['label']);
+
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertSee('Veio de: Instagram')->assertSee('Plano de Saúde · 20,00/dia')->assertDontSee('[Plano de Saúde]');
     }
 
     public function test_nested_payload_is_read(): void

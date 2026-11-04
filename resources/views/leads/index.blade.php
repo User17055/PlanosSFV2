@@ -8,6 +8,7 @@ $filters=['new'=>'Para chamar','contacted'=>'Em contato','converted'=>'Viraram c
 // Só o próximo passo de cada situação: a pessoa não precisa escolher entre muitos botões.
 $actions=['new'=>['contacted'=>'Já chamei','lost'=>'Sem interesse'],'contacted'=>['converted'=>'Virou cliente','lost'=>'Sem interesse'],'converted'=>['contacted'=>'Reabrir'],'lost'=>['contacted'=>'Reabrir']];
 $keep=fn(array $extra=[])=>array_filter($extra+['q'=>$q]);
+$saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->format($format);
 @endphp
 <div class="page-heading lead-heading">
 <div><h1>Leads</h1><p>{!! $canUpdate ? 'Chame no WhatsApp, clique em <b>Já chamei</b> e depois marque o resultado.' : 'Quem pediu contato pelos anúncios.' !!}</p></div>
@@ -18,35 +19,47 @@ $keep=fn(array $extra=[])=>array_filter($extra+['q'=>$q]);
 <div class="lead-topline">
 <nav class="lead-filters" aria-label="Filtrar por situação">
 <a class="{{ !$status ? 'active' : '' }}" @if(!$status) aria-current="true" @endif href="{{ route('leads.index',$keep()) }}">Todos <b>{{ $counts->sum() }}</b></a>
-@foreach($filters as $value=>$label)<a class="{{ $status===$value ? 'active' : '' }}" @if($status===$value) aria-current="true" @endif href="{{ route('leads.index',$keep(['situacao'=>$value])) }}">{{ $label }} <b>{{ $counts[$value] ?? 0 }}</b></a>@endforeach
+{{-- O ponto de cada filtro também explica a cor do ponto em cada linha. --}}
+@foreach($filters as $value=>$label)<a class="{{ $status===$value ? 'active' : '' }}" @if($status===$value) aria-current="true" @endif href="{{ route('leads.index',$keep(['situacao'=>$value])) }}"><i class="lead-dot is-{{ $value }}"></i>{{ $label }} <b>{{ $counts[$value] ?? 0 }}</b></a>@endforeach
 </nav>
 @include('leads.intake-status')
 </div>
-<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Quem</th><th>De onde veio</th><th>Situação</th><th>O que fazer</th><th aria-label="Ver dados"></th></tr></thead><tbody>
+<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Nº</th><th>Chegou</th><th>Contato</th><th>Nome</th><th>Telefone</th><th>Anúncio</th><th aria-label="Próximo passo"></th><th aria-label="Origem, contato e situação"></th></tr></thead><tbody>
 @forelse($leads as $lead)
 @php
 $extra=$lead->extra ?? [];
 // O nome do anúncio diz mais que o número da campanha.
-$from=collect([ctype_digit((string) $lead->campaign) ? null : $lead->campaign,$extra['anuncio'] ?? null])->filter()->implode(' · ') ?: $lead->campaignLabel();
-$channel=$lead->channel();
-$logo=collect(['instagram','facebook'])->first(fn($name)=>str_contains(mb_strtolower((string) $channel),$name));
+$tag=$extra['anuncio'] ?? $lead->campaignLabel();
+$origin=$lead->origin();
 $hours=$lead->created_at->diffInHours(now());
 $active=in_array($lead->status,['new','contacted'],true);
+$next=$canUpdate ? ($actions[$lead->status] ?? []) : [];
+$step=$active ? array_slice($next,0,1,true) : [];
+$rest=array_diff_key($next,$step);
+$statusLabel=\App\Models\Lead::STATUSES[$lead->status] ?? $lead->status;
 @endphp
 <tr data-lead-id="{{ $lead->id }}">
-<td><strong>{{ $lead->name }}</strong>@if($lead->source==='teste')<small>Lead de teste</small>@endif @if($lead->phone)<small>{{ $lead->phoneLabel() }}</small>@endif @if($lead->email)<small><a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a></small>@endif</td>
-<td>@if($channel)<span class="lead-channel">@if($logo)<img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="" width="15" height="15">@endif{{ $channel }}</span>@endif {{ $from }}</td>
-<td>@if($lead->status==='new')<strong class="{{ $hours>=24 ? 'is-late' : ($hours>=1 ? 'is-soon' : '') }}">Esperando {{ $lead->created_at->locale('pt_BR')->diffForHumans() }}</strong><small>Chegou {{ $lead->created_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</small>@else<strong class="is-{{ $lead->status }}" title="Chegou {{ $lead->created_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }}">{{ \App\Models\Lead::STATUSES[$lead->status] ?? $lead->status }}</strong>@if($lead->handler)<small>Por {{ $lead->handler->name }} · {{ $lead->updated_at->timezone('America/Sao_Paulo')->format('d/m H:i') }}</small>@endif @endif</td>
-<td><div class="lead-actions">
-@if($lead->whatsappUrl())<a class="{{ $lead->status==='new' ? 'button button-primary button-small lead-whats' : ($active ? 'button button-secondary button-small lead-whats lead-whats-quiet' : 'text-button') }}" href="{{ $lead->whatsappUrl($lead->greeting()) }}" target="_blank" rel="noopener">@if($active)@include('components.icon',['name'=>'phone'])@endif WhatsApp</a>
-@elseif($lead->email && $active)<a class="button button-secondary button-small lead-whats lead-whats-quiet" href="mailto:{{ $lead->email }}">Enviar e-mail</a>@endif
-@foreach($canUpdate ? ($actions[$lead->status] ?? []) : [] as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="{{ $active && $loop->first ? 'button button-secondary button-small' : 'text-button' }}">{{ $label }}</button></form>@endforeach
-@if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif
+<td class="lead-num">{{ $lead->id }}</td>
+<td class="lead-nowrap" title="Chegou {{ $saoPaulo($lead->created_at,'d/m/Y H:i') }}">{{ $saoPaulo($lead->created_at) }}</td>
+<td class="lead-nowrap">@if($lead->status==='new')<span class="{{ $hours>=24 ? 'is-late' : ($hours>=1 ? 'is-soon' : '') }}" title="Esperando {{ $lead->created_at->locale('pt_BR')->diffForHumans() }}">Esperando {{ $hours<1 ? '<1 h' : ($hours<24 ? floor($hours).' h' : floor($hours/24).' d') }}</span>@elseif($lead->contacted_at)<span title="{{ $lead->handler ? 'Por '.$lead->handler->name.' · ' : '' }}{{ $saoPaulo($lead->contacted_at,'d/m/Y H:i') }}">{{ $saoPaulo($lead->contacted_at) }}</span>@endif</td>
+<td class="lead-name"><strong>{{ $lead->name }}</strong>@if($lead->source==='teste')<small>Lead de teste</small>@endif</td>
+<td class="lead-phone" title="{{ $lead->phone ? '' : $lead->email }}">{{ $lead->phoneLabel() ?: $lead->email }}</td>
+<td class="lead-tags"><span class="lead-tag" title="{{ $tag }}"><span>{{ $tag }}</span></span></td>
+<td class="lead-step">@foreach($step as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="button button-secondary button-small">{{ $label }}</button></form>@endforeach</td>
+<td class="lead-corner"><div>
+@if($origin)<span class="lead-origin" title="Veio de: {{ $origin['label'] }}">@forelse($origin['logos'] as $logo)<img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="{{ ucfirst($logo) }}" width="18" height="18">@empty<span class="lead-initial" role="img" aria-label="{{ $origin['label'] }}">{{ mb_strtoupper(mb_substr($origin['label'],0,1)) }}</span>@endforelse</span>@endif
+@if($lead->whatsappUrl())<a class="lead-icon" href="{{ $lead->whatsappUrl($lead->greeting()) }}" target="_blank" rel="noopener" title="Chamar no WhatsApp" aria-label="Chamar {{ $lead->name }} no WhatsApp"><img src="{{ asset('assets/brand/whatsapp.png') }}" alt="" width="22" height="22"></a>
+@elseif($lead->email && $active)<a class="lead-icon" href="mailto:{{ $lead->email }}" title="Enviar e-mail" aria-label="Enviar e-mail para {{ $lead->name }}">@include('components.icon',['name'=>'mail'])</a>@endif
+<i class="lead-dot is-{{ $lead->status }}" role="img" aria-label="{{ $statusLabel }}" title="{{ $statusLabel }}"></i>
+<button type="button" class="lead-toggle" data-lead-toggle aria-expanded="false" aria-controls="lead-more-{{ $lead->id }}" aria-label="Ver dados de {{ $lead->name }}">@include('components.icon',['name'=>'down'])</button>
 </div></td>
-<td class="lead-toggle-cell"><button type="button" class="lead-toggle" data-lead-toggle aria-expanded="false" aria-controls="lead-more-{{ $lead->id }}" aria-label="Ver dados de {{ $lead->name }}">@include('components.icon',['name'=>'down'])</button></td>
 </tr>
-<tr class="lead-more" id="lead-more-{{ $lead->id }}" data-lead-more="{{ $lead->id }}" hidden><td colspan="5">@include('leads.details')</td></tr>
-@empty<tr><td colspan="5"><div class="empty-state"><strong>{{ ($q || $status) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status) ? 'Limpe a busca ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
+<tr class="lead-more" id="lead-more-{{ $lead->id }}" data-lead-more="{{ $lead->id }}" hidden><td colspan="8">@include('leads.details')
+@if($rest || ($canDelete && $lead->source==='teste'))<div class="lead-actions">
+@foreach($rest as $value=>$label)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<input type="hidden" name="status" value="{{ $value }}"><button class="text-button">{{ $label }}</button></form>@endforeach
+@if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif
+</div>@endif</td></tr>
+@empty<tr><td colspan="8"><div class="empty-state"><strong>{{ ($q || $status) ? 'Nenhum lead com esse filtro.' : 'Nenhum lead por aqui.' }}</strong><p>{{ ($q || $status) ? 'Limpe a busca ou escolha outra situação.' : 'Quando alguém responder um anúncio, aparece nesta lista.' }}</p></div></td></tr>@endforelse
 </tbody></table></div><div class="pagination-wrapper">{{ $leads->links() }}</div></section>
 </div>
 @endsection
