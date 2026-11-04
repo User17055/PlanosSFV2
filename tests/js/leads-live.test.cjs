@@ -13,9 +13,9 @@ function setup(responses,firstLead=1) {
  class FakeDate extends Date{static now(){return clock.now;}}
  class DOMParser{parseFromString(html){return {querySelector:sel=>sel==='[data-live]'&&html!=='login'?{innerHTML:html,childNodes:[],querySelector:lastLead(Number(html))}:null};}}
  const document={title:'Leads',hidden:false,activeElement:null,querySelector:sel=>({'[data-live]':root,'[data-live-status]':status})[sel]??null,getElementById:()=>toast,addEventListener:(name,fn)=>(handlers[name]??=[]).push(fn)};
- vm.runInNewContext(source,{document,DOMParser,Date:FakeDate,URL,window:{},location:{href:'http://x/leads',origin:'http://x',pathname:'/leads'},history:{pushState(){}},Number,Math,String,Error,addEventListener(){},
+ vm.runInNewContext(source,{document,DOMParser,Date:FakeDate,URL,window:{},location:{href:'http://x/leads',origin:'http://x',pathname:'/leads'},history:{pushState(){}},Number,Math,String,Error,getSelection:()=>'',addEventListener(){},
   fetch:async()=>{clock.fetches++;return {ok:true,text:async()=>responses.shift()};},setInterval:fn=>{clock.tick=fn;return 7;},clearInterval:()=>{clock.cleared=true;},setTimeout(){},clearTimeout(){}});
- return {clock,status,toast,swaps,handlers,document,settle:()=>new Promise(done=>setImmediate(done))};
+ return {root,clock,status,toast,swaps,handlers,document,settle:()=>new Promise(done=>setImmediate(done))};
 }
 
 test('lead novo troca a lista e avisa; o título só muda com a aba escondida',async()=>{
@@ -53,4 +53,27 @@ test('parada a tela por 1 hora, para de renovar a sessão; mexer na tela retoma'
  page.handlers.pointerdown[0]();await page.settle();
  assert.equal(page.clock.fetches,1);
  assert.match(page.status.lastElementChild.textContent,/Ao vivo/);
+});
+
+test('dados abertos de um lead continuam abertos quando a lista se atualiza; clicar de novo fecha',async()=>{
+ const page=setup(['2']);
+ const more={hidden:true},row={dataset:{leadId:'5'},classList:{toggle(){}},querySelector:()=>null};
+ page.root.querySelector=sel=>({'[data-lead-more="5"]':more,'[data-lead-id="5"]':row})[sel]??null;
+ const click=()=>page.handlers.click.forEach(fn=>fn({target:{closest:sel=>sel==='[data-live] [data-lead-id]'?row:null}}));
+ click();
+ assert.equal(more.hidden,false);
+ more.hidden=true; // as linhas novas chegam fechadas
+ page.clock.tick();await page.settle();
+ assert.equal(page.swaps.length,1);
+ assert.equal(more.hidden,false);
+ click();
+ assert.equal(more.hidden,true);
+});
+
+test('clicar em link ou botão da linha não abre os dados',()=>{
+ const page=setup([]);
+ const more={hidden:true},row={dataset:{leadId:'5'},classList:{toggle(){}},querySelector:()=>null};
+ page.root.querySelector=sel=>sel==='[data-lead-more="5"]'?more:null;
+ page.handlers.click.forEach(fn=>fn({target:{closest:sel=>sel==='[data-live] [data-lead-id]'?row:(sel==='a,form'?{}:null)}}));
+ assert.equal(more.hidden,true);
 });

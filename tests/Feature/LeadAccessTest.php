@@ -107,6 +107,21 @@ class LeadAccessTest extends TestCase
         $list()->assertSee('Reabrir</button>', false)->assertDontSee('Sem interesse</button>', false);
     }
 
+    public function test_lead_data_shows_where_it_came_from_and_who_handled_it(): void
+    {
+        $lead = $this->lead(['external_id' => 'd1', 'pet_name' => 'Thor', 'extra' => ['platform' => 'ig', 'anuncio' => 'Vídeo gato', 'formulario' => 'Plano Econômico', 'especie_do_pet' => 'gato', 'idade_do_pet' => '3_anos']]);
+        $list = fn () => $this->actingAs($this->attendant)->get(route('leads.index'));
+
+        $list()->assertSee('data-lead-more="'.$lead->id.'"', false)
+            ->assertSeeInOrder(['Rede', 'Instagram', 'Campanha', 'Outubro', 'Anúncio', 'Vídeo gato', 'Formulário', 'Plano Econômico', 'Pet', 'Thor', 'Espécie', 'Gato', 'Idade do pet', '3 anos', 'Chegou', 'Atendido por', 'Ninguém ainda'])
+            ->assertDontSee('Platform')->assertDontSee('Última mudança');
+
+        $this->actingAs($this->attendant)->post(route('leads.update', $lead), ['status' => 'contacted']);
+        $handled = $lead->fresh();
+        $time = fn ($date) => $date->timezone('America/Sao_Paulo')->format('d/m/Y H:i');
+        $list()->assertSeeInOrder(['Atendido por', 'Ana Atendimento', 'Primeiro contato', $time($handled->contacted_at), 'Última mudança', $time($handled->updated_at)]);
+    }
+
     public function test_numeric_campaign_id_never_shows_as_a_long_number(): void
     {
         $this->lead(['campaign' => '120253596157660216', 'external_id' => 'c1']);

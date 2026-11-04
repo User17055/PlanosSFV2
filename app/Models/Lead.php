@@ -6,6 +6,9 @@ class Lead extends DomainModel
 {
     public const STATUSES = ['new' => 'Novo', 'contacted' => 'Em contato', 'converted' => 'Virou cliente', 'lost' => 'Sem interesse'];
 
+    /** Campos de "extra" em que o Pluga pode mandar a rede de origem. */
+    public const CHANNEL_FIELDS = ['plataforma', 'platform', 'origem', 'canal', 'rede_social'];
+
     protected function casts(): array
     {
         return ['extra' => 'array', 'contacted_at' => 'datetime'];
@@ -20,6 +23,17 @@ class Lead extends DomainModel
     public function campaignLabel(): string
     {
         return ctype_digit((string) $this->campaign) ? 'Campanha nº …'.substr($this->campaign, -6) : ($this->campaign ?: 'Anúncio');
+    }
+
+    /** Rede de onde o lead veio. Pode chegar como sigla ("ig", "fb"); sem o campo fica vazio, porque o anúncio pode ter rodado nas duas redes. */
+    public function channel(): ?string
+    {
+        $value = collect(self::CHANNEL_FIELDS)->map(fn ($field) => $this->extra[$field] ?? null)->filter()->first();
+        if ($value === null) {
+            return null;
+        }
+        $value = str_replace('_', ' ', $value);
+        return ['ig' => 'Instagram', 'fb' => 'Facebook'][mb_strtolower($value)] ?? mb_convert_case($value, MB_CASE_TITLE);
     }
 
     /** Link do WhatsApp: só dígitos, com o 55 do Brasil quando vier sem, e a mensagem já escrita. */

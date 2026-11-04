@@ -2,7 +2,7 @@
 
 Cada formulário enviado no Facebook chega ao sistema pelo Pluga e, com telefone ou e-mail, entra na lista da equipe. O sistema não consulta o Facebook: ele só registra o que o Pluga envia.
 
-Este documento descreve o código em 03/11/2026. A automação atual no Pluga e os dados de produção não foram conferidos.
+Este documento descreve o código em 04/11/2026. A automação atual no Pluga e os dados de produção não foram conferidos.
 
 ## Como funciona
 
@@ -47,13 +47,14 @@ Telefone ou e-mail é obrigatório. Use os nomes da coluna "Campo recomendado".
 | Nome | `nome` | `name`, `full_name`, `nome_completo` | Vazio vira "Sem nome". A mensagem do WhatsApp usa o primeiro nome. |
 | Id do lead | `lead_id` | `id` | Id de cada lead, não do formulário. Evita duplicar em reenvios. |
 | Campanha | `campanha` | `campaign`, `campaign_name`, `ad_name`, `form_name` | Nome legível. Alimenta "De onde veio". |
+| Rede de origem | `plataforma` | `platform`, `origem`, `canal`, `rede_social` | Aparece na lista, com a logo do Instagram ou do Facebook. `ig` vira Instagram e `fb` vira Facebook; outro valor aparece como veio, sem logo. Sem o campo, a lista não mostra a rede. |
 | Anúncio | `anuncio` | Nenhum | Alimenta "Por anúncio". |
-| Formulário | `formulario` | Nenhum | Aparece na coluna Origem. |
-| Nome do pet | `pet` | `pet_name`, `nome_do_pet`, `nome_pet` | Aparece na lista. |
+| Formulário | `formulario` | Nenhum | Aparece nos dados do lead. |
+| Nome do pet | `pet` | `pet_name`, `nome_do_pet`, `nome_pet` | Aparece nos dados do lead. |
 | Espécie do pet | `especie_do_pet` | Nenhum | Alimenta "Cachorro ou gato". |
-| Idade do pet | `idade_do_pet` | Nenhum | Aparece na lista. |
+| Idade do pet | `idade_do_pet` | Nenhum | Aparece nos dados do lead. |
 
-Qualquer outro campo aparece junto do lead na lista, até 30 campos de 500 caracteres cada. O nome pode vir com maiúsculas, acentos ou espaços: `Espécie do Pet` vira `especie_do_pet`.
+Qualquer outro campo aparece nos dados do lead, até 30 campos de 500 caracteres cada. O nome pode vir com maiúsculas, acentos ou espaços: `Espécie do Pet` vira `especie_do_pet`.
 
 ```json
 {
@@ -61,6 +62,7 @@ Qualquer outro campo aparece junto do lead na lista, até 30 campos de 500 carac
   "nome": "Maria da Silva",
   "telefone": "+55 18 99999-0000",
   "email": "maria@example.test",
+  "plataforma": "ig",
   "campanha": "Plano Econômico - Novembro",
   "anuncio": "Vídeo gato 01",
   "formulario": "Formulário Plano Econômico",
@@ -74,7 +76,7 @@ Cuidados que evitam perder dados:
 
 - **Campanha, anúncio e formulário:** não envie `campaign_name`, `ad_name` e `form_name` juntos. O sistema guarda só o primeiro e descarta os outros.
 - **Nome da campanha:** envie o nome, não o id. Um id numérico aparece como "Campanha nº …123456".
-- **Anúncio no painel:** só o nome exato `anuncio` alimenta o relatório. `Nome do anúncio`, por exemplo, aparece na lista, mas fica fora do painel.
+- **Anúncio no painel:** só o nome exato `anuncio` alimenta o relatório. `Nome do anúncio`, por exemplo, aparece nos dados do lead, mas fica fora do painel.
 - **Perguntas parecidas:** sem `telefone`, a resposta de "Você tem WhatsApp?" é tratada como telefone. Uma resposta como "Sim" não tem dígitos e é descartada.
 - **Formulário do Facebook:** deixe o telefone obrigatório. Um envio só com e-mail inválido entra na lista sem nenhum contato.
 
@@ -85,7 +87,7 @@ O teste do Facebook prova a conexão, e um envio real prova os campos.
 1. **Conexão:** envie um lead pela ferramenta de teste do Facebook. Ele aparece na lista marcado como "Lead de teste" e fica fora do painel.
 2. **Limpeza:** peça a um administrador ou gerente para clicar em "Apagar teste".
 3. **Campos:** preencha o formulário real com um telefone seu e abra `/leads`.
-4. **Conferência:** veja se nome, botão de WhatsApp, e-mail, campanha, anúncio e dados do pet estão no lugar certo.
+4. **Conferência:** veja se nome, botão de WhatsApp, e-mail, rede de origem, campanha, anúncio e dados do pet estão no lugar certo.
 
 O lead de teste do Facebook entra mesmo sem telefone reconhecido, então sozinho ele não prova o mapeamento. Lead real não pode ser apagado: o envio da etapa 3 fica no histórico e conta no painel.
 
@@ -119,7 +121,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Quem atendeu | Leads pela última pessoa que mudou a situação | Não mostra quem atendeu antes dela |
 
-A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando há..." muda de cor a partir de 1 hora e de novo a partir de 24 horas. Cada lead mostra só o próximo passo: novo tem "Já chamei" e "Sem interesse"; em contato tem "Virou cliente" e "Sem interesse"; os encerrados têm "Reabrir". O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando há..." muda de cor a partir de 1 hora e de novo a partir de 24 horas. Cada lead mostra só o próximo passo: novo tem "Já chamei" e "Sem interesse"; em contato tem "Virou cliente" e "Sem interesse"; os encerrados têm "Reabrir". Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu e os horários. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
 
 ## Acesso
 

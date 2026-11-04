@@ -46,6 +46,20 @@ Artisan::command('plans:reconcile',function() {
     $this->info('Conciliação encaminhada à fila financeira.');
 })->purpose('Conferir informações financeiras no provedor autorizado');
 
+Artisan::command('plans:import-vindi-customers {--apply : Grava os cadastros; sem esta opção, só mostra o que seria feito}',function(\App\Services\Integrations\VindiCustomerImport $import) {
+    $apply=(bool)$this->option('apply');
+    $report=$import->run($apply);
+    $this->table(['Plano','Assinaturas ativas'],collect($report['plans'])->map(fn($total,$name)=>[$name,$total])->values()->all());
+    $this->line('Fora da importação: '.implode(', ',$report['excluded']));
+    $this->line('Clientes com plano ativo: '.$report['found']);
+    $this->info(($apply?'Criados: ':'Seriam criados: ').$report['created']." (com e-mail: {$report['filled']['email']}, com telefone: {$report['filled']['phone']}, com endereço: {$report['filled']['address']})");
+    $this->info(($apply?'Ligados a um cadastro existente: ':'Seriam ligados a um cadastro existente: ').$report['linked']);
+    $this->line('Já estavam importados: '.$report['existing']);
+    // Só os ids da Vindi: nome e CPF não vão para o terminal.
+    foreach($report['skipped'] as $reason=>$ids) if($ids) $this->warn($reason.' ('.count($ids).'): '.implode(', ',$ids));
+    if(!$apply) $this->comment('Nada foi gravado. Para gravar, rode de novo com --apply.');
+})->purpose('Trazer da Vindi o cadastro de quem tem plano ativo, sem pet, contrato ou assinatura');
+
 Schedule::command('plans:recover-events')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('plans:reconcile')->everyFifteenMinutes()->withoutOverlapping();
 Artisan::command('plans:finalize',function() {

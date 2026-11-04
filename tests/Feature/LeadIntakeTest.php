@@ -70,7 +70,7 @@ class LeadIntakeTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'sales', 'active' => true]))->get('/leads')->assertOk()->assertDontSee('Maria Lead');
 
         $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
-        $this->actingAs($admin)->get('/leads')->assertOk()->assertSee('Maria Lead')->assertSee('Idade do pet: 3 anos')->assertSee('wa.me/5518999990000', false);
+        $this->actingAs($admin)->get('/leads')->assertOk()->assertSee('Maria Lead')->assertSee('Idade do pet')->assertSee('3 anos')->assertSee('wa.me/5518999990000', false);
         $this->actingAs($admin)->post('/leads/'.$lead->id, ['status' => 'contacted'])->assertRedirect();
         $this->assertSame('contacted', $lead->fresh()->status);
         $this->assertSame($admin->id, $lead->fresh()->handled_by);
@@ -85,6 +85,19 @@ class LeadIntakeTest extends TestCase
         $this->assertSame('18999990000', $lead->phone);
         $this->assertSame('maria@example.test', $lead->email);
         $this->assertSame(['especie_do_pet' => 'Gato'], $lead->extra);
+    }
+
+    public function test_list_shows_the_network_the_lead_came_from(): void
+    {
+        $this->send(['nome' => 'Ana', 'telefone' => '18911111111', 'platform' => 'ig'])->assertCreated();
+        $this->send(['nome' => 'Bia', 'telefone' => '18922222222', 'Plataforma' => 'FB'])->assertCreated();
+        $this->send(['nome' => 'Cris', 'telefone' => '18933333333', 'origem' => 'instagram_stories'])->assertCreated();
+        $this->send(['nome' => 'Davi', 'telefone' => '18944444444'])->assertCreated();
+        $this->assertSame(['Instagram', 'Facebook', 'Instagram Stories', null], Lead::orderBy('id')->get()->map->channel()->all());
+
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        // A rede aparece com a logo e não se repete nos detalhes do lead.
+        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertSee('assets/brand/instagram.svg', false)->assertSee('assets/brand/facebook.svg', false)->assertSee('Instagram Stories')->assertDontSee('Platform:')->assertDontSee('Origem:');
     }
 
     public function test_nested_payload_is_read(): void

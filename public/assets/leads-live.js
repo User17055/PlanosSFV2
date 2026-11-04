@@ -1,6 +1,6 @@
 'use strict';
 /* Lista e painel de leads ao vivo: busca a própria página de tempos em tempos e troca só o que mudou.
-   Filtros, paginação e botões também trocam sem recarregar. Sem JavaScript, tudo continua sendo link e formulário comuns. */
+   Filtros, paginação e botões também trocam sem recarregar. Sem JavaScript, eles continuam sendo link e formulário comuns; só os dados do lead não abrem. */
 (() => {
   // shortcut: refaz a página inteira a cada 20 s; se muitas abas abertas pesarem no servidor, trocar por um endpoint só com o último id.
   const EVERY = 20000;
@@ -45,12 +45,24 @@
     }[next];
   };
 
+  // Dados do lead: abrem ao clicar na linha e continuam abertos quando a lista se atualiza.
+  const opened = new Set();
+  const show = (id, open) => {
+    const more = root.querySelector(`[data-lead-more="${id}"]`);
+    if (!more) return;
+    more.hidden = !open;
+    const row = root.querySelector(`[data-lead-id="${id}"]`);
+    row?.classList.toggle('is-open', open);
+    row?.querySelector('[data-lead-toggle]')?.setAttribute('aria-expanded', String(open));
+  };
+
   // Troca o conteúdo mantendo o foco no mesmo botão da mesma linha, para quem navega pelo teclado não voltar ao início.
   const swap = fresh => {
     const focused = document.activeElement;
     const row = focused?.closest?.('[data-lead-id]');
     const label = focused?.textContent.trim();
     root.replaceChildren(...fresh.childNodes);
+    opened.forEach(id => show(id, true));
     if (!row) return;
     const again = root.querySelector(`[data-lead-id="${row.dataset.leadId}"]`);
     [...(again?.querySelectorAll('a,button') ?? [])].find(item => item.textContent.trim() === label)?.focus({ preventScroll: true });
@@ -125,6 +137,16 @@
       buttons.forEach(button => { button.disabled = false; });
       toast('Não foi possível salvar. Recarregue a página e tente de novo.');
     }
+  });
+
+  document.addEventListener('click', event => {
+    const row = event.target.closest?.('[data-live] [data-lead-id]');
+    // Links e botões da linha fazem o trabalho deles, e selecionar um texto para copiar não abre nem fecha.
+    if (!row || event.target.closest('a,form') || String(getSelection())) return;
+    const id = row.dataset.leadId;
+    const open = !opened.has(id);
+    if (open) opened.add(id); else opened.delete(id);
+    show(id, open);
   });
 
   // Filtros, paginação e período dentro da mesma tela; link para outra tela segue normal.

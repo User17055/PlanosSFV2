@@ -28,6 +28,12 @@ Se houver divergência de valor, estado não mapeado, recebimento parcial, estor
 
 O `ReconcileVindiSubscriptionJob` percorre as faturas da assinatura. A rotina precisa operar dentro dos limites contratados, com monitoramento e ajuste de frequência. A frequência de execução não prova que a conta foi homologada. A competência depende das datas efetivamente retornadas pela API e deve ser conferida na implantação.
 
+### Importação de cadastros
+
+`php8.4 artisan plans:import-vindi-customers` lê da Vindi os clientes com assinatura ativa em plano cujo nome começa com "Plano" e mostra o que faria, sem gravar. Pacotes, serviços, direitos de uso de marca e testes ficam de fora. Com `--apply`, grava nome, CPF, e-mail, telefone, endereço e `vindi_customer_id` na unidade `CENTRAL`, e registra `customer.imported_from_vindi` na auditoria. Só faz GET na Vindi, não envia e-mail e pode rodar de novo sem duplicar. Quem tem CPF inválido ou repetido, ou conflita com um cadastro local, fica de fora e aparece na saída pelo id da Vindi.
+
+O cadastro importado não liga a assinatura da Vindi a um contrato. Por isso, as faturas dele continuam indo para revisão manual, e iniciar o pagamento online de um contrato novo para esse cliente abre outra cobrança, além da assinatura que ele já tem. No site, quem tem o CPF importado recebe a orientação de pedir à unidade o link de acesso.
+
 ### Homologação ainda necessária
 
 1. Confirmar conta central/franquia e impedir mistura de credenciais.

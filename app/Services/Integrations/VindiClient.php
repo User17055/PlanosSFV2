@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Http;
 /** Vindi Service API v1. Read retries are safe; creation is never automatically retried. */
 class VindiClient
 {
+    public const PER_PAGE = 50;
+
     public function configured(): bool
     {
         return (bool) config('integrations.vindi.enabled') && filled(config('integrations.vindi.api_key'));
@@ -23,6 +25,12 @@ class VindiClient
     {
         $this->assertIdentifier($id);
         return $this->request()->get('subscriptions/'.$id)->throw()->json('subscription') ?? [];
+    }
+
+    /** Uma página de uma listagem da API (plans, subscriptions, customers). */
+    public function page(string $resource, int $page, ?string $query = null): array
+    {
+        return $this->request()->get($resource, array_filter(['query' => $query, 'page' => $page, 'per_page' => self::PER_PAGE]))->throw()->json($resource) ?? [];
     }
 
     public function billsForSubscription(string $id, int $page = 1): array
