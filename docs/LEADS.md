@@ -42,7 +42,7 @@ Telefone ou e-mail é obrigatório. Use os nomes da coluna "Campo recomendado".
 
 | Dado | Campo recomendado | Também aceita | Regra ou uso |
 | --- | --- | --- | --- |
-| Telefone | `telefone` | `phone`, `phone_number`, `celular`, `whatsapp` | Com DDD, em qualquer formato. Com menos de 10 dígitos, não aparece o botão de WhatsApp. |
+| Telefone | `telefone` | `phone`, `phone_number`, `celular`, `whatsapp` | Com DDD, em qualquer formato. Com menos de 10 dígitos, não aparece o link do WhatsApp. |
 | E-mail | `email` | `e_mail` | Obrigatório só se não houver telefone. |
 | Nome | `nome` | `name`, `full_name`, `nome_completo` | Vazio vira "Sem nome". A mensagem do WhatsApp usa o primeiro nome. |
 | Id do lead | `lead_id` | `id` | Id de cada lead, não do formulário. Evita duplicar em reenvios. |
@@ -87,7 +87,7 @@ O teste do Facebook prova a conexão, e um envio real prova os campos.
 1. **Conexão:** envie um lead pela ferramenta de teste do Facebook. Ele aparece na lista marcado como "Lead de teste" e fica fora do painel.
 2. **Limpeza:** peça a um administrador ou gerente para clicar em "Apagar teste".
 3. **Campos:** preencha o formulário real com um telefone seu e abra `/leads`.
-4. **Conferência:** veja se nome, botão de WhatsApp, e-mail, rede de origem, campanha, anúncio e dados do pet estão no lugar certo.
+4. **Conferência:** veja se nome, link do WhatsApp, e-mail, rede de origem, campanha, anúncio e dados do pet estão no lugar certo.
 
 O lead de teste do Facebook entra mesmo sem telefone reconhecido, então sozinho ele não prova o mapeamento. Lead real não pode ser apagado: o envio da etapa 3 fica no histórico e conta no painel.
 
@@ -121,7 +121,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Quem atendeu | Leads pela última pessoa que mudou a situação | Não mostra quem atendeu antes dela |
 
-A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome, telefone, anúncio, o próximo passo e, no canto, a origem, o WhatsApp e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome com o telefone, anúncio, o próximo passo a origem em selos redondos e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários, o link "Abrir WhatsApp" e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
 
 ## Acesso
 

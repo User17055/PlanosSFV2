@@ -100,7 +100,7 @@ class LeadIntakeTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
         // A rede aparece com a logo e não se repete nos detalhes do lead.
-        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertSee('assets/brand/instagram.svg', false)->assertSee('assets/brand/facebook.svg', false)->assertSee('assets/brand/google.svg', false)->assertSee('assets/brand/whatsapp.png', false)->assertSee('Instagram Stories')->assertDontSee('Platform:')->assertDontSee('Origem:');
+        $this->actingAs($admin)->get(route('leads.index'))->assertOk()->assertSee('assets/brand/instagram.svg', false)->assertSee('assets/brand/facebook.svg', false)->assertSee('assets/brand/google.svg', false)->assertSee('Instagram Stories')->assertDontSee('Platform:')->assertDontSee('Origem:');
     }
 
     public function test_campaign_name_wins_over_its_number_and_tells_the_network(): void

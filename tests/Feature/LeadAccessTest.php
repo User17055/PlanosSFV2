@@ -100,7 +100,7 @@ class LeadAccessTest extends TestCase
 
         // O nome do anúncio diz mais que o número da campanha.
         $list()->assertSee('Esperando')->assertSee('Cachorro')->assertSee('Plano Outubro')->assertDontSee('Campanha nº')
-            ->assertSee('Já chamei</button>', false)->assertDontSee('Virou cliente</button>', false);
+            ->assertSee('Abrir WhatsApp</a>', false)->assertDontSee('assets/brand/whatsapp', false)->assertSee('Já chamei</button>', false)->assertDontSee('Virou cliente</button>', false);
         $lead->update(['status' => 'contacted']);
         $list()->assertSee('Virou cliente</button>', false)->assertSee('Sem interesse</button>', false)->assertDontSee('Já chamei</button>', false);
         $lead->update(['status' => 'converted']);
