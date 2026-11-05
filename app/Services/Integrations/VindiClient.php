@@ -99,6 +99,13 @@ class VindiClient
         return $this->request()->get('subscriptions',['query'=>'code="'.str_replace('"','',$code).'"'])->throw()->json('subscriptions') ?? [];
     }
 
+    /** Todas as assinaturas de um cliente da Vindi; quem chama filtra a situação. */
+    public function subscriptionsOfCustomer(string $customerId): array
+    {
+        $this->assertIdentifier($customerId);
+        return $this->request()->get('subscriptions',['query'=>'customer_id='.$customerId,'per_page'=>50])->throw()->json('subscriptions') ?? [];
+    }
+
     public function customer(string $id): array
     {
         $this->assertIdentifier($id);

@@ -39,7 +39,9 @@ class PasswordResetTest extends TestCase
         $this->assertStringStartsWith(url('/redefinir-senha/'), $url);
 
         $token = basename(parse_url($url, PHP_URL_PATH));
-        $this->get($url)->assertOk()->assertSee('Criar nova senha');
+        // Só a senha é digitada: o e-mail vem escondido, tirado do próprio link.
+        $this->get($url)->assertOk()->assertSee('Criar nova senha')->assertDontSee('type="email"', false)
+            ->assertSee('type="hidden" name="email" value="'.e($staff->email).'"', false);
         $this->post(route('password.update'), ['token' => $token, 'email' => $staff->email, 'password' => 'curta', 'password_confirmation' => 'curta'])->assertSessionHasErrors('password');
         $this->post(route('password.update'), ['token' => $token, 'email' => $staff->email, 'password' => 'SenhaNova@2026x', 'password_confirmation' => 'SenhaNova@2026x'])
             ->assertRedirect(route('login', ['login' => $staff->email]));

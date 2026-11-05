@@ -235,6 +235,53 @@ class LeadChatTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_history_brings_contact_photo_and_files_only_as_https_links(): void
+    {
+        $this->connection($this->ana);
+        $photo = 'https://storage.example.test/thumb.png?X-Amz-Signature=abc';
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact() + ['thumbAvatar' => ['url' => $photo, 'accountId' => 'segredo-conta']]]]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => [
+                $this->message(['id' => 'img', 'type' => 'image', 'text' => '', 'file' => ['url' => 'https://storage.example.test/foto.jpg', 'name' => 'foto.jpg', 'checksum' => 'interno']]),
+                $this->message(['id' => 'bad', 'type' => 'document', 'file' => ['url' => 'javascript:alert(1)', 'name' => 'x.pdf']]),
+            ]]),
+        ]);
+        $response = $this->actingAs($this->ana)->getJson(route('leads.chat.messages', $this->mine))->assertOk()
+            ->assertJsonPath('avatar', $photo)->assertJsonPath('messages.1.file', ['url' => 'https://storage.example.test/foto.jpg', 'name' => 'foto.jpg'])
+            ->assertJsonPath('messages.0.file', null);
+        $response->assertDontSee('segredo-conta')->assertDontSee('interno')->assertDontSee('javascript');
+        Http::assertSent(fn (HttpRequest $request) => str_contains($request->url(), '/messages') && json_decode($request['query'], true)['include'] === ['file']);
+    }
+
+    public function test_photo_and_recorded_audio_are_sent_with_the_type_read_from_the_content(): void
+    {
+        $this->connection($this->ana);
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact()]]),
+            $this->base.'/api/v1/messages' => Http::response(['id' => 'sent'], 201),
+        ]);
+        $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        // O navegador diz "foto.pdf", mas o conteúdo é PNG: vale o conteúdo.
+        $this->actingAs($this->ana)->postJson(route('leads.chat.send', $this->mine), $this->payload(['text' => 'Olha a carteirinha', 'file' => ['data' => $png, 'name' => 'foto<script>.pdf']]))->assertOk();
+        Http::assertSent(fn (HttpRequest $request) => $request->method() === 'POST' && $request['file'] === ['base64' => $png, 'mimetype' => 'image/png', 'name' => 'fotoscript.pdf']
+            && $request['text'] === 'Olha a carteirinha' && ! isset($request['type']) && $request['contactId'] === 'contact-1');
+        // Áudio gravado no Chrome: MP4 só de som, sem texto.
+        $this->postJson(route('leads.chat.send', $this->mine), $this->payload(['text' => '', 'file' => ['data' => 'AAAAHGZ0eXBNNEEgAAAAAE00QSBtcDQyaXNvbQ==', 'name' => 'audio.m4a']]))->assertOk();
+        Http::assertSent(fn (HttpRequest $request) => $request->method() === 'POST' && ($request['file']['mimetype'] ?? null) === 'audio/mp4' && $request['text'] === '');
+    }
+
+    public function test_files_of_other_types_or_too_large_never_reach_digisac(): void
+    {
+        $this->connection($this->ana);
+        Http::fake();
+        $this->actingAs($this->ana)->postJson(route('leads.chat.send', $this->mine), $this->payload(['file' => ['data' => base64_encode('<?php echo 1;'), 'name' => 'foto.jpg']]))
+            ->assertUnprocessable()->assertJsonPath('message', 'Envie foto, áudio, vídeo MP4 ou PDF.');
+        $this->postJson(route('leads.chat.send', $this->mine), $this->payload(['file' => ['data' => base64_encode("\x89PNG\r\n\x1a\n".str_repeat('a', 5 * 1024 * 1024)), 'name' => 'grande.png']]))
+            ->assertUnprocessable();
+        $this->postJson(route('leads.chat.send', $this->mine), $this->payload(['file' => ['data' => 'não é base64!', 'name' => 'x.png']]))->assertUnprocessable();
+        Http::assertNothingSent();
+    }
+
     public function test_missing_configuration_and_blank_messages_do_not_call_api(): void
     {
         $this->actingAs($this->ana)->get(route('leads.chat.show', $this->mine))->assertOk()->assertSee('Conecte seu Digisac');

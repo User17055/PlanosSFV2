@@ -81,17 +81,35 @@ class LeadChatController extends Controller
         $contact = $client->contact($connection, $phone);
         $result = $contact ? $client->messages($connection, (string) $contact['id'], (int) ($data['page'] ?? 1))
             : ['messages' => [], 'has_more' => false];
+        $result['avatar'] = $contact ? (DigisacClient::fileUrl($contact['thumbAvatar'] ?? null) ?? DigisacClient::fileUrl($contact['avatar'] ?? null)) : null;
         // Revalida caso o responsável tenha sido trocado durante a consulta externa.
         $this->readable($request, $lead, $access);
         return response()->json($result)->header('Cache-Control', 'private, no-store');
     }
 
+    /** Tipo lido do próprio conteúdo, nunca do navegador. O áudio gravado no Chrome é MP4 só de som, que o finfo chama de vídeo. */
+    private function attachment(array $file): array
+    {
+        $bytes = base64_decode($file['data'], true);
+        abort_if($bytes === false || $bytes === '', 422, 'Não foi possível ler o arquivo. Anexe de novo.');
+        abort_if(strlen($bytes) > 5 * 1024 * 1024, 422, 'O arquivo passa de 5 MB. Envie um arquivo menor.');
+        $name = mb_substr(trim(preg_replace('/[^\pL\pN ._-]+/u', '', basename($file['name']))), 0, 120) ?: 'arquivo';
+        $type = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+        if (in_array($type, ['video/mp4', 'audio/x-m4a'], true) && str_ends_with(strtolower($name), '.m4a')) $type = 'audio/mp4';
+        if ($type === 'video/webm' && str_ends_with(strtolower($name), '.weba')) $type = 'audio/webm';
+        abort_unless(in_array($type, ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/aac', 'audio/webm', 'video/mp4', 'application/pdf'], true),
+            422, 'Envie foto, áudio, vídeo MP4 ou PDF.');
+        return ['base64' => base64_encode($bytes), 'mimetype' => $type, 'name' => $name];
+    }
+
     public function send(Request $request, Lead $lead, AccessService $access, DigisacClient $client)
     {
         $this->owned($request, $lead, $access);
-        $data = $request->validate(['text' => 'required|string|max:4096', 'request_id' => 'required|uuid']);
-        $text = trim($data['text']);
-        abort_if($text === '', 422, 'Escreva uma mensagem antes de enviar.');
+        $data = $request->validate(['text' => 'nullable|string|max:4096|required_without:file', 'request_id' => 'required|uuid',
+            'file' => 'nullable|array:data,name', 'file.data' => 'required_with:file|string|max:7000000', 'file.name' => 'required_with:file|string|max:120']);
+        $text = trim($data['text'] ?? '');
+        $file = isset($data['file']) ? $this->attachment($data['file']) : null;
+        abort_if($text === '' && ! $file, 422, 'Escreva uma mensagem antes de enviar.');
         $connection = $this->connection($request);
         $phone = DigisacClient::phone($lead->phone);
         abort_unless($phone, 422, 'O lead precisa de um telefone válido para conversar.');
@@ -101,7 +119,7 @@ class LeadChatController extends Controller
         $this->owned($request, $lead, $access);
         // Reserva antes de enviar. Uma falha de rede pode ocorrer depois da entrega remota.
         abort_unless(Cache::add($key, 'pending', now()->addDay()), 409, 'Este envio já foi iniciado. Confira a conversa antes de tentar novamente.');
-        $client->send($connection, isset($contact['id']) ? (string) $contact['id'] : null, $phone, $text);
+        $client->send($connection, isset($contact['id']) ? (string) $contact['id'] : null, $phone, $text, $file);
         Cache::put($key, 'sent', now()->addDay());
         $lead->refresh();
         Lead::whereKey($lead->id)->where('handled_by', $request->user()->id)->update([

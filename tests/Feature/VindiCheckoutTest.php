@@ -26,6 +26,7 @@ class VindiCheckoutTest extends TestCase
     private string $billStatus='pending';
     private int $remoteCustomerId=111;
     private array $cpfMatches=[];
+    private array $outside=[];
 
     protected function setUp(): void
     {
@@ -67,6 +68,7 @@ class VindiCheckoutTest extends TestCase
                     if ($this->failAfterCreation) throw new \Illuminate\Http\Client\ConnectionException('test timeout');
                     return Http::response(['subscription'=>$remote]);
                 }
+                if (str_contains(urldecode($request->url()),'customer_id=')) return Http::response(['subscriptions'=>[...$this->outside,...($this->created?[$remote]:[])]]);
                 return Http::response(['subscriptions'=>$this->created?[$remote]:[]]);
             }
             // Monthly plans: the entry is a standalone bill (no subscription), created once and found again by its code.
@@ -180,6 +182,21 @@ class VindiCheckoutTest extends TestCase
         $this->assertSame(0,$this->customerPosts);
         $this->assertSame('555',$this->subscription->customer->fresh()->vindi_customer_id);
         Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/bills') && $request['customer_id']===555);
+    }
+
+    public function test_cpf_that_already_pays_a_subscription_made_in_vindi_is_not_charged_again(): void
+    {
+        $this->remoteCustomerId=555;
+        $this->cpfMatches=[['id'=>555,'code'=>null,'registry_code'=>'529.982.247-25','status'=>'active']];
+        $this->outside=[['id'=>900,'code'=>null,'status'=>'active','customer'=>['id'=>555],'plan'=>['id'=>428451]]];
+        $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertSessionHas('error');
+        $this->assertSame([0,0,0],[$this->customerPosts,$this->billPosts,$this->subscriptionPosts],'Nada é criado na Vindi.');
+        $this->assertDatabaseCount('vindi_checkouts',0);
+        $this->assertDatabaseHas('audit_logs',['action'=>'subscription.checkout_blocked_existing_vindi']);
+        // A assinatura antiga já cancelada não impede o pagamento.
+        $this->outside[0]['status']='canceled';
+        $this->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+        $this->assertSame(1,$this->billPosts);
     }
 
     public function test_duplicate_or_archived_cpf_in_vindi_stops_for_manual_review(): void

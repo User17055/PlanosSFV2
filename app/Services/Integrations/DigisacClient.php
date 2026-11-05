@@ -28,7 +28,7 @@ class DigisacClient
         if (! $base) throw new DomainException('DIGISAC_URL', 'O endereço do Digisac não está autorizado.', 422);
         try {
             $request = Http::baseUrl($base.'/api/v1')->withToken($connection->api_token)
-                ->acceptJson()->asJson()->connectTimeout(5)->timeout(20)->withoutRedirecting();
+                ->acceptJson()->asJson()->connectTimeout(5)->timeout(isset($data['file']) ? 90 : 20)->withoutRedirecting();
             $response = $method === 'GET' ? $request->get($path, $data) : $request->post($path, $data);
         } catch (ConnectionException) {
             throw new DomainException('DIGISAC_TIMEOUT', $method === 'POST'
@@ -80,7 +80,7 @@ class DigisacClient
         $body = $this->request($connection, 'GET', 'contacts', [
             'where[serviceId]' => $connection->service_id,
             'where[data.number][$iLike]' => '%'.(str_starts_with($phone, '55') && in_array(strlen($phone), [12, 13], true) ? substr($phone, 2) : $phone).'%',
-            'perPage' => 40,
+            'perPage' => 40, 'include[0]' => 'thumbAvatar',
         ]);
         $matches = array_values(array_filter(self::rows($body), fn ($contact) => is_array($contact)
             && (string) ($contact['serviceId'] ?? '') === $connection->service_id
@@ -94,7 +94,7 @@ class DigisacClient
     {
         $body = $this->request($connection, 'GET', 'messages', ['query' => json_encode([
             'where' => ['contactId' => $contactId, 'serviceId' => $connection->service_id, 'visible' => true],
-            'order' => [['timestamp', 'DESC'], ['id', 'DESC']], 'page' => $page, 'perPage' => 40,
+            'include' => ['file'], 'order' => [['timestamp', 'DESC'], ['id', 'DESC']], 'page' => $page, 'perPage' => 40,
         ], JSON_THROW_ON_ERROR)]);
         $rows = self::rows($body);
         $messages = [];
@@ -109,14 +109,24 @@ class DigisacClient
                 'type' => $message['type'], 'outgoing' => (bool) ($message['isFromMe'] ?? false),
                 'at' => $message['timestamp'] ?? $message['createdAt'] ?? null,
                 'sent' => (bool) ($message['sent'] ?? false),
+                'file' => ($url = self::fileUrl($message['file'] ?? null))
+                    ? ['url' => $url, 'name' => mb_substr((string) data_get($message, 'file.name', ''), 0, 120)] : null,
             ];
         }
         return ['messages' => array_reverse($messages), 'has_more' => count($rows) === 40];
     }
 
-    public function send(DigisacConnection $connection, ?string $contactId, string $phone, string $text): void
+    /** Fotos e arquivos do Digisac vêm em links temporários e assinados do armazenamento dele; só https passa. */
+    public static function fileUrl(mixed $file): ?string
     {
-        $payload = ['text' => $text, 'type' => 'chat', 'userId' => $connection->digisac_user_id, 'origin' => 'user'];
+        $url = is_array($file) ? ($file['url'] ?? null) : null;
+        return is_string($url) && str_starts_with($url, 'https://') && strlen($url) <= 4000 ? $url : null;
+    }
+
+    /** $file: ['base64', 'mimetype', 'name']. Com arquivo, a documentação manda sem "type": o Digisac usa o mimetype. */
+    public function send(DigisacConnection $connection, ?string $contactId, string $phone, string $text, ?array $file = null): void
+    {
+        $payload = ['text' => $text] + ($file ? ['file' => $file] : ['type' => 'chat']) + ['userId' => $connection->digisac_user_id, 'origin' => 'user'];
         $payload += $contactId ? ['contactId' => $contactId] : ['number' => $phone, 'serviceId' => $connection->service_id];
         $this->request($connection, 'POST', 'messages', $payload);
     }

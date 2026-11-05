@@ -3,7 +3,7 @@
 namespace App\Services\Integrations;
 
 use App\Models\{Customer,Invoice,Subscription};
-use App\Services\Domain\BillingSchedule;
+use App\Services\Domain\{Audit,BillingSchedule};
 use Illuminate\Support\Facades\{Cache,DB};
 
 class VindiCheckoutService
@@ -56,6 +56,11 @@ class VindiCheckoutService
         $code=$prefix.'-'.$subscription->number;
         $customerCode=$prefix.'-tutor-'.$subscription->customer_id;
         $map=$this->mapping($subscription);
+        // Só na primeira tentativa: uma tentativa já registrada passou por esta conferência e segue a recuperação por GET.
+        if (!DB::table('vindi_checkouts')->where('subscription_id',$subscription->id)->exists() && $this->paysOutsideSubscription($subscription,$prefix)) {
+            Audit::record('subscription.checkout_blocked_existing_vindi',$subscription);
+            throw new IntegrationPendingException('Você já tem uma assinatura ativa com a São Francisco. Para não haver cobrança em dobro, a unidade vai ligar este contrato a ela. Fale com a unidade.');
+        }
         $claim=DB::transaction(function() use($subscription,$account,$code) {
             Customer::lockForUpdate()->findOrFail($subscription->customer_id);
             $current=Subscription::lockForUpdate()->findOrFail($subscription->id);
@@ -207,6 +212,23 @@ class VindiCheckoutService
         if ($byCpf->count()>1) throw new \RuntimeException('More than one provider customer with this CPF.');
         if ($byCpf->isNotEmpty() && ($byCpf->first()['status']??'active')!=='active') throw new \RuntimeException('Provider customer with this CPF is not active.');
         return $byCpf->first() ?? $this->client->createCustomer(['code'=>$code,'name'=>$local->name,'email'=>$local->email,'registry_code'=>$cpf]);
+    }
+
+    /** O cliente antigo já paga uma assinatura feita direto na Vindi (achado pelo CPF): cobrar de novo aqui seria cobrança em dobro. */
+    private function paysOutsideSubscription(Subscription $subscription,string $prefix): bool
+    {
+        $local=$subscription->customer->fresh();
+        $cpf=preg_replace('/\D/','',(string)$local->document);
+        $ids=collect($this->client->customersByRegistryCode($cpf))
+            ->filter(fn($customer)=>preg_replace('/\D/','',(string)($customer['registry_code']??''))===$cpf)->pluck('id')
+            ->push($local->vindi_customer_id)->filter()->map(fn($id)=>(string)$id)->unique();
+        foreach ($ids as $id) {
+            foreach ($this->client->subscriptionsOfCustomer($id) as $remote) {
+                if ((string)data_get($remote,'customer.id')===$id && in_array($remote['status']??null,['active','future'],true)
+                    && !str_starts_with((string)($remote['code']??''),$prefix.'-')) return true;
+            }
+        }
+        return false;
     }
 
     private function linkCustomer(Subscription $subscription,string $vindiCustomerId): void
