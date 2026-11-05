@@ -103,7 +103,8 @@ class VindiCustomerImportTest extends TestCase
 
         $maria = Customer::where('document', '11144477735')->sole();
         $this->assertSame(['Maria da Silva', 'maria@example.test', '(18) 99999-0000', '10'], [$maria->name, $maria->email, $maria->phone, $maria->vindi_customer_id]);
-        $this->assertSame(['street' => 'Rua A', 'number' => '10', 'complement' => 'Casa', 'neighborhood' => 'Centro', 'city' => 'Prudente', 'state' => 'SP', 'zip' => '19010000', 'formatted' => 'Rua A, 10, Casa'], $maria->address);
+        // assertEquals: o MySQL guarda as chaves do JSON na ordem dele.
+        $this->assertEquals(['street' => 'Rua A', 'number' => '10', 'complement' => 'Casa', 'neighborhood' => 'Centro', 'city' => 'Prudente', 'state' => 'SP', 'zip' => '19010000', 'formatted' => 'Rua A, 10, Casa'], $maria->address);
         $this->assertSame(Franchise::where('code', 'CENTRAL')->value('id'), $maria->originating_franchise_id);
         $this->assertSame([0, 0, 0], [$maria->pets()->count(), $maria->subscriptions()->count(), $maria->invoices()->count()]);
 

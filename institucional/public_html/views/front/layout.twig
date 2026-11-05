@@ -294,7 +294,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         const lead = new FormData();
         lead.append("nome", nome);
         lead.append("telefone", telefone);
-        navigator.sendBeacon("{{ path('web_whatsapp_lead') }}", lead);
+        navigator.sendBeacon("{{ path('portal_whatsapp_lead') }}", lead);
       }
 
       window.open(url, "_blank");

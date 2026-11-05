@@ -75,5 +75,5 @@ return static function (RoutingConfigurator $routes): void {
     $routes->add('upload', '/upload/{path}/{imagem}')->controller('LuzPropria\\LuzPanel\\Controller\\MediaController::image')->methods(['GET']);
     $routes->add('web_revista', '/revista')->controller('LuzPropria\\LuzPanel\\Controller\\MediaController::revista')->methods(['GET']);
     $routes->add('web_whatsapp', '/whatsapp')->controller('LuzPropria\\LuzPanel\\Controller\\Front\\HomeController::WhatsappAction')->methods(['GET']);
-    $routes->add('web_whatsapp_lead', '/whatsapp/lead')->controller('LuzPropria\\LuzPanel\\Controller\\Front\\PortalController::whatsappLead')->methods(['POST']);
+    $routes->add('portal_whatsapp_lead', '/whatsapp/lead')->controller('LuzPropria\\LuzPanel\\Controller\\Front\\PortalController::whatsappLead')->methods(['POST']);
 };

@@ -164,7 +164,9 @@ class LeadAccessTest extends TestCase
         $list = fn () => $this->actingAs($this->attendant)->get(route('leads.index'));
 
         $list()->assertSee('data-lead-more="'.$lead->id.'"', false)
-            ->assertSeeInOrder(['Rede', 'Instagram', 'Campanha', 'Outubro', 'Anúncio', 'Vídeo gato', 'Formulário', 'Plano Econômico', 'Pet', 'Thor', 'Espécie', 'Gato', 'Idade do pet', '3 anos', 'Chegou', 'Atendido por', 'Ninguém ainda'])
+            ->assertSeeInOrder(['Rede', 'Instagram', 'Campanha', 'Outubro', 'Anúncio', 'Vídeo gato', 'Formulário', 'Plano Econômico', 'Pet', 'Thor', 'Chegou', 'Atendido por', 'Ninguém ainda'])
+            // O MySQL guarda as chaves do JSON na ordem dele: entre as respostas, só importa cada uma com o seu valor.
+            ->assertSeeInOrder(['Espécie', 'Gato'])->assertSeeInOrder(['Idade do pet', '3 anos'])
             ->assertDontSee('Platform')->assertDontSee('Última mudança');
 
         $this->actingAs($this->attendant)->post(route('leads.update', $lead), ['status' => 'contacted']);
