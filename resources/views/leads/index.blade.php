@@ -44,7 +44,7 @@ $isOn=($applied[$key] ?? null)===$name;
 </nav>
 @include('leads.intake-status',['problemsOnly'=>true])
 </div>
-<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Nº</th><th>Chegou</th><th>Contato</th><th>Nome</th><th class="lead-phone">Telefone</th><th>Anúncio</th><th>Situação</th>@if($seesAll)<th>Com quem está</th>@endif<th class="lead-origin-head">Origem</th><th aria-label="Ver dados"></th></tr></thead><tbody>
+<section class="card lead-list"><div class="table-scroll"><table class="lead-table" data-no-stack><thead><tr><th>Nº</th><th>Chegou</th><th>Contato</th><th>Nome</th><th class="lead-phone">Telefone</th><th>Anúncio</th>@if($seesAll)<th>Com quem está</th>@endif<th>Situação</th><th class="lead-origin-head">Origem</th><th aria-label="Ver dados"></th></tr></thead><tbody>
 @forelse($leads as $lead)
 @php
 $extra=$lead->extra ?? [];
@@ -63,10 +63,10 @@ $contact=$lead->phoneLabel() ?: $lead->email;
 <td class="lead-name"><strong>{{ $lead->name }}</strong>@if($lead->source==='teste')<small>Lead de teste</small>@endif @if($contact)<small class="lead-name-phone">{{ $contact }}</small>@endif</td>
 <td class="lead-phone" title="{{ $contact }}">{{ $contact }}</td>
 <td class="lead-tags"><span class="lead-tag" title="{{ $tag }}"><span>{{ $tag }}</span></span></td>
+@if($seesAll)<td class="lead-owner">@if($canAssign)<form method="POST" action="{{ route('leads.assign',$lead) }}">@csrf<select class="lead-status" name="handled_by" aria-label="Com quem está o lead de {{ $lead->name }}" data-lead-status><option value="">Na fila</option>@foreach($assignees[$lead->originating_franchise_id] ?? [] as $person)<option value="{{ $person->id }}" @selected($lead->handled_by===$person->id)>{{ $person->name }}</option>@endforeach @if($lead->handler && !collect($assignees[$lead->originating_franchise_id] ?? [])->contains('id',$lead->handled_by))<option value="" selected disabled>{{ $lead->handler->name }}</option>@endif</select><noscript><button class="button button-secondary button-small">Salvar</button></noscript></form>@else{{ $lead->handler?->name ?? 'Na fila' }}@endif</td>@endif
 <td class="lead-step"><div>
 @if($canUpdate)<form method="POST" action="{{ route('leads.update',$lead) }}">@csrf<select class="lead-status" name="status" aria-label="Situação de {{ $lead->name }}" data-lead-status>@foreach($filters as $value=>$label)<option value="{{ $value }}" @selected($lead->status===$value)>{{ $label }}</option>@endforeach</select><noscript><button class="button button-secondary button-small">Salvar</button></noscript></form>@else{{ $statusLabel }}@endif
 </div></td>
-@if($seesAll)<td class="lead-owner">@if($canAssign)<form method="POST" action="{{ route('leads.assign',$lead) }}">@csrf<select class="lead-status" name="handled_by" aria-label="Com quem está o lead de {{ $lead->name }}" data-lead-status><option value="">Na fila</option>@foreach($assignees[$lead->originating_franchise_id] ?? [] as $person)<option value="{{ $person->id }}" @selected($lead->handled_by===$person->id)>{{ $person->name }}</option>@endforeach @if($lead->handler && !collect($assignees[$lead->originating_franchise_id] ?? [])->contains('id',$lead->handled_by))<option value="" selected disabled>{{ $lead->handler->name }}</option>@endif</select><noscript><button class="button button-secondary button-small">Salvar</button></noscript></form>@else{{ $lead->handler?->name ?? 'Na fila' }}@endif</td>@endif
 <td class="lead-origin-cell">@if($origin)<span class="lead-origin" title="Veio de: {{ $origin['label'] }}">@forelse($origin['logos'] as $logo)<span class="lead-logo"><img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="{{ ucfirst($logo) }}" width="17" height="17"></span>@empty<span class="lead-logo" role="img" aria-label="{{ $origin['label'] }}">{{ mb_strtoupper(mb_substr($origin['label'],0,1)) }}</span>@endforelse</span>@endif</td>
 <td class="lead-corner"><div>
 <i class="lead-dot is-{{ $lead->status }}" role="img" aria-label="{{ $statusLabel }}" title="{{ $statusLabel }}"></i>

@@ -170,7 +170,8 @@ class LeadAccessTest extends TestCase
         $this->assertSame('contacted', Lead::where('name', 'Lead Da Bia')->sole()->status);
 
         foreach ([$this->admin, $this->teammate('Gabi Gestora', 'manager')] as $boss) {
-            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Com quem está')->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false);
+            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Com quem está')->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false)
+                ->assertSeeInOrder(['<th>Anúncio</th>', '<th>Com quem está</th>', '<th>Situação</th>', 'class="lead-tags"', 'class="lead-owner"', 'class="lead-step"'], false);
             $this->actingAs($boss)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 3)->assertSee('Com quem está');
         }
     }
