@@ -54,6 +54,12 @@ class Lead extends DomainModel
         return $this->source !== 'site_whatsapp' || ($this->extra['trafego'] ?? null) === 'pago' ? 'Pago' : 'Orgânico';
     }
 
+    /** Por onde a pessoa entrou. Quem veio do Google para o site tem as duas informações: entrada Site e origem Google. */
+    public function entry(): string
+    {
+        return $this->source === 'site_whatsapp' ? 'Site' : 'Anúncio';
+    }
+
     /** Rede de onde o lead veio. Pode chegar como sigla ("ig", "fb"); sem o campo fica vazio, porque o anúncio pode ter rodado nas duas redes. */
     public function channel(): ?string
     {

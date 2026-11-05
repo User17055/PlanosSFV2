@@ -117,6 +117,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Viraram cliente | Leads marcados como "Finalizado" pela equipe | Não vem de contrato nem de proposta |
 | Até o 1º contato | Tempo típico (mediana) entre a chegada e o primeiro clique em uma situação | Mede o clique, não o envio da mensagem |
 | Pago ou orgânico | Leads por tráfego | Veja a regra abaixo |
+| Por onde entrou | Site, para o formulário do WhatsApp, ou Anúncio, para o Facebook Lead Ads | Quem veio do Google para o site conta como Site aqui e como Google em "De onde veio" |
 | De onde veio | Leads pela mesma origem do filtro da lista: Google, Instagram, Facebook ou Site | Sem o campo da rede, um lead do Facebook Lead Ads entra como "Facebook ou Instagram" |
 | Por campanha | Leads por `campanha` | Sem o campo, entra como "Sem nome de campanha" |
 | Por anúncio | Leads por `anuncio` | Só aparece se algum lead do período tiver o campo |
@@ -124,7 +125,7 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Por responsável | Leads por pessoa, só para administradores | Mostra o responsável atual, sem histórico |
 | Quem converteu | Os 10 últimos finalizados do período, com origem, tráfego e responsável | A data é a da última mudança no lead |
 
-O filtro do painel escolhe o período (7, 30 ou 90 dias, ou de/até, com até um ano), a conversão, o tráfego, a origem, a campanha e quem atendeu. Ele muda todos os números da tela, inclusive a comparação com o período anterior e os leads em espera. A lista tem no botão "Filtros" o período, a conversão, o tráfego e a origem; para administradores, também com quem está.
+O filtro do painel escolhe o período (7, 30 ou 90 dias, ou de/até, com até um ano), a conversão, o tráfego, a origem, a campanha e quem atendeu. Ele muda todos os números da tela, inclusive a comparação com o período anterior e os leads em espera. A lista tem no botão "Filtros" o período, a conversão, o tráfego, por onde entrou e a origem; para administradores, também com quem está. Na coluna Origem, abaixo da logo, cada linha mostra "Pago" ou "Orgânico", com "Site ·" antes quando o lead veio pelo formulário do site.
 
 **Pago ou orgânico:** lead do Facebook Lead Ads conta como pago, porque esse formulário só existe em anúncio. No formulário do site, conta como pago quem chegou com `gclid`, `gbraid`, `wbraid` ou com `utm_medium` de mídia paga (`cpc`, `paid`, `ads` e parecidos). O resto é orgânico, inclusive quem veio de anúncio do Facebook sem `utm_medium`, porque o `fbclid` aparece em qualquer link do Facebook. Lead salvo antes dessa regra e cookie antigo do site contam como orgânico no formulário do site.
 
@@ -147,7 +148,7 @@ A linha mostra a logo do Google, do Instagram ou do Facebook conforme o cookie. 
 | Ver envio recusado e recebimento desligado | `central_admin`, `manager` |
 | Ver todos os leads e escolher com quem cada um fica | `central_admin`, `manager` |
 
-**Cada pessoa vê os seus leads.** `sales`, `operator` e `attendant` veem só os leads em que são responsáveis e a fila, que são os leads sem responsável, tanto na lista quanto no painel e no contador do menu. Quem muda primeiro a situação de um lead da fila fica com ele, e os outros deixam de vê-lo. Administradores mudam a situação sem tirar o lead de quem está com ele e, na coluna "Com quem está", trocam o responsável ou devolvem o lead para a fila. O responsável fica em `handled_by`; leads antigos continuam com a última pessoa que mudou a situação deles. Em cargo, a troca depende da opção "Escolher com quem o lead fica".
+**Cada pessoa vê os seus leads.** `sales`, `operator` e `attendant` veem só os leads em que são responsáveis e a fila, que são os leads sem responsável, tanto na lista quanto no painel e no contador do menu. Quem muda primeiro a situação de um lead da fila fica com ele, e os outros deixam de vê-lo. Administradores mudam a situação sem tirar o lead de quem está com ele , e a coluna "Com quem está" é só leitura. Para trocar o responsável ou devolver o lead para a fila, eles abrem os dados do lead, escolhem a pessoa e confirmam em "Trocar responsável". O responsável fica em `handled_by`; leads antigos continuam com a última pessoa que mudou a situação deles. Em cargo, a troca depende da opção "Escolher com quem o lead fica".
 
 Só `central_admin` vê todas as unidades; os demais veem as unidades vinculadas ao seu cadastro. Todos os leads caem em uma única unidade (`LEADS_FRANCHISE_CODE`, padrão `CENTRAL`), então quem não está vinculado a ela não vê nenhum lead. O perfil `attendant` enxerga apenas as telas de Leads. A área Leads também precisa estar liberada no cadastro do funcionário.
 

@@ -170,7 +170,10 @@ class LeadAccessTest extends TestCase
         $this->assertSame('contacted', Lead::where('name', 'Lead Da Bia')->sole()->status);
 
         foreach ([$this->admin, $this->teammate('Gabi Gestora', 'manager')] as $boss) {
-            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Com quem está')->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false)
+            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Com quem está')->assertSee('<td class="lead-owner">Bia Vendas</td>', false)->assertSee('<td class="lead-owner">Na fila</td>', false)
+                // A troca só existe nos dados do lead, com botão e confirmação: a mudança nunca acontece ao mexer no seletor.
+                ->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false)->assertSee('data-confirm="Trocar o responsável deste lead?"', false)
+                ->assertDontSeeText('data-lead-status name="handled_by"')
                 ->assertSeeInOrder(['<th>Anúncio</th>', '<th>Com quem está</th>', '<th>Situação</th>', 'class="lead-tags"', 'class="lead-owner"', 'class="lead-step"'], false);
             $this->actingAs($boss)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 3)->assertSee('Com quem está');
         }
@@ -230,6 +233,24 @@ class LeadAccessTest extends TestCase
         (require database_path('migrations/2026_11_05_000001_grant_lead_assign_to_manager_job_roles.php'))->up();
         $this->assertTrue($withLeads->fresh()->allows('leads.assign'));
         $this->assertFalse($withoutLeads->fresh()->allows('leads.assign'));
+    }
+
+    public function test_lead_shows_paid_or_organic_and_whether_it_came_through_the_site(): void
+    {
+        $this->lead(['name' => 'Do Anuncio', 'external_id' => 't1', 'extra' => ['plataforma' => 'instagram']]);
+        $this->lead(['name' => 'Google Pago', 'external_id' => 't2', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'google', 'trafego' => 'pago']]);
+        $this->lead(['name' => 'Google Organico', 'external_id' => 't3', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'google', 'trafego' => 'organico']]);
+        $this->lead(['name' => 'Site Direto', 'external_id' => 't4', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'site', 'trafego' => 'organico']]);
+        $list = fn (array $filters = []) => $this->actingAs($this->admin)->get(route('leads.index', $filters))->assertOk();
+        $panel = fn (array $filters = []) => $this->actingAs($this->admin)->get(route('leads.dashboard', $filters))->assertOk();
+
+        $list()->assertSee('<small class="lead-traffic">Pago</small>', false)->assertSee('<small class="lead-traffic">Site · Pago</small>', false)->assertSee('<small class="lead-traffic">Site · Orgânico</small>', false);
+        // Quem veio do Google para o site aparece nos dois filtros.
+        $list(['entrada' => 'Site'])->assertSee('Google Pago')->assertSee('Google Organico')->assertSee('Site Direto')->assertDontSee('Do Anuncio');
+        $list(['origem' => 'Google'])->assertSee('Google Pago')->assertSee('Google Organico')->assertDontSee('Site Direto');
+        $list(['origem' => 'Google', 'trafego' => 'Orgânico'])->assertSee('Google Organico')->assertDontSee('Google Pago');
+        $panel()->assertSee('Por onde entrou')->assertViewHas('entries', fn ($rows) => $rows['Site']['total'] === 3 && $rows['Anúncio']['total'] === 1);
+        $panel(['entrada' => 'Site'])->assertViewHas('totals', fn ($totals) => $totals['total'] === 3);
     }
 
     public function test_going_back_to_waiting_never_counts_as_first_contact(): void

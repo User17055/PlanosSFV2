@@ -13,7 +13,7 @@ class LeadController extends Controller
 {
     private const REFUSED = 'leads:last-refused';
 
-    private const FILTERS = ['dias' => 'nullable|in:7,30,90', 'de' => 'nullable|date_format:Y-m-d', 'ate' => 'nullable|date_format:Y-m-d', 'conversao' => 'nullable|string|max:30', 'trafego' => 'nullable|string|max:20', 'origem' => 'nullable|string|max:60', 'campanha' => 'nullable|string|max:200', 'responsavel' => 'nullable|string|max:150'];
+    private const FILTERS = ['dias' => 'nullable|in:7,30,90', 'de' => 'nullable|date_format:Y-m-d', 'ate' => 'nullable|date_format:Y-m-d', 'conversao' => 'nullable|string|max:30', 'trafego' => 'nullable|string|max:20', 'entrada' => 'nullable|string|max:20', 'origem' => 'nullable|string|max:60', 'campanha' => 'nullable|string|max:200', 'responsavel' => 'nullable|string|max:150'];
 
     /** Campos que o Pluga costuma mandar, em português ou inglês (minúsculas, sem acento, "_" no lugar de espaço). O que não estiver aqui vai para "extra". */
     private const ALIASES = [
@@ -134,6 +134,7 @@ class LeadController extends Controller
         return [
             'conversao' => fn (Lead $lead) => $lead->conversion(),
             'trafego' => fn (Lead $lead) => $lead->traffic(),
+            'entrada' => fn (Lead $lead) => $lead->entry(),
             'origem' => fn (Lead $lead) => $lead->originGroup(),
             'campanha' => fn (Lead $lead) => $lead->campaign ? $lead->campaignLabel() : 'Sem nome de campanha',
             'responsavel' => fn (Lead $lead) => $lead->handler?->name ?? 'Na fila',
@@ -187,7 +188,7 @@ class LeadController extends Controller
         $chosen = array_filter(Arr::only($input, array_keys($dimensions)));
         // shortcut: separa os filtros em memória, com a mesma regra da tela; troque por colunas próprias se passar de ~20 mil leads.
         $rows = (clone $query)->get(['id', 'status', 'campaign', 'extra', 'source', 'handled_by']);
-        $filterOptions = collect(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'origem' => ['Instagram', 'Facebook', 'Google']] + ($seesAll ? ['responsavel' => ['Na fila']] : []))
+        $filterOptions = collect(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'entrada' => ['Site', 'Anúncio'], 'origem' => ['Instagram', 'Facebook', 'Google']] + ($seesAll ? ['responsavel' => ['Na fila']] : []))
             ->map(fn ($names, $key) => collect($names)->mapWithKeys(fn ($name) => [$name => 0])->merge($rows->countBy($dimensions[$key])));
         if ($chosen) {
             $query->whereIn('id', $rows->filter($this->matcher($chosen))->pluck('id'));
@@ -235,8 +236,8 @@ class LeadController extends Controller
             'endsToday' => $end->isSameDay(now('America/Sao_Paulo')),
             'chosen' => $chosen,
             // O valor escolhido fica na lista mesmo sem lead no período, para o filtro ativo continuar visível.
-            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'origem' => 'Origem', 'campanha' => 'Campanha'] + ($seesAll ? ['responsavel' => 'Com quem está'] : []))
-                ->map(fn ($label, $key) => [$label, $inPeriod->toBase()->map($dimensions[$key])->merge(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC][$key] ?? [])->push($chosen[$key] ?? null)->filter()->unique()->sort()->values()]),
+            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'entrada' => 'Por onde entrou', 'origem' => 'Origem', 'campanha' => 'Campanha'] + ($seesAll ? ['responsavel' => 'Com quem está'] : []))
+                ->map(fn ($label, $key) => [$label, $inPeriod->toBase()->map($dimensions[$key])->merge(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'entrada' => ['Site', 'Anúncio']][$key] ?? [])->push($chosen[$key] ?? null)->filter()->unique()->sort()->values()]),
             'intake' => $this->intakeStatus($request->user(), $access),
             'totals' => $sum($leads) + ['lost' => $leads->where('status', 'lost')->count()],
             'previous' => $between($start->copy()->subDays($days), $start->copy()->subDay())->filter($matches)->count(),
@@ -245,6 +246,7 @@ class LeadController extends Controller
             'firstCall' => $minutes === null ? null : ($minutes < 60 ? round($minutes).' min' : ($minutes < 2880 ? round($minutes / 60).' h' : round($minutes / 1440).' dias')),
             'perDay' => collect(range(0, $days - 1))->mapWithKeys(fn ($i) => [$start->copy()->addDays($i)->format('Y-m-d') => 0])->merge($perDay),
             'traffic' => $breakdown($dimensions['trafego']),
+            'entries' => $breakdown($dimensions['entrada']),
             'origins' => $breakdown($dimensions['origem']),
             'campaigns' => $breakdown($dimensions['campanha']),
             'ads' => $leads->contains(fn ($lead) => isset($lead->extra['anuncio'])) ? $breakdown(fn ($lead) => $lead->extra['anuncio'] ?? 'Não informado') : collect(),
