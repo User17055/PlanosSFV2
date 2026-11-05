@@ -12,10 +12,12 @@
   const form = root.querySelector('[data-chat-compose]');
   const textarea = form?.querySelector('textarea');
   const sendButton = form?.querySelector('button');
+  const sendLabel = form?.querySelector('[data-send-label]');
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
   const messages = new Map();
   let page = 1, loading = false, sending = false, stopped = false, timer;
   let requestId = null, requestText = null, lastSendError = '', idleAt = Date.now();
+  const paused = () => document.documentElement.dataset.chatPaused === 'true';
 
   function showError(message) {
     error.textContent = message;
@@ -63,6 +65,20 @@
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
+  const dayKey = date => date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+  function dayLabel(date, day) {
+    if (day === dayKey(new Date())) return 'Hoje';
+    return day === dayKey(new Date(Date.now() - 86400000)) ? 'Ontem' : day;
+  }
+
+  // O campo cresce com o texto até o limite do CSS e volta ao tamanho normal depois do envio.
+  function fitTextarea() {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 2 + 'px';
+  }
+
   function render() {
     const nearBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 100;
     const scrollHeight = history.scrollHeight;
@@ -72,11 +88,11 @@
     let previousDate = '';
     for (const message of items) {
       const date = dateOf(message.at);
-      const day = date?.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) || '';
+      const day = date ? dayKey(date) : '';
       if (day && day !== previousDate) {
         const divider = document.createElement('div');
         divider.className = 'chat-day';
-        divider.textContent = day;
+        divider.textContent = dayLabel(date, day);
         fragment.append(divider);
         previousDate = day;
       }
@@ -96,7 +112,8 @@
       }
       const time = document.createElement('small');
       time.textContent = (date?.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) || '')
-        + (message.outgoing ? (message.sent ? ' · Enviada' : ' · Aguardando confirmação') : '');
+        + (message.outgoing ? (message.sent ? ' ✓' : ' · Aguardando confirmação') : '');
+      if (message.outgoing) time.title = message.sent ? 'Enviada' : 'Aguardando confirmação';
       bubble.append(time);
       fragment.append(bubble);
     }
@@ -108,11 +125,11 @@
 
   function schedule() {
     clearTimeout(timer);
-    if (!stopped) timer = setTimeout(() => load(), 10000);
+    if (!stopped && !paused()) timer = setTimeout(() => load(), 10000);
   }
 
   async function load(previous = false, manual = false) {
-    if (loading || stopped) return;
+    if (loading || stopped || paused()) return;
     if (!manual && (document.hidden || Date.now() - idleAt > 3600000)) {
       status.textContent = 'Atualização pausada';
       schedule();
@@ -125,7 +142,7 @@
       const url = new URL(root.dataset.messagesUrl, location.href);
       url.searchParams.set('page', previous ? page + 1 : 1);
       const data = await api(url);
-      if (stopped) return;
+      if (stopped || paused()) return;
       for (const message of data.messages) if (message.id) messages.set(message.id, message);
       if (previous) page++;
       if (previous || page === 1) older.hidden = !data.has_more;
@@ -148,6 +165,21 @@
   root.addEventListener('pointerdown', () => { idleAt = Date.now(); });
   root.addEventListener('keydown', () => { idleAt = Date.now(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { idleAt = Date.now(); load(); } });
+  document.addEventListener('lead-chat:visibility', () => {
+    if (paused()) {
+      clearTimeout(timer);
+      messages.clear();
+      list.replaceChildren();
+      empty.hidden = true;
+      older.hidden = true;
+      page = 1;
+      status.textContent = 'Atualização pausada';
+    } else {
+      idleAt = Date.now();
+      load(false, true);
+    }
+  });
+  textarea?.addEventListener('input', fitTextarea);
   textarea?.addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
@@ -161,7 +193,7 @@
     sending = true;
     sendButton.disabled = true;
     textarea.readOnly = true;
-    sendButton.textContent = 'Enviando…';
+    sendLabel.textContent = 'Enviando…';
     lastSendError = '';
     showError('');
     // Mantém a chave após falhas de rede: clicar novamente não duplica o mesmo envio.
@@ -169,6 +201,7 @@
     try {
       await api(root.dataset.sendUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, request_id: requestId }) });
       textarea.value = '';
+      fitTextarea();
       requestId = requestText = null;
       status.textContent = 'Mensagem enviada. Atualizando conversa…';
     } catch (failure) {
@@ -178,7 +211,7 @@
       sending = false;
       sendButton.disabled = stopped;
       textarea.readOnly = false;
-      sendButton.textContent = 'Enviar';
+      sendLabel.textContent = 'Enviar';
       if (!stopped) textarea.focus();
     }
     if (!textarea.value && !stopped) await load(false, true);

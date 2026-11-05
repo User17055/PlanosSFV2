@@ -69,14 +69,76 @@ class LeadChatTest extends TestCase
         return $overrides + ['text' => 'Olá, posso ajudar?', 'request_id' => (string) Str::uuid()];
     }
 
-    public function test_chat_lists_only_owned_leads_and_a_separate_queue_even_for_admin(): void
+    public function test_floating_chat_is_available_only_to_staff_with_lead_access(): void
+    {
+        $this->actingAs($this->ana)->get(route('leads.index'))->assertOk()
+            ->assertSee('data-chat-launcher', false)->assertSee('data-chat-frame', false)
+            ->assertDontSee(route('leads.chat.show', $this->mine), false);
+        $this->get(route('leads.chat.index'))->assertOk()->assertDontSee('data-chat-launcher', false)
+            ->assertDontSee('class="sidebar', false)->assertSee('chat-window-content');
+        $finance = $this->user('Financeiro', 'finance');
+        $this->actingAs($finance)->get(route('dashboard'))->assertOk()->assertDontSee('data-chat-launcher', false);
+        $manager = $this->user('Gestora', 'manager');
+        $manager->update(['areas' => ['dashboard']]);
+        $this->actingAs($manager)->get(route('dashboard'))->assertOk()->assertDontSee('data-chat-launcher', false);
+        Http::assertNothingSent();
+    }
+
+    public function test_chat_button_shows_the_red_dot_only_while_a_lead_is_waiting(): void
+    {
+        $this->actingAs($this->ana)->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot aria-hidden', false)->assertSee('há leads esperando atendimento');
+        Lead::query()->update(['status' => 'contacted']);
+        $this->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot hidden', false)->assertDontSee('há leads esperando atendimento');
+        // Quem atende só conta o que pode ver: lead esperando com outra pessoa não acende a bolinha.
+        $this->theirs->update(['status' => 'new']);
+        $this->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot hidden', false);
+        $this->actingAs($this->admin)->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot aria-hidden', false);
+    }
+
+    public function test_each_person_lists_their_leads_and_only_administrators_list_everyone(): void
     {
         $this->actingAs($this->ana)->get(route('leads.chat.index'))->assertOk()->assertSee('Cliente da Ana')->assertDontSee('Cliente da Bia')->assertDontSee('Cliente disponível');
         $this->get(route('leads.chat.index', ['fila' => 1]))->assertOk()->assertSee('Cliente disponível')->assertDontSee('Cliente da Ana')->assertDontSee('Cliente da Bia');
         $this->get(route('leads.chat.index', ['q' => 'Bia']))->assertOk()->assertDontSee('Cliente da Bia');
-        $this->actingAs($this->admin)->get(route('leads.chat.index'))->assertOk()->assertDontSee('Cliente da Ana')->assertDontSee('Cliente da Bia');
-        $this->get(route('leads.chat.show', $this->theirs))->assertForbidden();
+        // Quem não é administrador não chega à aba Todas nem pelo endereço.
+        $this->get(route('leads.chat.index', ['todas' => 1]))->assertOk()->assertDontSee('Cliente da Bia')->assertSee('Cliente da Ana')->assertDontSee('>Todas</a>', false);
+        $this->actingAs($this->admin)->get(route('leads.chat.index'))->assertOk()->assertDontSee('Cliente da Ana')->assertDontSee('Cliente da Bia')->assertSee('>Todas</a>', false);
+        $this->get(route('leads.chat.index', ['todas' => 1]))->assertOk()->assertSee('Cliente da Ana')->assertSee('Cliente da Bia')->assertSee('Com Ana')->assertSee('Com Bia')->assertDontSee('Cliente disponível');
+        $this->get(route('leads.chat.show', $this->theirs))->assertOk();
         Http::assertNothingSent();
+    }
+
+    public function test_administrator_reads_any_conversation_with_their_own_token_but_never_replies(): void
+    {
+        $manager = $this->user('Gestora', 'manager');
+        $this->getJson(route('leads.chat.messages', $this->theirs))->assertUnauthorized();
+        // Sem conexão própria não lê: o token do atendente nunca é usado por outra pessoa.
+        $this->connection($this->bia, 'token-da-bia');
+        $this->actingAs($this->admin)->getJson(route('leads.chat.messages', $this->theirs))->assertStatus(422);
+        Http::assertNothingSent();
+
+        $this->connection($this->admin, 'token-do-admin');
+        $this->connection($manager, 'token-da-gestora');
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact()]]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => [$this->message()]]),
+        ]);
+        foreach ([[$this->admin, 'token-do-admin'], [$manager, 'token-da-gestora']] as [$boss, $token]) {
+            $this->actingAs($boss)->getJson(route('leads.chat.messages', $this->theirs))->assertOk()->assertJsonPath('messages.0.text', 'Mensagem do cliente');
+            Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'Bearer '.$token));
+            $this->get(route('leads.chat.show', $this->theirs))->assertOk()->assertSee('Você está acompanhando esta conversa')->assertSee('Com Bia')->assertDontSee('data-chat-compose', false);
+            $this->postJson(route('leads.chat.send', $this->theirs), $this->payload())->assertForbidden();
+            // Lead da fila continua precisando ser assumido antes de abrir a conversa.
+            $this->getJson(route('leads.chat.messages', $this->queue))->assertForbidden();
+        }
+        Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+        Http::assertNotSent(fn ($request) => $request->hasHeader('Authorization', 'Bearer token-da-bia'));
+
+        // Gestão só enxerga a própria unidade.
+        $otherUnit = Franchise::create(['name' => 'Outra', 'code' => 'OUTRA', 'active' => true]);
+        $this->theirs->update(['originating_franchise_id' => $otherUnit->id]);
+        $this->actingAs($manager)->getJson(route('leads.chat.messages', $this->theirs))->assertForbidden();
+        $this->get(route('leads.chat.show', $this->theirs))->assertForbidden();
     }
 
     public function test_other_owners_and_units_are_blocked_before_any_external_request(): void

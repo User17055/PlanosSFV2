@@ -71,7 +71,7 @@ Teste dívida vencida de um Plano bloqueando os benefícios de outro pet e de um
 
 ## Integrações e documentos
 
-O chat de atendimento dos leads fica em **Leads → Chat**, com conexão individual ao Digisac e acesso restrito ao responsável local. Ativação, configuração e limites: [Chat com Digisac](docs/DIGISAC_CHAT.md). A conexão real exige token pessoal e os IDs do usuário/canal, cadastrados em **Conexão**.
+O botão flutuante **Chat** abre o atendimento dos leads em tela inteira, com conexão individual ao Digisac e acesso restrito ao responsável local, e leitura para os administradores. Ativação, configuração e limites: [Chat com Digisac](docs/DIGISAC_CHAT.md). A conexão real exige token pessoal e os IDs do usuário/canal, cadastrados em **Conexão**.
 
 | Destino | Entregue | Pendente |
 |---|---|---|

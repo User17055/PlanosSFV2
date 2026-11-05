@@ -5,10 +5,12 @@ namespace App\Jobs;
 use App\Models\Subscription;
 use App\Models\IntegrationEvent;
 use App\Services\Integrations\IntegrationPendingException;
+use App\Services\Integrations\VindiClient;
 use App\Services\Integrations\VindiReconciler;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class ReconcileVindiSubscriptionJob implements ShouldQueue, ShouldBeUnique
 {
@@ -49,6 +51,7 @@ class ReconcileVindiSubscriptionJob implements ShouldQueue, ShouldBeUnique
                 'received_at' => now(), 'payload' => ['subscription_id' => $subscription->id],
             ]);
             if (! $exception instanceof IntegrationPendingException) {
+                Log::warning('Vindi: conciliação não concluída nesta tentativa.', ['assinatura' => $subscription->id] + VindiClient::failureReason($exception));
                 // Do not serialize raw provider response bodies in failed_jobs.
                 throw new \RuntimeException('A conciliação Vindi falhou. Verificar a pendência registrada no painel de integrações.');
             }

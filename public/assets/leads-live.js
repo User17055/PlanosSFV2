@@ -83,6 +83,9 @@
       lastHtml = html;
       const nav = doc.querySelector('.nav-shortcuts');
       if (nav) document.querySelector('.nav-shortcuts')?.replaceWith(nav);
+      // A bolinha do botão de chat acompanha os leads que chegam sem precisar recarregar.
+      const dot = doc.querySelector('[data-chat-dot]');
+      if (dot) document.querySelector('[data-chat-dot]')?.toggleAttribute('hidden', dot.hidden);
       swap(fresh);
     }
     if (arrived) {

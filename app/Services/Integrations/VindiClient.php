@@ -3,12 +3,23 @@
 namespace App\Services\Integrations;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
 /** Vindi Service API v1. Read retries are safe; creation is never automatically retried. */
 class VindiClient
 {
     public const PER_PAGE = 50;
+
+    /** Causa de uma falha para o log: tipo, código HTTP e local. Nunca a mensagem nem o corpo da resposta, que podem trazer dados de cliente. */
+    public static function failureReason(\Throwable $exception): array
+    {
+        return [
+            'tipo' => class_basename($exception),
+            'http' => $exception instanceof RequestException ? $exception->response->status() : null,
+            'local' => basename($exception->getFile()).':'.$exception->getLine(),
+        ];
+    }
 
     public function configured(): bool
     {

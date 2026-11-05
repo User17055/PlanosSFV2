@@ -5,22 +5,31 @@ namespace App\Jobs;
 use App\Models\IntegrationEvent;
 use App\Models\Subscription;
 use App\Services\Integrations\IntegrationPendingException;
+use App\Services\Integrations\VindiClient;
 use App\Services\Integrations\VindiReconciler;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ProcessVindiWebhookJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 5;
+    // Esperar a vez no limite por minuto não é falha: só erro de verdade conta para desistir. Em um lote grande, os avisos aguardam em vez de esgotar as tentativas.
+    public int $maxExceptions = 5;
     public int $timeout = 90;
 
     public function __construct(public int $eventId)
     {
         $this->onQueue('vindi');
+    }
+
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHours(6);
     }
 
     public function backoff(): array
@@ -30,7 +39,7 @@ class ProcessVindiWebhookJob implements ShouldQueue
 
     public function middleware(): array
     {
-        return [(new WithoutOverlapping('vindi-event-'.$this->eventId))->releaseAfter(30)->expireAfter(180)];
+        return [new RateLimited('vindi'), (new WithoutOverlapping('vindi-event-'.$this->eventId))->releaseAfter(30)->expireAfter(180)];
     }
 
     public function handle(VindiReconciler $reconciler): void
@@ -61,6 +70,7 @@ class ProcessVindiWebhookJob implements ShouldQueue
         } catch (IntegrationPendingException $exception) {
             $event->update(['status' => 'manual', 'error' => $exception->getMessage(), 'processed_at' => now()]);
         } catch (Throwable $exception) {
+            Log::warning('Vindi: aviso não processado nesta tentativa.', ['evento' => $event->id] + VindiClient::failureReason($exception));
             // No raw HTTP response or secrets in the operator-visible error.
             $event->update(['status' => 'error', 'error' => 'Falha temporária na consulta Vindi. Aguardando nova tentativa.']);
             throw new \RuntimeException('Consulta Vindi indisponível. Verificar credencial/rede e consultar a fila de conciliação.');

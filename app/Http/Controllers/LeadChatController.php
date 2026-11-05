@@ -12,15 +12,20 @@ class LeadChatController extends Controller
 {
     private function available(Request $request, AccessService $access)
     {
-        // O chat tem um escopo mais restrito que o painel de gestão, inclusive para gestores.
-        return $access->scope(Lead::query(), $request->user())
-            ->where(fn ($q) => $q->where('handled_by', $request->user()->id)->orWhereNull('handled_by'));
+        return $access->scope(Lead::visibleTo($request->user()), $request->user());
     }
 
     private function owned(Request $request, Lead $lead, AccessService $access): void
     {
         $access->franchise($request->user(), (int) $lead->originating_franchise_id);
         abort_unless(Lead::whereKey($lead->id)->where('handled_by', $request->user()->id)->exists(), 403, 'Assuma o lead disponível para abrir a conversa. Leads de outras pessoas não podem ser acessados.');
+    }
+
+    /** Ler é dos administradores e do atendente do lead; responder fica só com o atendente (owned). Lead da fila precisa ser assumido antes. */
+    private function readable(Request $request, Lead $lead, AccessService $access): void
+    {
+        $access->franchise($request->user(), (int) $lead->originating_franchise_id);
+        abort_unless(Lead::visibleTo($request->user())->whereKey($lead->id)->whereNotNull('handled_by')->exists(), 403, 'Assuma o lead disponível para abrir a conversa. Leads de outras pessoas não podem ser acessados.');
     }
 
     private function connection(Request $request): DigisacConnection
@@ -32,14 +37,18 @@ class LeadChatController extends Controller
 
     public function index(Request $request, AccessService $access, ?Lead $lead = null)
     {
-        $data = $request->validate(['q' => 'nullable|string|max:80', 'fila' => 'nullable|boolean']);
+        $data = $request->validate(['q' => 'nullable|string|max:80', 'fila' => 'nullable|boolean', 'todas' => 'nullable|boolean']);
         if ($lead) {
             abort_unless($this->available($request, $access)->whereKey($lead->id)->exists(), 403);
             $access->franchise($request->user(), (int) $lead->originating_franchise_id);
         }
         $queue = $request->boolean('fila');
-        $query = $this->available($request, $access)
-            ->when($queue, fn ($q) => $q->whereNull('handled_by'), fn ($q) => $q->where('handled_by', $request->user()->id));
+        $seesAll = in_array($request->user()->role, Lead::SEE_ALL, true);
+        $all = $seesAll && ! $queue && $request->boolean('todas');
+        $query = $this->available($request, $access)->with('handler:id,name')
+            ->when($queue, fn ($q) => $q->whereNull('handled_by'))
+            ->when($all, fn ($q) => $q->whereNotNull('handled_by'))
+            ->when(! $queue && ! $all, fn ($q) => $q->where('handled_by', $request->user()->id));
         $search = trim($data['q'] ?? '');
         if ($search !== '') {
             $like = '%'.addcslashes($search, '%_\\').'%';
@@ -47,7 +56,7 @@ class LeadChatController extends Controller
         }
         return response()->view('leads.chat', [
             'leads' => $query->orderByDesc('updated_at')->orderByDesc('id')->paginate(25)->withQueryString(),
-            'selected' => $lead, 'queue' => $queue, 'search' => $search,
+            'selected' => $lead, 'queue' => $queue, 'all' => $all, 'seesAll' => $seesAll, 'search' => $search,
             'connection' => DigisacConnection::where('user_id', $request->user()->id)->first(),
         ])->header('Cache-Control', 'private, no-store');
     }
@@ -64,7 +73,7 @@ class LeadChatController extends Controller
 
     public function messages(Request $request, Lead $lead, AccessService $access, DigisacClient $client)
     {
-        $this->owned($request, $lead, $access);
+        $this->readable($request, $lead, $access);
         $data = $request->validate(['page' => 'nullable|integer|min:1|max:10000']);
         $connection = $this->connection($request);
         $phone = DigisacClient::phone($lead->phone);
@@ -73,7 +82,7 @@ class LeadChatController extends Controller
         $result = $contact ? $client->messages($connection, (string) $contact['id'], (int) ($data['page'] ?? 1))
             : ['messages' => [], 'has_more' => false];
         // Revalida caso o responsável tenha sido trocado durante a consulta externa.
-        $this->owned($request, $lead, $access);
+        $this->readable($request, $lead, $access);
         return response()->json($result)->header('Cache-Control', 'private, no-store');
     }
 

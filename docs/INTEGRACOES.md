@@ -26,6 +26,8 @@ O endpoint `POST /webhooks/vindi` autentica antes de persistir. O armazenamento 
 
 Se houver divergência de valor, estado não mapeado, recebimento parcial, estorno ou contestação, o evento segue para revisão. Quando a fatura local é conhecida, sua conciliação fica incerta e a verificação financeira pendente. A aplicação não pode afirmar que a situação está regular nesse caso.
 
+Os avisos da Vindi são processados a no máximo 100 por minuto, abaixo do limite de 120 consultas da API. Na cobrança diária, que manda um lote de uma vez, o excedente espera na fila por até 6 horas sem gastar tentativas; só erros de verdade contam, com desistência no quinto. Cada falha registra no log o tipo, o código HTTP e o local, sem dados de cliente.
+
 O `ReconcileVindiSubscriptionJob` percorre as faturas da assinatura. A rotina precisa operar dentro dos limites contratados, com monitoramento e ajuste de frequência. A frequência de execução não prova que a conta foi homologada. A competência depende das datas efetivamente retornadas pela API e deve ser conferida na implantação.
 
 ### Importação de cadastros

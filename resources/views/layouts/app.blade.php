@@ -50,4 +50,4 @@ $navBadges=$currentRole==='customer' && auth()->user()->customer_id ? ['portal.i
 @if($currentRole==='customer')<footer class="page-footer portal-footer"><span>© {{ date('Y') }} São Francisco · Mais vida para viver juntos</span><a class="portal-emergency" href="tel:+551832212021">Emergência 24h · (18) 3221-2021</a></footer>@else
 <footer class="page-footer"><span>© {{ date('Y') }} São Francisco · Gestão de planos veterinários</span><span>@include('components.icon',['name'=>'lock']) Acesso autenticado</span></footer>
 @endif
-</main></div></div><div class="toast" id="toast" role="status"></div>@stack('scripts')</body></html>
+</main></div></div><div class="toast" id="toast" role="status"></div>@include('components.floating-lead-chat')@stack('scripts')</body></html>
