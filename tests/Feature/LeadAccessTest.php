@@ -101,7 +101,9 @@ class LeadAccessTest extends TestCase
         // O nome do anúncio diz mais que o número da campanha.
         $list()->assertSee('Esperando')->assertSee('Cachorro')->assertSee('Plano Outubro')->assertDontSee('Campanha nº')
             ->assertSee('Abrir WhatsApp</a>', false)->assertDontSee('assets/brand/whatsapp', false)
-            ->assertSeeInOrder(['Esperando</option>', 'Processando</option>', 'Finalizado</option>', 'Sem interesse</option>'], false)->assertSee('value="new" selected', false);
+            ->assertSeeInOrder(['Esperando</option>', 'Processando</option>', 'Finalizado</option>', 'Sem interesse</option>'], false)->assertSee('value="new" selected', false)
+            // A bolinha da situação fica no canto direito da linha, junto da seta.
+            ->assertSeeInOrder(['class="lead-origin-cell"', 'class="lead-corner"', 'lead-dot is-new', 'data-lead-toggle'], false);
         $lead->update(['status' => 'contacted']);
         $list()->assertSee('value="contacted" selected', false);
     }
