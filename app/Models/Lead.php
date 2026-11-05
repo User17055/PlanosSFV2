@@ -60,7 +60,7 @@ class Lead extends DomainModel
         return $this->source === 'site_whatsapp' ? 'Site' : 'Anúncio';
     }
 
-    /** Rede de onde o lead veio. Pode chegar como sigla ("ig", "fb"); sem o campo fica vazio, porque o anúncio pode ter rodado nas duas redes. */
+    /** Rede de onde o lead veio. Pode chegar como sigla ("ig", "fb"); sem o campo fica vazio, porque o anúncio pode ter rodado nas duas redes. Decisão do negócio: quem entrou pelo site sem rastro conta como Google. */
     public function channel(): ?string
     {
         $value = collect(self::CHANNEL_FIELDS)->map(fn ($field) => $this->extra[$field] ?? null)->filter()->first();
@@ -68,7 +68,7 @@ class Lead extends DomainModel
             return null;
         }
         $value = str_replace('_', ' ', $value);
-        return ['ig' => 'Instagram', 'fb' => 'Facebook'][mb_strtolower($value)] ?? mb_convert_case($value, MB_CASE_TITLE);
+        return ['ig' => 'Instagram', 'fb' => 'Facebook', 'site' => 'Google'][mb_strtolower($value)] ?? mb_convert_case($value, MB_CASE_TITLE);
     }
 
     /** Origem e logos para a tela. Sem o campo da rede, só se sabe que veio de um formulário do Facebook Lead Ads, que roda nas duas redes. */

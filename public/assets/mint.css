@@ -1811,9 +1811,9 @@ html body.admin-body .lead-black h1{font-family:var(--font);font-size:26px;font-
 .lead-status{width:auto;min-height:30px;padding:0 26px 0 9px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;color:#2a2a2a;cursor:pointer}
 .lead-corner{width:1%;white-space:nowrap}
 .lead-corner>div{display:flex;align-items:center;justify-content:flex-end;gap:10px}
-.lead-origin{display:flex;min-width:74px;justify-content:center;gap:6px}
-.lead-origin-head{text-align:center}
-.lead-table td small.lead-traffic{display:block;margin-top:4px;font-size:12px;line-height:1.2;text-align:center;white-space:nowrap}
+.lead-origin{display:flex;min-width:74px;align-items:center;justify-content:flex-start;gap:6px}
+.lead-origin-head{text-align:left}
+.lead-table td small.lead-traffic{margin:0 0 0 2px;font-size:12.5px;line-height:1.2;white-space:nowrap}
 .lead-origin-cell{width:1%;white-space:nowrap}
 .lead-logo{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1);font-size:12px;line-height:1;color:var(--text-2)}
 .lead-logo img{display:block}
@@ -1922,7 +1922,7 @@ a.lead-stat:hover span{text-decoration:underline;text-underline-offset:2px}
 .lead-table tr[data-lead-id]{position:relative}
 .lead-table tr[data-lead-id]{display:flex;flex-wrap:wrap}
 .card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-num{display:none}
-.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-name{order:-1;padding-right:150px}
+.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-name{order:-1;padding-right:205px}
 .lead-black .lead-filters a{min-width:0;padding:4px 12px 7px}
 .lead-step>div{justify-content:flex-start}
 .card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-nowrap{width:auto;padding-right:14px}

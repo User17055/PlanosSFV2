@@ -117,7 +117,7 @@ class LeadController extends Controller
             'phone' => $phone,
             'campaign' => ($data['campaign'] ?? null) ?: 'Formulário do WhatsApp',
             'source' => 'site_whatsapp',
-            // O cookie só distingue estas três redes; visita direta ou vinda de outro site fica como "Site".
+            // O cookie só distingue estas três redes. Visita direta ou vinda de outro site fica guardada como "site" e aparece como Google (Lead::channel).
             'extra' => ['plataforma' => in_array($data['origin'] ?? null, ['google', 'instagram', 'facebook'], true) ? $data['origin'] : 'site', 'trafego' => $request->boolean('paid') ? 'pago' : 'organico', 'formulario' => 'WhatsApp do site'],
         ]);
         return response()->json(['received' => true, 'id' => $lead->id], 201);

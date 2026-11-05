@@ -118,14 +118,14 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Até o 1º contato | Tempo típico (mediana) entre a chegada e o primeiro clique em uma situação | Mede o clique, não o envio da mensagem |
 | Pago ou orgânico | Leads por tráfego | Veja a regra abaixo |
 | Por onde entrou | Site, para o formulário do WhatsApp, ou Anúncio, para o Facebook Lead Ads | Quem veio do Google para o site conta como Site aqui e como Google em "De onde veio" |
-| De onde veio | Leads pela mesma origem do filtro da lista: Google, Instagram, Facebook ou Site | Sem o campo da rede, um lead do Facebook Lead Ads entra como "Facebook ou Instagram" |
+| De onde veio | Leads pela mesma origem do filtro da lista: Google, Instagram ou Facebook | Sem o campo da rede, um lead do Facebook Lead Ads entra como "Facebook ou Instagram" |
 | Por campanha | Leads por `campanha` | Sem o campo, entra como "Sem nome de campanha" |
 | Por anúncio | Leads por `anuncio` | Só aparece se algum lead do período tiver o campo |
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Por responsável | Leads por pessoa, só para administradores | Mostra o responsável atual, sem histórico |
 | Quem converteu | Os 10 últimos finalizados do período, com origem, tráfego e responsável | A data é a da última mudança no lead |
 
-O filtro do painel escolhe o período (7, 30 ou 90 dias, ou de/até, com até um ano), a conversão, o tráfego, a origem, a campanha e quem atendeu. Ele muda todos os números da tela, inclusive a comparação com o período anterior e os leads em espera. A lista tem no botão "Filtros" o período, a conversão, o tráfego, por onde entrou e a origem; para administradores, também com quem está. Na coluna Origem, abaixo da logo, cada linha mostra "Pago" ou "Orgânico", com "Site ·" antes quando o lead veio pelo formulário do site.
+O filtro do painel escolhe o período (7, 30 ou 90 dias, ou de/até, com até um ano), a conversão, o tráfego, a origem, a campanha e quem atendeu. Ele muda todos os números da tela, inclusive a comparação com o período anterior e os leads em espera. A lista tem no botão "Filtros" o período, a conversão, o tráfego, por onde entrou e a origem; para administradores, também com quem está. Na coluna Origem, ao lado da logo, cada linha mostra "Pago" ou "Orgânico", com "Site ·" antes quando o lead veio pelo formulário do site.
 
 **Pago ou orgânico:** lead do Facebook Lead Ads conta como pago, porque esse formulário só existe em anúncio. No formulário do site, conta como pago quem chegou com `gclid`, `gbraid`, `wbraid` ou com `utm_medium` de mídia paga (`cpc`, `paid`, `ads` e parecidos). O resto é orgânico, inclusive quem veio de anúncio do Facebook sem `utm_medium`, porque o `fbclid` aparece em qualquer link do Facebook. Lead salvo antes dessa regra e cookie antigo do site contam como orgânico no formulário do site.
 
@@ -137,7 +137,7 @@ A busca da lista procura em todos os leads, por nome, telefone ou e-mail, mesmo 
 
 O botão verde do site institucional (`views/front/layout.twig`) abre um formulário com nome, telefone e tema. Quando o tema é "Plano de Saúde", o navegador avisa `POST /whatsapp/lead` sem atrasar a abertura do WhatsApp; os outros temas não viram lead. O site lê a origem do cookie `sf_origem` (preenchido por `js/origem.js` a partir de `gclid`, `utm_source` ou do site de onde a pessoa veio) e chama `POST /api/site/v1/leads` com a chave do site, limitado a 5 envios por minuto por IP.
 
-A linha mostra a logo do Google, do Instagram ou do Facebook conforme o cookie. Sem essa informação, como em quem digitou o endereço, a origem fica "Site". Se a gestão estiver fora do ar, a conversa abre mesmo assim e o site registra só o código do erro no log, sem dados da pessoa.
+A linha mostra a logo do Google, do Instagram ou do Facebook conforme o cookie. Sem essa informação, como em quem digitou o endereço, o lead conta como Google orgânico, por decisão do negócio; por isso, esse número pode incluir visitas que não vieram do Google. Se a gestão estiver fora do ar, a conversa abre mesmo assim e o site registra só o código do erro no log, sem dados da pessoa.
 
 ## Acesso
 

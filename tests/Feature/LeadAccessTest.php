@@ -120,7 +120,7 @@ class LeadAccessTest extends TestCase
         $panel()->assertViewHas('totals', $total(3))->assertViewHas('waitingTotal', 2)->assertSee('Quem converteu');
         $panel(['trafego' => 'Pago'])->assertViewHas('totals', $total(1))->assertViewHas('waitingTotal', 0)->assertSee('Paga Google')->assertSee('Ana Atendimento');
         $panel(['trafego' => 'Orgânico'])->assertViewHas('totals', $total(2))->assertViewHas('waitingTotal', 2)->assertDontSee('Quem converteu');
-        $panel(['origem' => 'Google', 'trafego' => 'Orgânico'])->assertViewHas('totals', $total(1))->assertViewHas('waitingTotal', 1);
+        $panel(['origem' => 'Google', 'trafego' => 'Orgânico'])->assertViewHas('totals', $total(2))->assertViewHas('waitingTotal', 2);
         $panel(['conversao' => 'Ainda não converteu'])->assertViewHas('totals', $total(2));
         $panel(['responsavel' => 'Ana Atendimento'])->assertViewHas('totals', $total(1));
         $panel(['de' => now()->subDays(25)->format('Y-m-d'), 'ate' => now()->subDays(10)->format('Y-m-d')])->assertViewHas('totals', $total(1))->assertViewHas('days', 16)->assertViewHas('endsToday', false);
@@ -247,7 +247,7 @@ class LeadAccessTest extends TestCase
         $list()->assertSee('<small class="lead-traffic">Pago</small>', false)->assertSee('<small class="lead-traffic">Site · Pago</small>', false)->assertSee('<small class="lead-traffic">Site · Orgânico</small>', false);
         // Quem veio do Google para o site aparece nos dois filtros.
         $list(['entrada' => 'Site'])->assertSee('Google Pago')->assertSee('Google Organico')->assertSee('Site Direto')->assertDontSee('Do Anuncio');
-        $list(['origem' => 'Google'])->assertSee('Google Pago')->assertSee('Google Organico')->assertDontSee('Site Direto');
+        $list(['origem' => 'Google'])->assertSee('Google Pago')->assertSee('Google Organico')->assertSee('Site Direto')->assertDontSee('Do Anuncio');
         $list(['origem' => 'Google', 'trafego' => 'Orgânico'])->assertSee('Google Organico')->assertDontSee('Google Pago');
         $panel()->assertSee('Por onde entrou')->assertViewHas('entries', fn ($rows) => $rows['Site']['total'] === 3 && $rows['Anúncio']['total'] === 1);
         $panel(['entrada' => 'Site'])->assertViewHas('totals', fn ($totals) => $totals['total'] === 3);

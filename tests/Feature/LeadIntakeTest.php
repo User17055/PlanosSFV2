@@ -43,9 +43,10 @@ class LeadIntakeTest extends TestCase
         $this->assertSame('Formulário do WhatsApp', $lead->campaignLabel());
         $this->assertSame('Orgânico', $lead->traffic());
 
-        // Sem origem conhecida, ou com um valor forjado no cookie, fica como "Site".
+        // Sem origem conhecida, ou com um valor forjado no cookie, conta como Google orgânico.
         $this->fromSite(['name' => 'Bia', 'phone' => '18988880000', 'origin' => 'other'])->assertCreated();
-        $this->assertSame('Site', Lead::where('name', 'Bia')->sole()->originGroup());
+        $this->assertSame(['label' => 'Google', 'logos' => ['google']], Lead::where('name', 'Bia')->sole()->origin());
+        $this->assertSame('Orgânico', Lead::where('name', 'Bia')->sole()->traffic());
 
         $this->fromSite(['name' => 'Caio', 'phone' => '18977770000', 'origin' => 'google', 'paid' => true])->assertCreated();
         $this->assertSame('Pago', Lead::where('name', 'Caio')->sole()->traffic());
