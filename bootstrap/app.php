@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn (\Illuminate\Http\Request $request) => $request->user()?->role === 'customer' ? '/portal' : '/painel');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['api_token']);
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $exception, \Illuminate\Http\Request $request) {
             $status=$response->getStatusCode();
             if(!$request->expectsJson() && in_array($status,[419,500],true)) {
@@ -30,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             if ($request->expectsJson()) return response()->json(['code'=>$e->errorCode,'message'=>$e->getMessage(),'details'=>$e->details],$e->httpStatus);
             if(in_array($e->httpStatus,[403,404],true)) return response($e->getMessage(),$e->httpStatus)->header('Content-Type','text/plain; charset=UTF-8');
-            if (! $request->isMethod('GET')) return back()->withErrors(['operation'=>$e->getMessage()])->withInput($request->except(['password','password_confirmation','signature_data']));
+            if (! $request->isMethod('GET')) return back()->withErrors(['operation'=>$e->getMessage()])->withInput($request->except(['password','password_confirmation','signature_data','api_token']));
             return response($e->getMessage(),$e->httpStatus)->header('Content-Type','text/plain; charset=UTF-8');
         });
     })->create();

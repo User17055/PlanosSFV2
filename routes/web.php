@@ -32,6 +32,16 @@ Route::post('/webhooks/vindi',function(Request $request) {
 Route::post('/webhooks/leads/{token}',[\App\Http\Controllers\LeadController::class,'intake'])->middleware('throttle:120,1')->name('webhooks.leads');
 
 Route::middleware(['auth','active'])->group(function () {
+    Route::middleware('role:central_admin,manager,sales,operator,attendant')->group(function () {
+        Route::get('/leads/chat', [\App\Http\Controllers\LeadChatController::class, 'index'])->name('leads.chat.index');
+        Route::get('/leads/chat/conexao', [\App\Http\Controllers\DigisacConnectionController::class, 'edit'])->name('leads.chat.connection');
+        Route::post('/leads/chat/conexao', [\App\Http\Controllers\DigisacConnectionController::class, 'save'])->middleware('throttle:10,1')->name('leads.chat.connection.save');
+        Route::post('/leads/chat/desconectar', [\App\Http\Controllers\DigisacConnectionController::class, 'destroy'])->middleware('throttle:10,1')->name('leads.chat.connection.destroy');
+        Route::get('/leads/chat/{lead}', [\App\Http\Controllers\LeadChatController::class, 'index'])->name('leads.chat.show');
+        Route::post('/leads/chat/{lead}/assumir', [\App\Http\Controllers\LeadChatController::class, 'claim'])->middleware('throttle:30,1')->name('leads.chat.claim');
+        Route::get('/leads/chat/{lead}/mensagens', [\App\Http\Controllers\LeadChatController::class, 'messages'])->middleware('throttle:60,1')->name('leads.chat.messages');
+        Route::post('/leads/chat/{lead}/mensagens', [\App\Http\Controllers\LeadChatController::class, 'send'])->middleware('throttle:20,1')->name('leads.chat.send');
+    });
     Route::get('/leads',[\App\Http\Controllers\LeadController::class,'index'])->middleware('role:central_admin,manager,sales,operator,attendant')->name('leads.index');
     Route::get('/leads/painel',[\App\Http\Controllers\LeadController::class,'dashboard'])->middleware('role:central_admin,manager,sales,operator,attendant')->name('leads.dashboard');
     Route::post('/leads/{lead}',[\App\Http\Controllers\LeadController::class,'update'])->middleware(['role:central_admin,manager,sales,operator,attendant','throttle:60,1'])->name('leads.update');

@@ -16,8 +16,8 @@ class JobRole extends DomainModel
     public const OPTIONS = [
         'dashboard.view' => ['Ver painel, com valores de vendas e recebimentos', ['dashboard', 'dashboard.map', 'dashboard.neighborhoods']],
         'dashboard.export' => ['Exportar resumo', ['dashboard.export']],
-        'leads.view' => ['Ver lista e painel de leads', ['leads.index', 'leads.dashboard']],
-        'leads.update' => ['Mudar a situação do lead', ['leads.update']],
+        'leads.view' => ['Ver lista, painel e chat dos seus leads', ['leads.index', 'leads.dashboard', 'leads.chat.index', 'leads.chat.show', 'leads.chat.messages', 'leads.chat.connection', 'leads.chat.connection.save', 'leads.chat.connection.destroy']],
+        'leads.update' => ['Mudar a situação do lead e atender pelo chat', ['leads.update', 'leads.chat.claim', 'leads.chat.send']],
         'leads.assign' => ['Escolher com quem o lead fica', ['leads.assign']],
         'leads.destroy' => ['Apagar lead de teste', ['leads.destroy']],
         'customers.view' => ['Ver tutores e pets', ['customers.index', 'customers.show', 'pets.photo']],

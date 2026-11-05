@@ -11,7 +11,7 @@ $chosenDays=(int)($applied['dias'] ?? 0);
 $saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->format($format);
 @endphp
 <div class="lead-head lead-black">
-<div class="lead-head-top"><h1>Leads</h1><div class="lead-head-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.dashboard') }}">Ver painel</a></div></div>
+<div class="lead-head-top"><h1>Leads</h1><div class="lead-head-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.chat.index') }}">Chat</a><a class="text-link" href="{{ route('leads.dashboard') }}">Ver painel</a></div></div>
 <div class="lead-head-tools">
 <form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@foreach(\Illuminate\Support\Arr::except($applied,'q') as $name=>$value)<input type="hidden" name="{{ $name }}" value="{{ $value }}">@endforeach<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Nome, telefone ou e-mail"></div></form>
 <details class="lead-filter-menu">
@@ -77,6 +77,7 @@ $contact=$lead->phoneLabel() ?: $lead->email;
 @if($lead->whatsappUrl() || $lead->email || $canAssign || ($canDelete && $lead->source==='teste'))<div class="lead-actions">
 @if($lead->whatsappUrl())<a class="text-button" href="{{ $lead->whatsappUrl($lead->greeting()) }}" target="_blank" rel="noopener">Abrir WhatsApp</a>
 @elseif($lead->email)<a class="text-button" href="mailto:{{ $lead->email }}">Enviar e-mail</a>@endif
+@if($lead->phone && ($lead->handled_by===null || $lead->handled_by===auth()->id()))<a class="text-button" href="{{ route('leads.chat.show',$lead) }}">Abrir chat</a>@endif
 @if($canAssign)<form class="lead-assign" method="POST" action="{{ route('leads.assign',$lead) }}">@csrf<select class="lead-status" name="handled_by" aria-label="Novo atendente do lead de {{ $lead->name }}"><option value="">Na fila</option>@foreach($assignees[$lead->originating_franchise_id] ?? [] as $person)<option value="{{ $person->id }}" @selected($lead->handled_by===$person->id)>{{ $person->name }}</option>@endforeach @if($lead->handler && !collect($assignees[$lead->originating_franchise_id] ?? [])->contains('id',$lead->handled_by))<option value="" selected disabled>{{ $lead->handler->name }}</option>@endif</select><button class="text-button" data-confirm="Trocar o atendente deste lead?">Trocar atendente</button></form>@endif
 @if($canDelete && $lead->source==='teste')<form method="POST" action="{{ route('leads.destroy',$lead) }}">@csrf<button class="text-button text-danger" data-confirm="Apagar este lead de teste?">Apagar teste</button></form>@endif
 </div>@endif</td></tr>
