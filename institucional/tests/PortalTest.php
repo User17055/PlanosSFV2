@@ -98,6 +98,21 @@ class PortalTest extends TestCase
         self::assertStringContainsString('Confirmar e assinar contrato',$this->browser->getResponse()->getContent());
     }
 
+    public function test_whatsapp_form_sends_the_lead_with_the_saved_origin_and_never_blocks_the_visitor(): void
+    {
+        $this->browser->getCookieJar()->set(new \Symfony\Component\BrowserKit\Cookie('sf_origem','google|Campanha Plano|1'));
+        $this->browser->request('POST','/whatsapp/lead',['nome'=>' Maria ','telefone'=>'(18) 99999-0000']);
+        self::assertSame(204,$this->browser->getResponse()->getStatusCode());
+        $call=end($this->api->calls);
+        self::assertSame('leads',$call['path']);
+        self::assertSame(['name'=>'Maria','phone'=>'(18) 99999-0000','origin'=>'google','campaign'=>'Campanha Plano','paid'=>true],$call['data']);
+        self::assertNull($call['token']);
+
+        $this->api->unavailable=true;
+        $this->browser->request('POST','/whatsapp/lead',['nome'=>'Maria','telefone'=>'(18) 99999-0000']);
+        self::assertSame(204,$this->browser->getResponse()->getStatusCode());
+    }
+
     public function test_invalid_csrf_never_reaches_management_api(): void
     {
         $this->browser->request('POST','/contratar/SF-ESS',['_token'=>'invalid','name'=>'Tutor','password'=>'secret']);

@@ -6,11 +6,13 @@ use App\Models\{Franchise,Lead,User};
 use App\Services\AccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Cache,Log};
-use Illuminate\Support\{Arr,Str};
+use Illuminate\Support\{Arr,Carbon,Str};
 
 class LeadController extends Controller
 {
     private const REFUSED = 'leads:last-refused';
+
+    private const FILTERS = ['dias' => 'nullable|in:7,30,90', 'de' => 'nullable|date_format:Y-m-d', 'ate' => 'nullable|date_format:Y-m-d', 'conversao' => 'nullable|string|max:30', 'trafego' => 'nullable|string|max:20', 'origem' => 'nullable|string|max:60', 'campanha' => 'nullable|string|max:200', 'responsavel' => 'nullable|string|max:150'];
 
     /** Campos que o Pluga costuma mandar, em português ou inglês (minúsculas, sem acento, "_" no lugar de espaço). O que não estiver aqui vai para "extra". */
     private const ALIASES = [
@@ -82,9 +84,8 @@ class LeadController extends Controller
 
         $used = array_merge(array_filter($keys), ...array_values(self::ALIASES));
         $extra = array_slice(array_map(fn ($v) => mb_substr($v, 0, 500), array_diff_key($flat, array_flip($used))), 0, 30);
-        $franchise = Franchise::where('code', config('services.leads.franchise_code'))->where('active', true)->first() ?? Franchise::where('active', true)->orderBy('id')->firstOrFail();
         $lead = Lead::create([
-            'originating_franchise_id' => $franchise->id,
+            'originating_franchise_id' => $this->intakeFranchise()->id,
             'external_id' => $externalId,
             'name' => mb_substr($data['name'] ?: 'Sem nome', 0, 150),
             'phone' => $data['phone'] ? mb_substr($data['phone'], 0, 30) : null,
@@ -97,12 +98,77 @@ class LeadController extends Controller
         return response()->json(['received' => true, 'id' => $lead->id], 201);
     }
 
+    /** Formulário do WhatsApp do site: quem pede o plano entra na lista, com a origem que o site guardou no cookie sf_origem. A chave do site é conferida em SiteGateway. */
+    public function fromSite(Request $request)
+    {
+        $data = $request->validate(['name' => 'required|string|min:2|max:150', 'phone' => 'required|string|max:30', 'origin' => 'nullable|string|max:20', 'campaign' => 'nullable|string|max:120', 'paid' => 'nullable|boolean']);
+        $phone = preg_replace('/\D/', '', $data['phone']);
+        if (strlen($phone) < 10 || strlen($phone) > 13) {
+            return response()->json(['received' => false, 'errors' => ['phone' => ['Telefone inválido.']]], 422);
+        }
+        // Mesma regra do Pluga: o mesmo contato em 10 min é clique repetido, não lead novo.
+        if (Lead::where('phone', $phone)->where('created_at', '>=', now()->subMinutes(10))->exists()) {
+            return response()->json(['received' => true, 'duplicate' => true]);
+        }
+        $lead = Lead::create([
+            'originating_franchise_id' => $this->intakeFranchise()->id,
+            'name' => $data['name'],
+            'phone' => $phone,
+            'campaign' => ($data['campaign'] ?? null) ?: 'Formulário do WhatsApp',
+            'source' => 'site_whatsapp',
+            // O cookie só distingue estas três redes; visita direta ou vinda de outro site fica como "Site".
+            'extra' => ['plataforma' => in_array($data['origin'] ?? null, ['google', 'instagram', 'facebook'], true) ? $data['origin'] : 'site', 'trafego' => $request->boolean('paid') ? 'pago' : 'organico', 'formulario' => 'WhatsApp do site'],
+        ]);
+        return response()->json(['received' => true, 'id' => $lead->id], 201);
+    }
+
+    private function intakeFranchise(): Franchise
+    {
+        return Franchise::where('code', config('services.leads.franchise_code'))->where('active', true)->first() ?? Franchise::where('active', true)->orderBy('id')->firstOrFail();
+    }
+
+    /** Conversão, tráfego e origem seguem regras da tela, por isso a lista e o painel filtram em memória. */
+    private function dimensions(): array
+    {
+        return [
+            'conversao' => fn (Lead $lead) => $lead->conversion(),
+            'trafego' => fn (Lead $lead) => $lead->traffic(),
+            'origem' => fn (Lead $lead) => $lead->originGroup(),
+            'campanha' => fn (Lead $lead) => $lead->campaign ? $lead->campaignLabel() : 'Sem nome de campanha',
+            'responsavel' => fn (Lead $lead) => $lead->handler?->name ?? 'Ninguém ainda',
+        ];
+    }
+
+    private function matcher(array $chosen): \Closure
+    {
+        $dimensions = $this->dimensions();
+        return fn (Lead $lead) => collect($chosen)->every(fn ($value, $key) => $dimensions[$key]($lead) === $value);
+    }
+
+    /** Período no horário de São Paulo: 7, 30 ou 90 dias até hoje, ou de/até à escolha, até um ano. Sem nada escolhido, usa $days; sem $days, não há período. */
+    private function period(array $input, ?int $days = null): array
+    {
+        $day = fn (string $value) => Carbon::createFromFormat('Y-m-d', $value, 'America/Sao_Paulo')->startOfDay();
+        $today = now('America/Sao_Paulo')->startOfDay();
+        $days = (int) (($input['dias'] ?? null) ?: $days);
+        $from = $input['de'] ?? null;
+        $to = $input['ate'] ?? null;
+        if (! $from && ! $to && ! $days) {
+            return [null, null];
+        }
+        $end = $to ? $day($to)->min($today) : $today;
+        $start = $from ? $day($from) : $end->copy()->subDays(($days ?: 30) - 1);
+        if ($start->gt($end)) {
+            [$start, $end] = [$end, $start];
+        }
+        return [$start->max($end->copy()->subDays(365)), $end];
+    }
+
     public function index(Request $request, AccessService $access)
     {
-        $request->validate(['q' => 'nullable|string|max:80', 'situacao' => 'nullable|in:'.implode(',', array_keys(Lead::STATUSES)), 'origem' => 'nullable|string|max:60']);
-        $origin = $request->query('origem');
-        $status = $request->query('situacao');
-        $q = trim((string) $request->query('q'));
+        $input = $request->validate(self::FILTERS + ['q' => 'nullable|string|max:80', 'situacao' => 'nullable|in:'.implode(',', array_keys(Lead::STATUSES))]);
+        $status = $input['situacao'] ?? null;
+        $q = trim((string) ($input['q'] ?? ''));
         $query = $access->scope(Lead::query(), $request->user())->with('handler');
         if ($q !== '') {
             $like = '%'.addcslashes($q, '%_\\').'%';
@@ -110,28 +176,46 @@ class LeadController extends Controller
             $query->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('email', 'like', $like)
                 ->when(strlen($digits) >= 4, fn ($p) => $p->orWhere('phone', 'like', '%'.$digits.'%')));
         }
-        // shortcut: separa as origens em memória, com a mesma regra da tela; troque por uma coluna própria se passar de ~20 mil leads.
-        $origins = (clone $query)->get(['id', 'campaign', 'extra', 'source'])->groupBy(fn ($lead) => $lead->originGroup());
-        $originOptions = collect(['Instagram' => 0, 'Facebook' => 0, 'Google' => 0])->merge($origins->map->count());
-        if ($origin) {
-            $query->whereIn('id', ($origins[$origin] ?? collect())->pluck('id'));
+        [$start, $end] = $this->period($input);
+        if ($start) {
+            $query->whereBetween('created_at', [$start->copy()->utc(), $end->copy()->endOfDay()->utc()]);
         }
-        // Os contadores seguem a busca, mas não o filtro de situação, para os botões mostrarem quantos há em cada uma.
+        $dimensions = $this->dimensions();
+        $chosen = array_filter(Arr::only($input, array_keys($dimensions)));
+        // shortcut: separa os filtros em memória, com a mesma regra da tela; troque por colunas próprias se passar de ~20 mil leads.
+        $rows = (clone $query)->get(['id', 'status', 'campaign', 'extra', 'source', 'handled_by']);
+        $filterOptions = collect(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'origem' => ['Instagram', 'Facebook', 'Google']])
+            ->map(fn ($names, $key) => collect($names)->mapWithKeys(fn ($name) => [$name => 0])->merge($rows->countBy($dimensions[$key])));
+        if ($chosen) {
+            $query->whereIn('id', $rows->filter($this->matcher($chosen))->pluck('id'));
+        }
+        // Os contadores seguem a busca e os filtros, mas não a situação, para os botões mostrarem quantos há em cada uma.
         $counts = (clone $query)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
         // Quem ainda não foi chamado fica no topo, mesmo em "Todos": lead novo não pode se perder no meio do histórico.
         $leads = $query->when($status, fn ($w) => $w->where('status', $status))->orderByRaw("case when status = 'new' then 0 else 1 end")->orderByDesc('id')->paginate(20)->withQueryString();
-        return view('leads.index', compact('leads', 'counts', 'status', 'q', 'origin', 'originOptions') + ['intake' => $this->intakeStatus($request->user(), $access)]);
+        return view('leads.index', compact('leads', 'counts', 'status', 'q', 'filterOptions', 'start', 'end') + [
+            'applied' => array_filter(['q' => $q] + Arr::only($input, array_keys(self::FILTERS))),
+            'filtersOn' => count($chosen) + ($start ? 1 : 0),
+            'intake' => $this->intakeStatus($request->user(), $access),
+        ]);
     }
 
-    /** Painel dos leads: de onde vieram, quantos a equipe chamou e quantos viraram cliente. Lead de teste fica de fora. */
+    /** Painel dos leads: de onde vieram, quantos a equipe chamou e quem converteu. Os filtros mudam todos os números. Lead de teste fica de fora. */
     public function dashboard(Request $request, AccessService $access)
     {
-        $days = (int) ($request->validate(['dias' => 'nullable|in:7,30,90'])['dias'] ?? 30);
-        $start = now('America/Sao_Paulo')->startOfDay()->subDays($days - 1);
-        $real = fn () => $access->scope(Lead::query(), $request->user())->where('source', '!=', 'teste');
+        $input = $request->validate(self::FILTERS);
+        [$start, $end] = $this->period($input, 30);
+        $days = (int) $start->diffInDays($end) + 1;
+        $dimensions = $this->dimensions();
+        $chosen = array_filter(Arr::only($input, array_keys($dimensions)));
+        $matches = $this->matcher($chosen);
+        $real = fn () => $access->scope(Lead::query(), $request->user())->where('source', '!=', 'teste')->with('handler:id,name');
         // shortcut: soma os leads do período em memória; troque por consultas agrupadas se um período passar de ~20 mil leads.
-        $leads = $real()->where('created_at', '>=', $start->copy()->utc())->with('handler:id,name')
-            ->get(['id', 'status', 'campaign', 'extra', 'created_at', 'contacted_at', 'handled_by']);
+        $between = fn ($from, $to) => $real()->whereBetween('created_at', [$from->copy()->utc(), $to->copy()->endOfDay()->utc()])
+            ->get(['id', 'name', 'status', 'campaign', 'extra', 'source', 'created_at', 'updated_at', 'contacted_at', 'handled_by']);
+        $inPeriod = $between($start, $end);
+        $leads = $inPeriod->filter($matches);
+        $waiting = $real()->where('status', 'new')->oldest('id')->get()->filter($matches);
 
         $sum = fn ($group) => ['total' => $group->count(), 'called' => $group->where('status', '!=', 'new')->count(), 'converted' => $group->where('status', 'converted')->count()];
         $breakdown = fn (callable $key) => $leads->groupBy($key)->map($sum)->sortByDesc('total');
@@ -140,17 +224,27 @@ class LeadController extends Controller
 
         return view('leads.dashboard', [
             'days' => $days,
+            'start' => $start,
+            'end' => $end,
+            'endsToday' => $end->isSameDay(now('America/Sao_Paulo')),
+            'chosen' => $chosen,
+            // O valor escolhido fica na lista mesmo sem lead no período, para o filtro ativo continuar visível.
+            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'origem' => 'Origem', 'campanha' => 'Campanha', 'responsavel' => 'Quem atendeu'])
+                ->map(fn ($label, $key) => [$label, $inPeriod->toBase()->map($dimensions[$key])->merge(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC][$key] ?? [])->push($chosen[$key] ?? null)->filter()->unique()->sort()->values()]),
             'intake' => $this->intakeStatus($request->user(), $access),
             'totals' => $sum($leads) + ['lost' => $leads->where('status', 'lost')->count()],
-            'previous' => $real()->where('created_at', '>=', $start->copy()->subDays($days)->utc())->where('created_at', '<', $start->copy()->utc())->count(),
-            'waitingTotal' => $real()->where('status', 'new')->count(),
-            'waiting' => $real()->where('status', 'new')->oldest('id')->limit(5)->get(),
+            'previous' => $between($start->copy()->subDays($days), $start->copy()->subDay())->filter($matches)->count(),
+            'waitingTotal' => $waiting->count(),
+            'waiting' => $waiting->take(5),
             'firstCall' => $minutes === null ? null : ($minutes < 60 ? round($minutes).' min' : ($minutes < 2880 ? round($minutes / 60).' h' : round($minutes / 1440).' dias')),
             'perDay' => collect(range(0, $days - 1))->mapWithKeys(fn ($i) => [$start->copy()->addDays($i)->format('Y-m-d') => 0])->merge($perDay),
-            'campaigns' => $breakdown(fn ($lead) => $lead->campaign ? $lead->campaignLabel() : 'Sem nome de campanha'),
+            'traffic' => $breakdown($dimensions['trafego']),
+            'origins' => $breakdown($dimensions['origem']),
+            'campaigns' => $breakdown($dimensions['campanha']),
             'ads' => $leads->contains(fn ($lead) => isset($lead->extra['anuncio'])) ? $breakdown(fn ($lead) => $lead->extra['anuncio'] ?? 'Não informado') : collect(),
             'species' => $leads->contains(fn ($lead) => isset($lead->extra['especie_do_pet'])) ? $breakdown(fn ($lead) => isset($lead->extra['especie_do_pet']) ? mb_convert_case($lead->extra['especie_do_pet'], MB_CASE_TITLE) : 'Não informado') : collect(),
-            'team' => $breakdown(fn ($lead) => $lead->handler?->name ?? '')->forget(''),
+            'team' => $breakdown($dimensions['responsavel'])->forget('Ninguém ainda')->sortByDesc('converted'),
+            'converted' => $leads->where('status', 'converted')->sortByDesc('updated_at')->take(10),
         ]);
     }
 
@@ -179,7 +273,7 @@ class LeadController extends Controller
     {
         $access->franchise($request->user(), (int) $lead->originating_franchise_id);
         $data = $request->validate(['status' => 'required|in:'.implode(',', array_keys(Lead::STATUSES))]);
-        $lead->update(['status' => $data['status'], 'handled_by' => $request->user()->id, 'contacted_at' => $lead->contacted_at ?? now()]);
+        $lead->update(['status' => $data['status'], 'handled_by' => $request->user()->id, 'contacted_at' => $data['status'] === 'new' ? $lead->contacted_at : ($lead->contacted_at ?? now())]);
         return back()->with('success', 'Lead atualizado.');
     }
 }

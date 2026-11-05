@@ -66,6 +66,18 @@ class PortalController
         return $response;
     }
 
+    /** Formulário do WhatsApp: a conversa já abriu no navegador, então uma falha aqui fica só no log. Sem sessão, não há o que proteger com CSRF; quem limita é o SiteGateway. */
+    public function whatsappLead(Request $r): Response
+    {
+        [$origin,$campaign,$paid]=array_pad(explode('|',(string)$r->cookies->get('sf_origem'),3),3,'');
+        try {
+            $this->call($r,'POST','leads',['name'=>trim((string)$r->request->get('nome')),'phone'=>(string)$r->request->get('telefone'),'origin'=>$origin,'campaign'=>$campaign,'paid'=>$paid==='1'],false);
+        } catch(PortalApiException $e) {
+            error_log('Lead do WhatsApp não gravado: HTTP '.$e->result->status);
+        }
+        return new Response('',204,['Cache-Control'=>'private, no-store']);
+    }
+
     private function call(Request $r,string $method,string $path,array $data=[],bool $auth=true,bool $pdf=false): PortalResult
     {
         $token=$auth?$r->getSession()->get('portal_token'):null;

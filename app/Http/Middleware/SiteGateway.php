@@ -20,7 +20,7 @@ class SiteGateway
         $identity=$request->is('*/account-check','*/verification-resend') ? $request->header('X-Portal-IP',$request->ip())
             : ($request->bearerToken() ?: ($request->input('email') ?: $request->header('X-Portal-IP',$request->ip())));
         $bucket='site-api:'.hash('sha256',$request->path().'|'.strtolower((string)$identity));
-        $max=$request->is('*/account-check','*/verification-resend')?20:($request->is('*/login')?5:($request->is('*/register','*/forgot-password','*/reset-password')?5:120));
+        $max=$request->is('*/account-check','*/verification-resend')?20:($request->is('*/login')?5:($request->is('*/register','*/forgot-password','*/reset-password','*/leads')?5:120));
         abort_if(RateLimiter::tooManyAttempts($bucket,$max),429,'Aguarde um minuto e tente novamente.');
         RateLimiter::hit($bucket,60);
         // Attribution services need a session, but API clients never share Laravel cookies.

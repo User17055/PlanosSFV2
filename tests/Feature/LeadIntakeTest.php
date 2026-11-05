@@ -23,6 +23,34 @@ class LeadIntakeTest extends TestCase
         return $this->postJson('/webhooks/leads/'.$token, $payload);
     }
 
+    private function fromSite(array $payload, string $key = 'chave-do-site-com-pelo-menos-32-caracteres')
+    {
+        config(['site_portal.enabled' => true, 'site_portal.key' => 'chave-do-site-com-pelo-menos-32-caracteres']);
+        return $this->postJson('/api/site/v1/leads', $payload, ['X-Site-Key' => $key]);
+    }
+
+    public function test_whatsapp_form_of_the_site_becomes_a_lead_with_its_origin(): void
+    {
+        $this->fromSite(['name' => 'Ana', 'phone' => '(18) 99999-0000', 'origin' => 'google'], 'chave-errada-com-pelo-menos-32-caracteres!')->assertUnauthorized();
+        $this->fromSite(['name' => 'Ana', 'phone' => '123', 'origin' => 'google'])->assertStatus(422);
+        $this->assertDatabaseCount('leads', 0);
+
+        $this->fromSite(['name' => 'Ana', 'phone' => '(18) 99999-0000', 'origin' => 'google', 'campaign' => ''])->assertCreated();
+        $this->fromSite(['name' => 'Ana', 'phone' => '(18) 99999-0000', 'origin' => 'google'])->assertOk()->assertJsonPath('duplicate', true);
+        $lead = Lead::sole();
+        $this->assertSame('18999990000', $lead->phone);
+        $this->assertSame(['label' => 'Google', 'logos' => ['google']], $lead->origin());
+        $this->assertSame('Formulário do WhatsApp', $lead->campaignLabel());
+        $this->assertSame('Orgânico', $lead->traffic());
+
+        // Sem origem conhecida, ou com um valor forjado no cookie, fica como "Site".
+        $this->fromSite(['name' => 'Bia', 'phone' => '18988880000', 'origin' => 'other'])->assertCreated();
+        $this->assertSame('Site', Lead::where('name', 'Bia')->sole()->originGroup());
+
+        $this->fromSite(['name' => 'Caio', 'phone' => '18977770000', 'origin' => 'google', 'paid' => true])->assertCreated();
+        $this->assertSame('Pago', Lead::where('name', 'Caio')->sole()->traffic());
+    }
+
     public function test_wrong_or_missing_token_records_nothing(): void
     {
         $this->send(['nome' => 'Maria', 'telefone' => '18999990000'], 'errado')->assertNotFound();

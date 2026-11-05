@@ -112,16 +112,31 @@ O painel em `/leads/painel` mostra os últimos 7, 30 (padrão) ou 90 dias, no ho
 | Indicador | O que mede | Cuidado |
 | --- | --- | --- |
 | Chegaram | Leads recebidos no período | Compara com o período anterior de mesmo tamanho |
-| Esperando contato | Leads em "Novo" neste momento | Ignora o período escolhido |
-| Foram chamados | Leads que saíram de "Novo" | Inclui quem foi marcado direto como cliente ou sem interesse |
-| Viraram cliente | Leads marcados assim pela equipe | Não vem de contrato nem de proposta |
+| Esperando contato | Leads em "Esperando" neste momento | Ignora o período escolhido |
+| Foram chamados | Leads que saíram de "Esperando" | Inclui quem foi marcado direto como finalizado ou sem interesse |
+| Viraram cliente | Leads marcados como "Finalizado" pela equipe | Não vem de contrato nem de proposta |
 | Até o 1º contato | Tempo típico (mediana) entre a chegada e o primeiro clique em uma situação | Mede o clique, não o envio da mensagem |
-| De onde veio | Leads por `campanha` | Sem o campo, entra como "Sem nome de campanha" |
+| Pago ou orgânico | Leads por tráfego | Veja a regra abaixo |
+| De onde veio | Leads pela mesma origem do filtro da lista: Google, Instagram, Facebook ou Site | Sem o campo da rede, um lead do Facebook Lead Ads entra como "Facebook ou Instagram" |
+| Por campanha | Leads por `campanha` | Sem o campo, entra como "Sem nome de campanha" |
 | Por anúncio | Leads por `anuncio` | Só aparece se algum lead do período tiver o campo |
 | Cachorro ou gato | Leads por `especie_do_pet` | Só aparece se algum lead do período tiver o campo |
 | Quem atendeu | Leads pela última pessoa que mudou a situação | Não mostra quem atendeu antes dela |
+| Quem converteu | Os 10 últimos finalizados do período, com origem, tráfego e quem marcou | A data é a da última mudança no lead |
 
-A busca da lista procura em todos os leads, por nome, telefone ou e-mail, mesmo com uma aba aberta. O botão "Filtros" separa os leads por origem, com a mesma regra da logo mostrada na linha. A lista em `/leads` tem quatro situações: Novo, Em contato, Virou cliente e Sem interesse. Os novos ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome com o telefone, anúncio, o próximo passo a origem em selos redondos e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários, o link "Abrir WhatsApp" e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+O filtro do painel escolhe o período (7, 30 ou 90 dias, ou de/até, com até um ano), a conversão, o tráfego, a origem, a campanha e quem atendeu. Ele muda todos os números da tela, inclusive a comparação com o período anterior e os leads em espera. A lista tem no botão "Filtros" o período, a conversão, o tráfego e a origem.
+
+**Pago ou orgânico:** lead do Facebook Lead Ads conta como pago, porque esse formulário só existe em anúncio. No formulário do site, conta como pago quem chegou com `gclid`, `gbraid`, `wbraid` ou com `utm_medium` de mídia paga (`cpc`, `paid`, `ads` e parecidos). O resto é orgânico, inclusive quem veio de anúncio do Facebook sem `utm_medium`, porque o `fbclid` aparece em qualquer link do Facebook. Lead salvo antes dessa regra e cookie antigo do site contam como orgânico no formulário do site.
+
+**Conversão:** "Converteu" é Finalizado, "Ainda não converteu" é Esperando ou Processando e "Não converteu" é Sem interesse.
+
+A busca da lista procura em todos os leads, por nome, telefone ou e-mail, mesmo com uma aba aberta. O botão "Filtros" separa os leads por origem, com a mesma regra da logo mostrada na linha. A lista em `/leads` tem quatro situações: Esperando, Processando, Finalizado (virou cliente) e Sem interesse (não virou cliente), e cada linha tem um seletor para a equipe escolher qualquer uma; nada muda de situação sozinho. Os que esperam ficam no topo, e o "Esperando" muda de cor a partir de 1 hora e de novo a partir de 24 horas. A linha mostra número, datas, nome com o telefone, anúncio, o próximo passo a origem em selos redondos e a situação pela cor do ponto. Ao clicar em um lead, abrem a rede e o anúncio de origem, os dados do formulário, quem atendeu, os horários, o link "Abrir WhatsApp" e os outros botões: "Sem interesse" nos leads ativos e "Reabrir" nos encerrados. "Atendido por" mostra só a última pessoa que mudou a situação, porque o sistema não guarda o histórico. O painel não tem dados de investimento, então o custo por lead continua vindo do Facebook.
+
+## Formulário do WhatsApp do site
+
+O botão verde do site institucional (`views/front/layout.twig`) abre um formulário com nome, telefone e tema. Quando o tema é "Plano de Saúde", o navegador avisa `POST /whatsapp/lead` sem atrasar a abertura do WhatsApp; os outros temas não viram lead. O site lê a origem do cookie `sf_origem` (preenchido por `js/origem.js` a partir de `gclid`, `utm_source` ou do site de onde a pessoa veio) e chama `POST /api/site/v1/leads` com a chave do site, limitado a 5 envios por minuto por IP.
+
+A linha mostra a logo do Google, do Instagram ou do Facebook conforme o cookie. Sem essa informação, como em quem digitou o endereço, a origem fica "Site". Se a gestão estiver fora do ar, a conversa abre mesmo assim e o site registra só o código do erro no log, sem dados da pessoa.
 
 ## Acesso
 
@@ -224,7 +239,7 @@ Sem `LEADS_WEBHOOK_TOKEN`, todo envio recebe 404. Depois de mudar o `.env`, reca
 | `campaign_name`, `ad_name` e `form_name` disputam a mesma coluna | Só o primeiro é guardado | Testado localmente |
 | Dois envios simultâneos com o mesmo id novo | O índice único deve fazer o segundo responder 500 | Leitura do código |
 | Token na URL, sem assinatura | Fica no `access.log`; se vazar, permite gravar leads falsos até ser trocado aqui e no Pluga | Leitura do código |
-| "Virou cliente" não cria cliente nem proposta | A conversão do painel é informada à mão | Leitura do código |
+| "Finalizado" não cria cliente nem proposta | A conversão do painel é informada à mão | Leitura do código |
 
 ### Arquivos
 

@@ -9,8 +9,8 @@
     try { var v = decodeURIComponent(m[1]).split('|'); return { source: v[0], campaign: v[1] || '' }; } catch (e) { return null; }
   }
 
-  function write(source, campaign) {
-    document.cookie = COOKIE + '=' + encodeURIComponent(source + '|' + campaign) + ';max-age=' + 30 * 86400 + ';path=/;SameSite=Lax' + (location.protocol === 'https:' ? ';Secure' : '');
+  function write(source, campaign, paid) {
+    document.cookie = COOKIE + '=' + encodeURIComponent(source + '|' + campaign.replace(/\|/g, ' ') + '|' + (paid ? '1' : '0')) + ';max-age=' + 30 * 86400 + ';path=/;SameSite=Lax' + (location.protocol === 'https:' ? ';Secure' : '');
   }
 
   // Valores aceitos pelo sistema: google, instagram, facebook ou other.
@@ -26,12 +26,15 @@
   var host = '';
   try { host = new URL(document.referrer).hostname.replace(/^www\./, ''); } catch (e) {}
   var utm = query.get('utm_source');
+  // Estes códigos só existem em clique de anúncio do Google. O fbclid não serve para isso: o Facebook põe em qualquer link, até de post comum.
+  var googleAd = query.get('gclid') || query.get('gbraid') || query.get('wbraid');
+  var paid = googleAd || /^(cpc|ppc|cpm|cpv|display|sem|retargeting)$|paid|(^|[_-])ads?$/i.test(query.get('utm_medium') || '');
 
   // Um anúncio ou link marcado sempre vale; quem veio de outro site só vale se ainda não houver origem guardada.
-  if (utm || query.get('gclid') || query.get('fbclid')) {
-    write(utm ? classify(utm) : (query.get('gclid') ? 'google' : 'facebook'), (query.get('utm_campaign') || '').slice(0, 120));
+  if (utm || googleAd || query.get('fbclid')) {
+    write(utm ? classify(utm) : (googleAd ? 'google' : 'facebook'), (query.get('utm_campaign') || '').slice(0, 120), paid);
   } else if (host && host !== location.hostname.replace(/^www\./, '') && !read()) {
-    write(classify(host), '');
+    write(classify(host), '', false);
   }
 
   function fill() {

@@ -4,7 +4,12 @@ namespace App\Models;
 
 class Lead extends DomainModel
 {
-    public const STATUSES = ['new' => 'Novo', 'contacted' => 'Em contato', 'converted' => 'Virou cliente', 'lost' => 'Sem interesse'];
+    public const STATUSES = ['new' => 'Esperando', 'contacted' => 'Processando', 'converted' => 'Finalizado', 'lost' => 'Sem interesse'];
+
+    /** Finalizado é quem virou cliente; Sem interesse é quem não virou. */
+    public const CONVERSIONS = ['Converteu' => ['converted'], 'Ainda não converteu' => ['new', 'contacted'], 'Não converteu' => ['lost']];
+
+    public const TRAFFIC = ['Pago', 'Orgânico'];
 
     /** Campos de "extra" em que o Pluga pode mandar a rede de origem. */
     public const CHANNEL_FIELDS = ['plataforma', 'platform', 'origem', 'canal', 'rede_social'];
@@ -27,6 +32,17 @@ class Lead extends DomainModel
         }
         // O marketing escreve o nome em blocos: "[Plano de Saúde] - [20,00/dia] - [Feed IG]".
         return preg_replace('/\]\s*-\s*\[/u', ' · ', trim((string) $this->campaign, "[] \t")) ?: 'Anúncio';
+    }
+
+    public function conversion(): string
+    {
+        return collect(self::CONVERSIONS)->search(fn ($statuses) => in_array($this->status, $statuses, true)) ?: 'Ainda não converteu';
+    }
+
+    /** Formulário do Facebook Lead Ads só existe em anúncio. Só o formulário do site pode ser orgânico: ele traz o que o cookie viu (gclid ou utm_medium de mídia paga). */
+    public function traffic(): string
+    {
+        return $this->source !== 'site_whatsapp' || ($this->extra['trafego'] ?? null) === 'pago' ? 'Pago' : 'Orgânico';
     }
 
     /** Rede de onde o lead veio. Pode chegar como sigla ("ig", "fb"); sem o campo fica vazio, porque o anúncio pode ter rodado nas duas redes. */

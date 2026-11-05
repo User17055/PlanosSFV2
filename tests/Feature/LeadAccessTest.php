@@ -93,18 +93,67 @@ class LeadAccessTest extends TestCase
         $page->assertSeeInOrder(['Esperando há mais tempo', 'Espera Muito', 'Espera Pouco'])->assertDontSee('Já Chamada')->assertSee('+100% sobre os 30 dias anteriores');
     }
 
-    public function test_list_shows_only_the_next_step_of_each_lead(): void
+    public function test_list_offers_every_status_on_each_lead(): void
     {
         $lead = $this->lead(['external_id' => 'p1', 'campaign' => '120253596157660216', 'extra' => ['anuncio' => 'Plano Outubro', 'especie_do_pet' => 'cachorro']]);
         $list = fn () => $this->actingAs($this->attendant)->get(route('leads.index'));
 
         // O nome do anúncio diz mais que o número da campanha.
         $list()->assertSee('Esperando')->assertSee('Cachorro')->assertSee('Plano Outubro')->assertDontSee('Campanha nº')
-            ->assertSee('Abrir WhatsApp</a>', false)->assertDontSee('assets/brand/whatsapp', false)->assertSee('Já chamei</button>', false)->assertDontSee('Virou cliente</button>', false);
+            ->assertSee('Abrir WhatsApp</a>', false)->assertDontSee('assets/brand/whatsapp', false)
+            ->assertSeeInOrder(['Esperando</option>', 'Processando</option>', 'Finalizado</option>', 'Sem interesse</option>'], false)->assertSee('value="new" selected', false);
         $lead->update(['status' => 'contacted']);
-        $list()->assertSee('Virou cliente</button>', false)->assertSee('Sem interesse</button>', false)->assertDontSee('Já chamei</button>', false);
-        $lead->update(['status' => 'converted']);
-        $list()->assertSee('Reabrir</button>', false)->assertDontSee('Sem interesse</button>', false);
+        $list()->assertSee('value="contacted" selected', false);
+    }
+
+    public function test_panel_filters_change_every_number(): void
+    {
+        $this->lead(['name' => 'Paga Google', 'external_id' => 'f1', 'status' => 'converted', 'handled_by' => $this->attendant->id, 'extra' => ['plataforma' => 'google']]);
+        $this->lead(['name' => 'Organica Site', 'external_id' => 'f2', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'site', 'trafego' => 'organico']]);
+        $old = $this->lead(['name' => 'Organica Antiga', 'external_id' => 'f3', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'google', 'trafego' => 'organico']]);
+        $old->forceFill(['created_at' => now()->subDays(20)])->saveQuietly();
+        $panel = fn (array $filters = []) => $this->actingAs($this->attendant)->get(route('leads.dashboard', $filters))->assertOk();
+        $total = fn (int $expected) => fn ($totals) => $totals['total'] === $expected;
+
+        $panel()->assertViewHas('totals', $total(3))->assertViewHas('waitingTotal', 2)->assertSee('Quem converteu');
+        $panel(['trafego' => 'Pago'])->assertViewHas('totals', $total(1))->assertViewHas('waitingTotal', 0)->assertSee('Paga Google')->assertSee('Ana Atendimento');
+        $panel(['trafego' => 'Orgânico'])->assertViewHas('totals', $total(2))->assertViewHas('waitingTotal', 2)->assertDontSee('Quem converteu');
+        $panel(['origem' => 'Google', 'trafego' => 'Orgânico'])->assertViewHas('totals', $total(1))->assertViewHas('waitingTotal', 1);
+        $panel(['conversao' => 'Ainda não converteu'])->assertViewHas('totals', $total(2));
+        $panel(['responsavel' => 'Ana Atendimento'])->assertViewHas('totals', $total(1));
+        $panel(['de' => now()->subDays(25)->format('Y-m-d'), 'ate' => now()->subDays(10)->format('Y-m-d')])->assertViewHas('totals', $total(1))->assertViewHas('days', 16)->assertViewHas('endsToday', false);
+        // Datas invertidas valem como período, e um filtro sem lead continua aparecendo como escolhido.
+        $panel(['de' => now()->subDays(10)->format('Y-m-d'), 'ate' => now()->subDays(25)->format('Y-m-d')])->assertViewHas('totals', $total(1));
+        $panel(['campanha' => 'Campanha que sumiu'])->assertViewHas('totals', $total(0))->assertSee('Nenhum lead com esses filtros.')->assertSee('<option value="Campanha que sumiu" selected>', false);
+    }
+
+    public function test_list_filters_by_period_conversion_and_traffic(): void
+    {
+        $this->lead(['name' => 'Lead Esperando', 'external_id' => 'g1', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'google', 'trafego' => 'organico']]);
+        $this->lead(['name' => 'Lead Processando', 'external_id' => 'g2', 'status' => 'contacted']);
+        $this->lead(['name' => 'Lead Finalizado', 'external_id' => 'g3', 'status' => 'converted']);
+        $lost = $this->lead(['name' => 'Lead Perdido', 'external_id' => 'g4', 'status' => 'lost']);
+        $lost->forceFill(['created_at' => now()->subDays(20)])->saveQuietly();
+        $list = fn (array $filters) => $this->actingAs($this->attendant)->get(route('leads.index', $filters))->assertOk();
+
+        $list(['conversao' => 'Ainda não converteu'])->assertSee('Lead Esperando')->assertSee('Lead Processando')->assertDontSee('Lead Finalizado')->assertDontSee('Lead Perdido')->assertSee('limpar filtros');
+        $list(['trafego' => 'Orgânico'])->assertSee('Lead Esperando')->assertDontSee('Lead Processando');
+        $list(['dias' => 7])->assertSee('Lead Finalizado')->assertDontSee('Lead Perdido');
+        $list(['de' => now()->subDays(25)->format('Y-m-d'), 'ate' => now()->subDays(15)->format('Y-m-d')])->assertSee('Lead Perdido')->assertDontSee('Lead Finalizado');
+        // A situação e a busca somam com os filtros, e os links mantêm o que já foi escolhido.
+        $list(['conversao' => 'Ainda não converteu', 'situacao' => 'contacted'])->assertSee('Lead Processando')->assertDontSee('Lead Esperando');
+        $list(['trafego' => 'Pago', 'dias' => 7])->assertSee('situacao=new&amp;dias=7&amp;trafego=Pago', false);
+        $this->actingAs($this->attendant)->get(route('leads.index', ['de' => 'ontem']))->assertSessionHasErrors('de');
+    }
+
+    public function test_going_back_to_waiting_never_counts_as_first_contact(): void
+    {
+        $lead = $this->lead();
+        $this->actingAs($this->attendant)->post(route('leads.update', $lead), ['status' => 'new'])->assertRedirect();
+        $this->assertNull($lead->fresh()->contacted_at);
+        $this->actingAs($this->attendant)->post(route('leads.update', $lead), ['status' => 'lost'])->assertRedirect();
+        $this->assertSame('lost', $lead->fresh()->status);
+        $this->assertNotNull($lead->fresh()->contacted_at);
     }
 
     public function test_lead_data_shows_where_it_came_from_and_who_handled_it(): void

@@ -68,7 +68,7 @@
     opened.forEach(id => show(id, true));
     if (!row) return;
     const again = root.querySelector(`[data-lead-id="${row.dataset.leadId}"]`);
-    [...(again?.querySelectorAll('a,button') ?? [])].find(item => nameOf(item) === label)?.focus({ preventScroll: true });
+    [...(again?.querySelectorAll('a,button,select') ?? [])].find(item => nameOf(item) === label)?.focus({ preventScroll: true });
   };
 
   // Devolve false quando a resposta não é esta tela (a sessão acabou e veio o login).
@@ -121,7 +121,10 @@
   };
   const seen = () => { unseen = 0; document.title = pageTitle; };
 
-  // Botões da tela (Já chamei, Virou cliente...): salvam sem recarregar nem perder a posição na lista.
+  // Trocar a situação na linha já salva, pelo mesmo caminho dos botões.
+  document.addEventListener('change', event => { if (event.target.matches('[data-lead-status]')) event.target.form.requestSubmit(); });
+
+  // Botões e situação da linha: salvam sem recarregar nem perder a posição na lista.
   document.addEventListener('submit', async event => {
     const form = event.target;
     if (!root.contains(form) || form.method !== 'post') return;
@@ -138,6 +141,7 @@
       setState(state === 'ended' ? 'ended' : 'live');
     } catch {
       buttons.forEach(button => { button.disabled = false; });
+      form.reset();
       toast('Não foi possível salvar. Recarregue a página e tente de novo.');
     }
   });
