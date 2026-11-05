@@ -50,10 +50,13 @@ class DigisacClient
         return $body;
     }
 
-    public function record(DigisacConnection $connection, string $path): array
+    /** Conferido na API real em 2026-11-05: GET users/{id} e services/{id} não devolvem o registro, então a busca vai pela listagem e confere o id exato. */
+    public function record(DigisacConnection $connection, string $resource, string $id): array
     {
-        $body = $this->request($connection, 'GET', $path);
-        return isset($body['data']) && is_array($body['data']) ? $body['data'] : $body;
+        foreach (self::rows($this->request($connection, 'GET', $resource, ['where[id]' => $id, 'perPage' => 1])) as $row) {
+            if (is_array($row) && (string) ($row['id'] ?? '') === $id) return $row;
+        }
+        return [];
     }
 
     public static function rows(array $body): array

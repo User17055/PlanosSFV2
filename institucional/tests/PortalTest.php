@@ -34,6 +34,7 @@ class PortalFakeApi extends PortalApi
         if ($path==='proposals')return new PortalResult(201,['id'=>1]);
         if ($path==='invoices/1/payment')return new PortalResult(200,['url'=>'https://app.vindi.com.br/bills/1']);
         if ($path==='logout')return new PortalResult(200,['ok'=>true]);
+        if ($path==='attribution-preview')return new PortalResult(200,['referrer'=>($data['attribution_ref']??'')==='Ref+Cifrada='?'Vendedora Teste':null]);
         return new PortalResult(200,['message'=>'Concluído.']);
     }
 }
@@ -111,6 +112,30 @@ class PortalTest extends TestCase
         $this->api->unavailable=true;
         $this->browser->request('POST','/whatsapp/lead',['nome'=>'Maria','telefone'=>'(18) 99999-0000']);
         self::assertSame(204,$this->browser->getResponse()->getStatusCode());
+    }
+
+    public function test_registration_link_shows_who_referred_and_forgot_password_goes_to_management(): void
+    {
+        $this->browser->request('GET','/contratar/SF-ESS?ref=Ref%2BCifrada%3D');
+        self::assertStringContainsString('Indicado por',$this->browser->getResponse()->getContent());
+        self::assertStringContainsString('Vendedora Teste',$this->browser->getResponse()->getContent());
+        self::assertStringNotContainsString('name="referrer_name"',$this->browser->getResponse()->getContent());
+        $this->browser->request('GET','/area-do-cliente/esqueci-senha');
+        self::assertSame('https://gestao.test/esqueci-senha',$this->browser->getResponse()->headers->get('Location'));
+    }
+
+    public function test_registration_link_reference_reaches_the_management_signup_once(): void
+    {
+        $csrf=$this->csrf('/contratar/SF-ESS?ref=Ref%2BCifrada%3D');
+        $this->browser->request('POST','/contratar/SF-ESS',['_token'=>$csrf,'name'=>'Tutor','password'=>'SecretPassword@2026']);
+        $register=array_values(array_filter($this->api->calls,fn($call)=>$call['path']==='register'));
+        self::assertSame('Ref+Cifrada=',$register[0]['data']['attribution_ref']);
+        // Lixo no endereço nunca vai para a gestão.
+        $this->browser->getCookieJar()->clear();
+        $csrf=$this->csrf('/contratar/SF-ESS?ref=%3Cscript%3E');
+        $this->browser->request('POST','/contratar/SF-ESS',['_token'=>$csrf,'name'=>'Tutor','password'=>'SecretPassword@2026']);
+        $register=array_values(array_filter($this->api->calls,fn($call)=>$call['path']==='register'));
+        self::assertNull(end($register)['data']['attribution_ref']);
     }
 
     public function test_invalid_csrf_never_reaches_management_api(): void

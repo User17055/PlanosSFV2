@@ -50,9 +50,10 @@ class DigisacConnectionController extends Controller
             'api_token' => ($data['api_token'] ?? null) ?: $existing?->api_token,
             'digisac_user_id' => $data['digisac_user_id'], 'service_id' => $data['service_id'],
         ]);
-        $remote = $client->record($connection, 'users/'.rawurlencode($connection->digisac_user_id));
-        $service = $client->record($connection, 'services/'.rawurlencode($connection->service_id));
-        if ((string) ($remote['id'] ?? '') !== $connection->digisac_user_id || empty($remote['active']) || ! empty($remote['archivedAt'])
+        $remote = $client->record($connection, 'users', $connection->digisac_user_id);
+        $service = $client->record($connection, 'services', $connection->service_id);
+        // O usuário do Digisac não tem campo "active": quem foi arquivado ou excluído fica de fora.
+        if ((string) ($remote['id'] ?? '') !== $connection->digisac_user_id || ! empty($remote['archivedAt']) || ! empty($remote['deletedAt'])
             || (string) ($service['id'] ?? '') !== $connection->service_id || ! empty($service['archivedAt'])
             || empty($remote['accountId']) || ($remote['accountId'] !== ($service['accountId'] ?? null))) {
             throw ValidationException::withMessages(['digisac_user_id' => 'Confira o usuário ativo e a conexão: ambos precisam pertencer à mesma conta do Digisac.']);

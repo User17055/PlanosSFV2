@@ -8,6 +8,7 @@ Route::prefix('site/v1')->middleware(SiteGateway::class)->group(function() {
     Route::get('catalog',[Portal::class,'catalog']);
     Route::get('postal/{zip}',\App\Http\Controllers\PostalAddressController::class);
     Route::post('account-check',[Portal::class,'accountCheck']);
+    Route::post('attribution-preview',[Portal::class,'attributionPreview']);
     Route::post('leads',[\App\Http\Controllers\LeadController::class,'fromSite']);
     Route::post('login',[Portal::class,'login']);
     Route::post('register',[Portal::class,'register']);

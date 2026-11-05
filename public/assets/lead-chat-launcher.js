@@ -19,14 +19,25 @@
     setTimeout(done, 400);
   };
   const notify = () => frame.contentWindow?.postMessage({ type: 'sf:lead-chat:visibility', visible: dialog.open && !document.hidden }, location.origin);
-  launcher.addEventListener('click', event => {
-    if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    if (!frame.hasAttribute('src')) frame.src = launcher.href;
+  const show = url => {
+    if (url) frame.src = url;
     if (!dialog.open) dialog.showModal();
     document.documentElement.classList.add('lead-chat-open');
     launcher.setAttribute('aria-expanded', 'true');
     notify();
+  };
+  const plainClick = event => !(event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey);
+  launcher.addEventListener('click', event => {
+    if (!plainClick(event)) return;
+    event.preventDefault();
+    show(frame.hasAttribute('src') ? null : launcher.href);
+  });
+  // "Chat" e "Abrir chat" da lista abrem esta mesma janela, já na conversa, em vez da página sem menu.
+  document.addEventListener('click', event => {
+    const link = event.target.closest?.('a[data-chat-open]');
+    if (!link || !plainClick(event)) return;
+    event.preventDefault();
+    show(link.href);
   });
   dialog.querySelector('[data-chat-minimize]').addEventListener('click', hide);
   // Esc na página também fecha com animação, em vez do fechamento seco do navegador.

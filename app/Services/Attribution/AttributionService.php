@@ -8,7 +8,8 @@ use App\Models\User;
 use App\Services\AccessService;
 use App\Services\Domain\DomainException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\{Crypt, Validator};
 use Illuminate\Support\Str;
 
 class AttributionService
@@ -60,6 +61,38 @@ class AttributionService
         $request->session()->put(self::SESSION_KEY, ['visitor_key' => $visitor, 'first_touch_id' => $first?->id ?? $touch->id, 'last_touch_id' => $touch->id]);
 
         return $touch;
+    }
+
+    /** Leva a origem desta sessão para o cadastro no site, que acontece pela API. Criptografada: o navegador não lê nem altera. */
+    public function handoff(Request $request): string
+    {
+        return Crypt::encryptString(json_encode(['state' => $request->session()->get(self::SESSION_KEY, []), 'at' => time()]));
+    }
+
+    /** Restaura a origem trazida pelo site e devolve o link, se ainda valer. Referência adulterada, de outra chave ou com mais de 30 dias é ignorada: o cadastro segue sem vendedor. */
+    public function resume(Request $request, mixed $handoff): ?MarketingLink
+    {
+        if (! is_string($handoff) || $handoff === '' || strlen($handoff) > 2000 || ! $request->hasSession()) {
+            return null;
+        }
+        try {
+            $data = json_decode(Crypt::decryptString($handoff), true);
+        } catch (DecryptException) {
+            return null;
+        }
+        if (! is_array($data['state'] ?? null) || ($data['at'] ?? 0) < now()->subDays(30)->timestamp) {
+            return null;
+        }
+        $request->session()->put(self::SESSION_KEY, $data['state']);
+        [, $last] = $this->sessionTouches($request);
+        $link = $last?->marketingLink;
+        return $link && $this->links->isUsable($link) ? $link : null;
+    }
+
+    /** Nome mostrado como "Indicado por" no cadastro aberto pelo link: quem indicou, ou quem enviou o link. */
+    public static function referrerLabel(MarketingLink $link): ?string
+    {
+        return $link->referrer_name ?: $link->referrerCustomer?->name ?: $link->owner?->name;
     }
 
     /** HTTP input may declare a source/referrer; ownership and unit always come from authorized server records. */

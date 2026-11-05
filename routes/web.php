@@ -17,6 +17,10 @@ Route::get('/acesso/confirmado/{user}',[AuthController::class,'confirmedAccess']
 Route::middleware('guest')->group(function () {
     Route::get('/entrar',[AuthController::class,'login'])->name('login');
     Route::post('/entrar',[AuthController::class,'authenticate'])->name('authenticate');
+    Route::get('/esqueci-senha',[\App\Http\Controllers\PasswordResetController::class,'request'])->name('password.request');
+    Route::post('/esqueci-senha',[\App\Http\Controllers\PasswordResetController::class,'email'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/redefinir-senha/{token}',[\App\Http\Controllers\PasswordResetController::class,'edit'])->name('password.reset');
+    Route::post('/redefinir-senha',[\App\Http\Controllers\PasswordResetController::class,'update'])->middleware('throttle:10,1')->name('password.update');
     Route::get('/cadastro',[RegistrationController::class,'create'])->name('register');
     Route::post('/cadastro',[RegistrationController::class,'store'])->middleware('throttle:5,1')->name('register.store');
 });

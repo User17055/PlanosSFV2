@@ -14,7 +14,8 @@ O institucional não importa arquivos PHP, templates ou banco da gestão. Comuni
 ## Telas e fluxo
 
 - `/planos-saude/`: conserva o banner e a estrutura visual; obtém nomes, valores e benefícios do catálogo versionado da gestão. Se a API estiver indisponível, mantém o conteúdo informativo do CMS e o contato com a equipe.
-- `/contratar/{code}`: cadastro com plano selecionado, ou escolha de pet para cliente autenticado.
+- `/contratar/{code}`: cadastro com plano selecionado, ou escolha de pet para cliente autenticado. O link de cadastro enviado pela equipe (Links de divulgação) abre esta mesma tela: a gestão manda `?ref=` com a origem criptografada, o site guarda na sessão e a devolve à API em `attribution_ref`, para a venda continuar com quem enviou o link. Nesse cadastro, o site mostra "Indicado por" com o nome vindo da gestão (`attribution-preview`) e esconde os campos de origem e indicação; a API também ignora esses campos quando o link vale.
+- Esqueci a senha: `/area-do-cliente/esqueci-senha` redireciona para `/esqueci-senha` na gestão, que atende equipe e clientes e cria o acesso de quem ainda não tem senha. Os links de redefinição antigos, de `/area-do-cliente/redefinir-senha`, continuam funcionando.
 - `/area-do-cliente`: pets, propostas pendentes, contratos, benefícios/carências e pagamentos.
 - Login, confirmação/reenvio de e-mail, recuperação de senha, cadastro de outro pet e logout.
 - Conferência do PDF autenticado, assinatura pelo titular e geração/recuperação do documento final sem duplicar contratação.

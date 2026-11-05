@@ -217,7 +217,7 @@ class ProposalController extends Controller
             throw ValidationException::withMessages(['document'=>'Este CPF não é o do titular do contrato. Confira os números.']);
         }
         RateLimiter::clear($key);
-        $user=$this->signingUser($proposal->customer);
+        $user=$proposal->customer->accessUser();
         if(!$user) throw ValidationException::withMessages(['document'=>'Não foi possível abrir o contrato por este link. Fale com a unidade.']);
         Auth::login($user);
         $request->session()->regenerate();
@@ -234,15 +234,6 @@ class ProposalController extends Controller
     }
 
     /** A assinatura precisa de um acesso do titular. Quem não tem ganha um com senha aleatória, que só é usado pelo link. */
-    private function signingUser(Customer $customer): ?User
-    {
-        if(!$customer->active) return null;
-        $user=User::where('customer_id',$customer->id)->where('role','customer')->first();
-        if($user) return $user->active ? $user : null;
-        if(!filter_var($customer->email,FILTER_VALIDATE_EMAIL) || User::where('email',$customer->email)->exists()) return null;
-        return User::create(['name'=>$customer->name,'email'=>$customer->email,'password'=>Str::random(40),'role'=>'customer','customer_id'=>$customer->id,'active'=>true]);
-    }
-
     public function accept(Request $request, Proposal $proposal, ProposalService $service, ContractService $contracts, SigningEvidence $signing)
     {
         $this->access->record($request->user(),$proposal);

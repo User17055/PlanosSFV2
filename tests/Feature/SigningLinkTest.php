@@ -99,7 +99,7 @@ class SigningLinkTest extends TestCase
         $this->post(route('sales.proposal.confirm', $token), ['document' => self::CPF]);
         $this->get(route('portal'))->assertRedirect(route('login'));
         $this->assertGuest();
-        $this->get(route('login'))->assertSee('entre com sua senha')->assertSee('/area-do-cliente/esqueci-senha');
+        $this->get(route('login'))->assertSee('entre com sua senha')->assertSee(route('password.request'), false);
 
         $this->post(route('sales.proposal.confirm', $token), ['document' => self::CPF]);
         $this->post(route('proposals.cancel', $proposal))->assertForbidden();

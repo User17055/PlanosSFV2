@@ -17,6 +17,8 @@ class PortalController
         $action=(string)$r->attributes->get('portal_action');
         // O login do cliente fica na gestão; esta página não existe mais no site.
         if ($action==='login') return new RedirectResponse($this->api->managementUrl().'/entrar',302);
+        // Criar ou recuperar senha também fica na gestão, com o mesmo visual do login. Links de e-mail antigos (reset) continuam funcionando aqui.
+        if ($action==='forgot') return new RedirectResponse($this->api->managementUrl().'/esqueci-senha',302);
         if (!$r->isMethodSafe() && !$this->csrf->isTokenValid(new CsrfToken('portal_action',(string)$r->request->get('_token')))) {
             return $this->page($r,'error',['message'=>'Sua sessão expirou. Recarregue a página e tente novamente.'],419);
         }
@@ -148,12 +150,14 @@ class PortalController
         throw new PortalApiException(new PortalResult(404,['message'=>'Este plano não está disponível para contratação.']));
     }
 
-    private function signup(Request $r,?array $offer=null): Response
+    private function signup(Request $r,?array $offer=null,?string $referral=null): Response
     {
         if ($r->getSession()->get('portal_token')) return $this->redirect('portal_home');
         if ($r->isMethod('POST')) {
             $data=$r->request->all(); unset($data['_token']);
             $data['product_version_id']=empty($offer['informational'])?($offer['id']??null):null;
+            $data['attribution_ref']=$r->getSession()->get('portal_attribution_ref');
+            if ($data['attribution_ref']) unset($data['acquisition_source'],$data['referrer_name'],$data['campaign_name']);
             try {
                 $result=$this->call($r,'POST','register',$data,false)->data;
             } catch (PortalApiException $e) {
@@ -163,19 +167,23 @@ class PortalController
             }
             $this->establish($r,$result);
             $r->getSession()->remove('portal_plan_code');
+            $r->getSession()->remove('portal_attribution_ref');
             if (!empty($result['proposal_id']))$r->getSession()->set('portal_pending_proposal',$result['proposal_id']);
             return !empty($result['proposal_id'])
                 ?$this->redirect('portal_proposal',['id'=>$result['proposal_id']]):$this->redirect('portal_home');
         }
-        return $this->page($r,'signup',['offer'=>$offer]);
+        return $this->page($r,'signup',['offer'=>$offer,'referral'=>$referral]);
     }
 
     private function subscribe(Request $r): Response
     {
         $code=(string)$r->attributes->get('code');
         $offer=$this->offer($r,$code);
+        // Link de cadastro enviado pela equipe: a gestão manda a origem criptografada, devolvida a ela no cadastro para a venda ficar com quem enviou.
+        $ref=$r->query->get('ref');
+        if (is_string($ref) && $ref!=='' && strlen($ref)<=2000 && preg_match('~^[A-Za-z0-9+/=_-]+$~D',$ref)) $r->getSession()->set('portal_attribution_ref',$ref);
         $r->getSession()->set('portal_plan_code',$code);
-        if (!$r->getSession()->get('portal_token')) return $this->signup($r,$offer);
+        if (!$r->getSession()->get('portal_token')) return $this->signup($r,$offer,$this->referral($r));
         $account=$this->call($r,'GET','me')->data;
         if (!empty($offer['informational'])) {
             $r->getSession()->remove('portal_plan_code');
@@ -185,17 +193,28 @@ class PortalController
         if ($r->isMethod('POST')) {
             $pet=(int)$r->request->get('pet_id');
             foreach($account['proposals'] as $p) if((int)$p['pet_id']===$pet && (int)$p['version_id']===(int)$offer['id']) return $this->redirect('portal_proposal',['id'=>$p['id']]);
-            $p=$this->call($r,'POST','proposals',['pet_id'=>$pet,'product_version_id'=>$offer['id']])->data;
+            $p=$this->call($r,'POST','proposals',['pet_id'=>$pet,'product_version_id'=>$offer['id'],'attribution_ref'=>$r->getSession()->get('portal_attribution_ref')])->data;
             $r->getSession()->remove('portal_plan_code');
+            $r->getSession()->remove('portal_attribution_ref');
             return $this->redirect('portal_proposal',['id'=>$p['id']]);
         }
         return $this->page($r,'choose-pet',['offer'=>$offer,'account'=>$account]);
     }
 
+    // Nome de quem indicou, para mostrar fixo no cadastro aberto pelo link. Sem resposta da gestão, o cadastro segue sem o aviso.
+    private function referral(Request $r): ?string
+    {
+        $ref=$r->getSession()->get('portal_attribution_ref');
+        if (!$ref || $r->isMethod('POST')) return null;
+        try { $name=$this->call($r,'POST','attribution-preview',['attribution_ref'=>$ref],false)->data['referrer']??null; }
+        catch(PortalApiException) { return null; }
+        return is_string($name) && $name!=='' ? mb_substr($name,0,120) : null;
+    }
+
     private function logout(Request $r): Response
     {
         try { $this->call($r,'POST','logout'); } catch(PortalApiException) {}
-        foreach(['portal_token','portal_pending_proposal','portal_plan_code','portal_old'] as $key)$r->getSession()->remove($key);
+        foreach(['portal_token','portal_pending_proposal','portal_plan_code','portal_old','portal_attribution_ref'] as $key)$r->getSession()->remove($key);
         $r->getSession()->migrate(true);
         return $this->redirect('portal_login');
     }

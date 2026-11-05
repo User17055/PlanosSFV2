@@ -70,6 +70,11 @@ class MarketingLinkController extends Controller
         $request->session()->put('sf_skip_attribution_landing',true);
         if($link->product_version_id) $request->session()->put('sf_suggested_product_version_id',$link->product_version_id);
         if ($link->self_registration && $link->product_version_id && (!$request->user() || $request->user()->role==='customer')) {
+            // Sem login, o cadastro é o mesmo de Planos → Contratar no site. A origem vai junto, para a venda continuar com quem mandou o link.
+            $code=$link->productVersion?->product?->code;
+            if (!$request->user() && config('site_portal.enabled') && $code) {
+                return redirect()->away(config('site_portal.public_url').'/contratar/'.rawurlencode($code).'?ref='.rawurlencode($attribution->handoff($request)));
+            }
             return redirect()->route($request->user() ? 'proposals.create' : 'register', ['product_version_id'=>$link->product_version_id]);
         }
         return redirect()->route('sales',array_filter(['product_version_id'=>$link->product_version_id]));

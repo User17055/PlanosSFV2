@@ -37,6 +37,13 @@ class PortalApiController extends Controller
         ])]);
     }
 
+    // Quem aparece como "Indicado por" no cadastro aberto pelo link de cadastro.
+    public function attributionPreview(Request $r)
+    {
+        $link=app(\App\Services\Attribution\AttributionService::class)->resume($r,$r->input('attribution_ref'));
+        return response()->json(['referrer'=>$link?\App\Services\Attribution\AttributionService::referrerLabel($link):null]);
+    }
+
     // Pergunta do cadastro: já existe acesso com este CPF ou e-mail? O gateway limita por IP para não servir de consulta em massa.
     public function accountCheck(Request $r)
     {
@@ -56,6 +63,7 @@ class PortalApiController extends Controller
 
     public function register(Request $r,CustomerController $customers,ProposalService $proposals)
     {
+        $link=app(\App\Services\Attribution\AttributionService::class)->resume($r,$r->input('attribution_ref'));
         $r->merge(['document'=>preg_replace('/\D/','',(string)$r->input('document'))]);
         // Someone who already has an account is sent to the login instead of failing the signup.
         if ($existing=$this->existingAccount((string)$r->input('document'),trim((string)$r->input('email')))) return response()->json($existing,409);
@@ -82,14 +90,15 @@ class PortalApiController extends Controller
         $version=empty($data['product_version_id'])?null:$this->offered((int)$data['product_version_id']);
         $unit=Franchise::where('code','CENTRAL')->where('active',true)->firstOrFail();
         $proposalIds=[];
-        $user=DB::transaction(function() use($r,$data,$petList,$unit,$version,$proposals,&$proposalIds) {
+        $user=DB::transaction(function() use($r,$data,$petList,$unit,$version,$proposals,$link,&$proposalIds) {
             $customer=Customer::create(['name'=>$data['name'],'document'=>$data['document'],'rg'=>$data['rg']??null,'email'=>$data['email'],
                 'phone'=>$data['phone'],'address'=>CustomerAddress::from($data),'originating_franchise_id'=>$unit->id,'contact_verified_at'=>config('plans.demo')?now():null]);
             $createdPets=array_map(fn($p)=>Pet::create(['customer_id'=>$customer->id,'name'=>$p['name'],'species'=>$p['species'],'birth_date'=>$p['birth_date'],
                 'breed'=>$p['breed']??null,'color'=>$p['color']??null,'sex'=>$p['sex']??'unknown']),$petList);
             $user=User::create(['name'=>$data['name'],'email'=>$data['email'],'password'=>$data['password'],'role'=>'customer',
                 'customer_id'=>$customer->id,'active'=>true,'email_verified_at'=>config('plans.demo')?now():null]);
-            $attribution=app(CustomerAcquisition::class)->record($customer,$user,$r,$data);
+            // Pelo link, a origem e quem indicou vêm dele: o que o cliente digitar nesses campos não vale.
+            $attribution=app(CustomerAcquisition::class)->record($customer,$user,$r,$link?array_diff_key($data,array_flip(['acquisition_source','referrer_name','referrer_customer_id','campaign_name'])):$data);
             if ($version) foreach($createdPets as $pet) $proposalIds[]=$proposals->create(['customer_id'=>$customer->id,'pet_id'=>$pet->id,'product_version_id'=>$version->id,
                 'originating_franchise_id'=>$unit->id,'channel'=>'site','prefill_by'=>'customer','signature_method'=>'digital'],$user,$attribution)->id;
             Audit::record('portal.customer_registered',$customer,$user);
@@ -254,6 +263,7 @@ class PortalApiController extends Controller
         $pet=$r->user()->customer->pets()->findOrFail($data['pet_id']);
         $version=$this->offered($data['product_version_id']);
         $unit=Franchise::where('code','CENTRAL')->where('active',true)->firstOrFail();
+        app(\App\Services\Attribution\AttributionService::class)->resume($r,$r->input('attribution_ref'));
         $attribution=app(\App\Services\Attribution\AttributionService::class)->proposalData($r,[],$r->user());
         $p=$service->create(['customer_id'=>$r->user()->customer_id,'pet_id'=>$pet->id,'product_version_id'=>$version->id,
             'originating_franchise_id'=>$unit->id,'channel'=>'site','prefill_by'=>'customer','signature_method'=>'digital'],$r->user(),$attribution);

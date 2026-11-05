@@ -73,7 +73,7 @@ class LeadChatTest extends TestCase
     {
         $this->actingAs($this->ana)->get(route('leads.index'))->assertOk()
             ->assertSee('data-chat-launcher', false)->assertSee('data-chat-frame', false)
-            ->assertDontSee(route('leads.chat.show', $this->mine), false);
+            ->assertSee('href="'.route('leads.chat.show', $this->mine).'" data-chat-open', false);
         $this->get(route('leads.chat.index'))->assertOk()->assertDontSee('data-chat-launcher', false)
             ->assertDontSee('class="sidebar', false)->assertSee('chat-window-content');
         $finance = $this->user('Financeiro', 'finance');
@@ -246,8 +246,9 @@ class LeadChatTest extends TestCase
     public function test_token_is_encrypted_hidden_and_validated_without_sending_a_message(): void
     {
         Http::fake([
-            $this->base.'/api/v1/users/remote-ana' => Http::response(['id' => 'remote-ana', 'name' => 'Ana Digisac', 'email' => $this->ana->email, 'active' => true, 'accountId' => 'account-1']),
-            $this->base.'/api/v1/services/service-1' => Http::response(['id' => 'service-1', 'accountId' => 'account-1']),
+            // Formato real da API: listagem paginada em "data", sem campo "active".
+            $this->base.'/api/v1/users*' => Http::response(['data' => [['id' => 'remote-ana', 'name' => 'Ana Digisac', 'email' => $this->ana->email, 'archivedAt' => null, 'deletedAt' => null, 'accountId' => 'account-1']], 'total' => 1]),
+            $this->base.'/api/v1/services*' => Http::response(['data' => [['id' => 'service-1', 'name' => 'São Francisco', 'type' => 'whatsapp', 'archivedAt' => null, 'accountId' => 'account-1']], 'total' => 1]),
         ]);
         $payload = ['base_url' => $this->base, 'digisac_user_id' => 'remote-ana', 'service_id' => 'service-1', 'api_token' => 'muito-secreto'];
         $this->actingAs($this->ana)->post(route('leads.chat.connection.save'), $payload)->assertRedirect();
@@ -260,6 +261,21 @@ class LeadChatTest extends TestCase
         $this->post(route('leads.chat.connection.save'), array_replace($payload, ['api_token' => '']))->assertRedirect();
         $this->assertSame('muito-secreto', $connection->fresh()->api_token);
         Http::assertNotSent(fn (HttpRequest $request) => $request->method() === 'POST');
+        Http::assertSent(fn (HttpRequest $request) => str_contains(urldecode($request->url()), '/api/v1/users?where[id]=remote-ana'));
+        Http::assertSent(fn (HttpRequest $request) => str_contains(urldecode($request->url()), '/api/v1/services?where[id]=service-1'));
+    }
+
+    public function test_archived_digisac_user_or_unknown_ids_are_refused(): void
+    {
+        $payload = ['base_url' => $this->base, 'digisac_user_id' => 'remote-ana', 'service_id' => 'service-1', 'api_token' => 'segredo'];
+        $service = Http::response(['data' => [['id' => 'service-1', 'archivedAt' => null, 'accountId' => 'account-1']]]);
+        Http::fakeSequence($this->base.'/api/v1/users*')
+            ->push(['data' => [['id' => 'remote-ana', 'email' => $this->ana->email, 'archivedAt' => '2026-10-01T10:00:00Z', 'accountId' => 'account-1']]])
+            ->push(['data' => []]);
+        Http::fake([$this->base.'/api/v1/services*' => $service]);
+        $this->actingAs($this->ana)->post(route('leads.chat.connection.save'), $payload)->assertSessionHasErrors('digisac_user_id');
+        $this->post(route('leads.chat.connection.save'), $payload)->assertSessionHasErrors('digisac_user_id');
+        $this->assertDatabaseCount('digisac_connections', 0);
     }
 
     public function test_invalid_settings_never_flash_tokens_or_accept_another_users_connection(): void
@@ -279,8 +295,8 @@ class LeadChatTest extends TestCase
     public function test_remote_identity_must_match_email_unless_mapping_is_made_by_admin(): void
     {
         Http::fake([
-            $this->base.'/api/v1/users/remote-bia' => Http::response(['id' => 'remote-bia', 'email' => $this->bia->email, 'active' => true, 'accountId' => 'a1']),
-            $this->base.'/api/v1/services/service-1' => Http::response(['id' => 'service-1', 'accountId' => 'a1']),
+            $this->base.'/api/v1/users*' => Http::response(['data' => [['id' => 'remote-bia', 'email' => $this->bia->email, 'archivedAt' => null, 'accountId' => 'a1']]]),
+            $this->base.'/api/v1/services*' => Http::response(['data' => [['id' => 'service-1', 'archivedAt' => null, 'accountId' => 'a1']]]),
         ]);
         $payload = ['base_url' => $this->base, 'api_token' => 'segredo', 'digisac_user_id' => 'remote-bia', 'service_id' => 'service-1'];
         $this->actingAs($this->ana)->post(route('leads.chat.connection.save'), $payload)->assertSessionHasErrors('digisac_user_id')->assertSessionMissing('_old_input.api_token');

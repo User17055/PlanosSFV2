@@ -34,6 +34,8 @@ class SelfRegistrationLinkTest extends TestCase
         $this->get(route('proposals.registration-link',$link))->assertOk()->assertSee('Envie o link para o tutor');
         $this->assertSame($before,[Customer::count(),Pet::count(),Proposal::count()]);
         $this->post(route('logout'));
+        // Sem o site ligado, o cadastro continua sendo o da gestão.
+        config(['site_portal.enabled'=>false]);
         $this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))
             ->assertRedirect(route('register',['product_version_id'=>$version->id]));
         $this->get(route('register',['product_version_id'=>$version->id]))->assertOk()->assertSee('Ler contrato antes de continuar');
@@ -50,6 +52,43 @@ class SelfRegistrationLinkTest extends TestCase
         $this->assertSame($staff->id,$proposal->link_owner_id);
         $this->assertSame($staff->franchise_id,$proposal->originating_franchise_id);
         $this->assertNull($proposal->accepted_at);
+    }
+
+    public function test_registration_link_opens_the_site_signup_and_keeps_the_seller(): void
+    {
+        $key=str_repeat('test-site-key-',3);
+        config(['site_portal.enabled'=>true,'site_portal.key'=>$key,'site_portal.public_url'=>'https://saofrancisco.vet.br']);
+        $staff=User::where('role','sales')->firstOrFail();
+        $version=ProductVersion::where('status','published')->firstOrFail();
+        $this->actingAs($staff)->post(route('proposals.store'),['channel'=>'link','prefill_by'=>'customer','signature_method'=>'digital',
+            'product_version_id'=>$version->id,'originating_franchise_id'=>$staff->franchise_id]);
+        $link=MarketingLink::where('self_registration',true)->sole();
+        $this->post(route('logout'));
+
+        // Mesmo endereço de Planos → Contratar, com a origem criptografada (ilegível no navegador).
+        $target=$this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertRedirect()->headers->get('Location');
+        $prefix='https://saofrancisco.vet.br/contratar/'.$version->product->code.'?ref=';
+        $this->assertStringStartsWith($prefix,$target);
+        $ref=rawurldecode(substr($target,strlen($prefix)));
+        $this->assertStringNotContainsString('visitor_key',base64_decode($ref));
+
+        $data=fn(string $email,string $document,?string $reference)=>['name'=>'Tutor do Site','document'=>$document,'email'=>$email,'phone'=>'18999990000',
+            'street'=>'Rua de teste','number'=>'10','neighborhood'=>'Centro','city'=>'Presidente Prudente','state'=>'SP','zip'=>'19000000',
+            'password'=>'SitePassword@2026','password_confirmation'=>'SitePassword@2026','privacy_accepted'=>1,
+            'pet_name'=>'Lua','pet_species'=>'dog','pet_birth_date'=>'2020-01-01','product_version_id'=>$version->id,'attribution_ref'=>$reference];
+        // O site mostra quem indicou, e o que o cliente digitar como origem ou indicação não substitui o link.
+        $this->postJson('/api/site/v1/attribution-preview',['attribution_ref'=>$ref],['X-Site-Key'=>$key])->assertOk()->assertJson(['referrer'=>$staff->name]);
+        $this->postJson('/api/site/v1/attribution-preview',['attribution_ref'=>'lixo'],['X-Site-Key'=>$key])->assertOk()->assertJson(['referrer'=>null]);
+        $this->postJson('/api/site/v1/register',$data('link.site@example.test','52998224725',$ref)+['acquisition_source'=>'google','referrer_name'=>'Outra Pessoa'],['X-Site-Key'=>$key])->assertCreated();
+        $proposal=Proposal::whereHas('customer',fn($q)=>$q->where('email','link.site@example.test'))->sole();
+        $this->assertSame([$link->id,$staff->id],[$proposal->marketing_link_id,$proposal->link_owner_id]);
+        $this->assertNotSame('Outra Pessoa',$proposal->referrer_name);
+        $this->assertNotSame('google',$proposal->acquisition_source);
+
+        // Referência adulterada não atribui a venda a ninguém, e o cadastro continua.
+        $this->postJson('/api/site/v1/register',$data('sem.vendedor@example.test','11144477735',substr_replace($ref,$ref[40]==='A'?'B':'A',40,1)),['X-Site-Key'=>$key])->assertCreated();
+        $plain=Proposal::whereHas('customer',fn($q)=>$q->where('email','sem.vendedor@example.test'))->sole();
+        $this->assertSame([null,null],[$plain->marketing_link_id,$plain->link_owner_id]);
     }
 
     public function test_seller_prefill_still_requires_existing_tutor_and_pet(): void

@@ -38,4 +38,14 @@ class Customer extends DomainModel
     {
         return $this->belongsTo(Franchise::class, 'originating_franchise_id');
     }
+
+    /** Acesso do titular: o que ele já tem ou um novo, com senha aleatória que ele troca pelo link. Sem e-mail válido ou com e-mail de outra conta, não há acesso. */
+    public function accessUser(): ?User
+    {
+        if (! $this->active) return null;
+        $user = User::where('customer_id', $this->id)->where('role', 'customer')->first();
+        if ($user) return $user->active ? $user : null;
+        if (! filter_var($this->email, FILTER_VALIDATE_EMAIL) || User::where('email', $this->email)->exists()) return null;
+        return User::create(['name' => $this->name, 'email' => $this->email, 'password' => \Illuminate\Support\Str::random(40), 'role' => 'customer', 'customer_id' => $this->id, 'active' => true]);
+    }
 }

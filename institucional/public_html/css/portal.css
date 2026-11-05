@@ -281,3 +281,8 @@ html body .pay-total strong{font-size:36px}
 .pay-steps li.done{color:#3d5a14}.pay-steps li.done span{background:#83ac38}
 .pay-steps li.current{color:#0b1936}.pay-steps li.current span{background:#0b1936;color:#fff}
 .pay-method-pix{color:#2aa699}
+
+/* Cadastro aberto pelo link da equipe: quem indicou fica fixo, sem campo para trocar. */
+.signup-referral{display:flex;flex-direction:column;gap:2px;grid-column:1/-1;padding:14px 16px;border:1px solid #d6e4c4;border-radius:12px;background:#f4f9ee}
+.signup-referral span{font-size:13px;color:#5b6b55}
+.signup-referral strong{font-size:16px;font-weight:600;color:#14264b}
