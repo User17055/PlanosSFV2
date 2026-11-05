@@ -162,20 +162,20 @@ class LeadAccessTest extends TestCase
         $this->lead(['name' => 'Lead Da Bia', 'external_id' => 'o2', 'status' => 'contacted', 'handled_by' => $bia->id]);
         $this->lead(['name' => 'Lead Da Fila', 'external_id' => 'o3']);
 
-        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Fila')->assertDontSee('Lead Da Bia')->assertDontSee('Com quem está')->assertDontSee('Bia Vendas');
-        $this->actingAs($this->attendant)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 2)->assertDontSee('Lead Da Bia')->assertDontSee('Com quem está');
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Fila')->assertDontSee('Lead Da Bia')->assertDontSee('Atendente')->assertDontSee('Bia Vendas');
+        $this->actingAs($this->attendant)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 2)->assertDontSee('Lead Da Bia')->assertDontSee('Atendente');
         // Nem pelo filtro nem pelo endereço direto se chega ao lead de outra pessoa.
         $this->actingAs($this->attendant)->get(route('leads.index', ['responsavel' => 'Bia Vendas']))->assertDontSee('Lead Da Bia');
         $this->actingAs($this->attendant)->post(route('leads.update', Lead::where('name', 'Lead Da Bia')->sole()), ['status' => 'lost'])->assertForbidden();
         $this->assertSame('contacted', Lead::where('name', 'Lead Da Bia')->sole()->status);
 
         foreach ([$this->admin, $this->teammate('Gabi Gestora', 'manager')] as $boss) {
-            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Com quem está')->assertSee('<td class="lead-owner">Bia Vendas</td>', false)->assertSee('<td class="lead-owner">Na fila</td>', false)
+            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Atendente')->assertSee('<td class="lead-owner">Bia Vendas</td>', false)->assertSee('<td class="lead-owner">Na fila</td>', false)
                 // A troca só existe nos dados do lead, com botão e confirmação: a mudança nunca acontece ao mexer no seletor.
-                ->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false)->assertSee('data-confirm="Trocar o responsável deste lead?"', false)
+                ->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false)->assertSee('data-confirm="Trocar o atendente deste lead?"', false)
                 ->assertDontSeeText('data-lead-status name="handled_by"')
-                ->assertSeeInOrder(['<th>Anúncio</th>', '<th>Com quem está</th>', '<th>Situação</th>', 'class="lead-tags"', 'class="lead-owner"', 'class="lead-step"'], false);
-            $this->actingAs($boss)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 3)->assertSee('Com quem está');
+                ->assertSeeInOrder(['<th>Anúncio</th>', '<th>Atendente</th>', '<th>Situação</th>', 'class="lead-tags"', 'class="lead-owner"', 'class="lead-step"'], false);
+            $this->actingAs($boss)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 3)->assertSee('Atendente');
         }
     }
 

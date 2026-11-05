@@ -236,7 +236,7 @@ class LeadController extends Controller
             'endsToday' => $end->isSameDay(now('America/Sao_Paulo')),
             'chosen' => $chosen,
             // O valor escolhido fica na lista mesmo sem lead no período, para o filtro ativo continuar visível.
-            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'entrada' => 'Por onde entrou', 'origem' => 'Origem', 'campanha' => 'Campanha'] + ($seesAll ? ['responsavel' => 'Com quem está'] : []))
+            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'entrada' => 'Por onde entrou', 'origem' => 'Origem', 'campanha' => 'Campanha'] + ($seesAll ? ['responsavel' => 'Atendente'] : []))
                 ->map(fn ($label, $key) => [$label, $inPeriod->toBase()->map($dimensions[$key])->merge(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'entrada' => ['Site', 'Anúncio']][$key] ?? [])->push($chosen[$key] ?? null)->filter()->unique()->sort()->values()]),
             'intake' => $this->intakeStatus($request->user(), $access),
             'totals' => $sum($leads) + ['lost' => $leads->where('status', 'lost')->count()],
