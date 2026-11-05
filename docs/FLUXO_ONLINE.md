@@ -10,4 +10,10 @@ O envio cria tutor, pet, acesso e proposta em uma única transação. Se o pet n
 
 Após salvar, o cliente segue para conferir os dados e o contrato da proposta. Quando a verificação do e-mail é obrigatória, a proposta é mantida na sessão e o link de verificação conduz à revisão do contrato. Esse cadastro não registra aceite, assinatura ou pagamento.
 
+## Assinatura pelo link, sem senha
+
+O link enviado ao tutor (`/convite/{token}`) abre sem login. A pessoa confirma o CPF do titular e chega ao contrato daquela proposta, onde revisa, assina e segue para o pagamento. Essa sessão alcança só o contrato do link: qualquer outra tela pede a senha. Se o titular ainda não tiver acesso, o sistema cria um com senha aleatória, e a pessoa define a própria em "Esqueci ou ainda não tenho senha", quando quiser ver o painel.
+
+Cinco CPFs errados travam o link por 15 minutos. O link deixa de abrir o contrato depois da assinatura, ao vencer ou ao ser substituído. O contrato registra "Identificação: link pessoal enviado ao titular, com confirmação do CPF". Não abre se o titular não tiver e-mail válido ou se o e-mail já pertencer a outro acesso: nesses casos, a unidade corrige o cadastro.
+
 Um CPF já cadastrado não cria outro tutor nem concede acesso ao cadastro existente. O cliente deve entrar com seu acesso ou usar o convite individual autorizado. O cadastro sem plano selecionado continua disponível para criação de acesso; não gera proposta de um produto que o cliente não escolheu.

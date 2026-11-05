@@ -10,6 +10,9 @@ Route::get('/contratar/{code}',[CatalogController::class,'subscribe'])->middlewa
 Route::get('/enderecos/cep/{zip}',\App\Http\Controllers\PostalAddressController::class)->middleware('throttle:30,1')->name('addresses.postal');
 Route::get('/planos/{version}/contrato',[CatalogController::class,'offeredContract'])->middleware('throttle:30,1')->name('sales.contract');
 Route::get('/l/{token}',[\App\Http\Controllers\MarketingLinkController::class,'visit'])->middleware('throttle:60,1')->name('attribution_links.visit');
+// O link de assinatura abre sem senha: quem o recebe confirma o CPF e chega só àquele contrato.
+Route::get('/convite/{token}',[ProposalController::class,'publicProposal'])->middleware(['active','throttle:30,1'])->name('sales.proposal');
+Route::post('/convite/{token}',[ProposalController::class,'confirmLink'])->middleware('throttle:10,1')->name('sales.proposal.confirm');
 Route::get('/acesso/confirmado/{user}',[AuthController::class,'confirmedAccess'])->middleware(['signed','throttle:20,1'])->name('login.confirmed');
 Route::middleware('guest')->group(function () {
     Route::get('/entrar',[AuthController::class,'login'])->name('login');
@@ -44,7 +47,6 @@ Route::middleware(['auth','active'])->group(function () {
     Route::get('/faturas',[PortalController::class,'invoices'])->middleware('role:customer')->name('portal.invoices');
     Route::get('/faturas/{invoice}/abrir',[PortalController::class,'openInvoice'])->middleware(['role:customer','throttle:30,1'])->name('portal.invoice.open');
     Route::post('/assinaturas/{subscription}/pagamento',\App\Http\Controllers\CheckoutController::class)->middleware(['role:customer','throttle:6,1'])->name('subscriptions.checkout');
-    Route::get('/convite/{token}',[ProposalController::class,'publicProposal'])->middleware('throttle:30,1')->name('sales.proposal');
     Route::get('/propostas',[ProposalController::class,'index'])->name('proposals.index');
     Route::get('/propostas/nova',[ProposalController::class,'create'])->middleware('role:central_admin,manager,sales,customer')->name('proposals.create');
     Route::get('/propostas/preenchimento/{link}',[ProposalController::class,'registrationLink'])->middleware('role:central_admin,manager,sales')->name('proposals.registration-link');

@@ -2032,9 +2032,9 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 
 /* Topo do menu com a logo da São Francisco (no lugar do seletor da referência) e busca dentro do menu */
 .sidebar-head{display:flex;flex-direction:column;gap:10px;padding:12px 12px 4px}
-.sidebar-brand{display:flex;align-items:center;padding:6px 8px 2px}
+.sidebar-brand{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:2px 4px 2px}
+.sidebar-logo{display:block;max-width:100%;height:auto}
 .sidebar-brand-text{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;line-height:1.2}
-.sidebar-brand-text strong{max-width:100%;overflow:hidden;font-family:'Bricolage Grotesque',var(--font);font-size:22px;font-weight:700;letter-spacing:-.02em;color:#fff;text-overflow:ellipsis;white-space:nowrap}
 .sidebar-brand-text small{max-width:100%;overflow:hidden;padding:2px 9px 2px 8px;border-radius:99px;background:rgba(185,220,124,.14);color:#b9dc7c;font-size:11.5px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
 .sidebar-brand-text small::before{content:"";display:inline-block;width:6px;height:6px;margin:0 6px 1px 0;border-radius:50%;background:#7cc242;vertical-align:middle}
 .sidebar .topbar-search{width:100%;max-width:none;margin:0}
@@ -2058,3 +2058,52 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .permission-topic>strong{display:block;margin-bottom:4px;font-size:14px;color:var(--text)}
 .permission-topic .check-label[hidden]{display:none}
 [data-without-job-role][hidden]{display:none}
+
+/* Celular: menos rolagem nas telas da equipe. */
+@media(max-width:768px){
+/* Tabelas em cartão: rótulo e valor na mesma linha, em vez de um campo por duas linhas. */
+.admin-body table.is-stackable tr{grid-template-columns:minmax(0,1fr);gap:7px;padding:13px 14px}
+.admin-body table.is-stackable td[data-label]:not(:first-child){display:grid;grid-template-columns:minmax(86px,34%) minmax(0,1fr);align-items:baseline;gap:2px 10px}
+.admin-body table.is-stackable td[data-label]:not(:first-child)>*{grid-column:2}
+.admin-body table.is-stackable td[data-label]:not(:first-child)::before{font-size:13px;font-weight:400}
+.admin-body table.is-stackable td[data-label]:not(:first-child)>.badge{justify-self:start}
+.table-arrow{display:grid;min-width:40px;min-height:40px;place-items:center}
+/* Lista de leads: abas em uma linha só de nome e número, e tudo que couber lado a lado. */
+.lead-black .lead-filters{gap:0 2px}
+.lead-black .lead-filters a{min-width:0;min-height:36px;flex-direction:row;gap:4px;padding:5px 6px 6px;font-size:13.5px;white-space:nowrap}
+.lead-head-tools{position:relative;gap:8px}
+.lead-head .filter-bar{flex:1 1 170px;min-width:0}
+.lead-head .search-input{min-width:0}
+.lead-head .search-input input::placeholder{font-size:13.5px}
+.lead-filter-menu{position:static}
+.lead-filter-menu summary{padding:0 13px}
+.lead-filter-panel{right:0;min-width:0}
+.card.lead-list>.table-scroll .lead-table tr[data-lead-id]{align-items:center;gap:0 10px;padding:11px 0}
+/* As datas ficam em uma linha; o anúncio e o botão, na seguinte. */
+.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-nowrap+td.lead-nowrap{flex:1 1 55%}
+.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-tags{flex:1 1 150px;width:auto;min-width:0}
+.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-step{flex:none;width:auto}
+.lead-tag{max-width:100%}
+/* Painel de leads: o nome ocupa a linha inteira, com os números embaixo, sem coluna espremida. */
+.lead-rank,.lead-rank thead,.lead-rank tbody{display:block;width:100%}
+.lead-rank tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:8px;border-bottom:1px solid var(--line)}
+.lead-rank tbody tr:last-child{border-bottom:0}
+.lead-rank th:first-child{display:none}
+.lead-rank td:first-child{grid-column:1/-1;padding:10px 0 2px;border:0}
+.lead-rank th:not(:first-child),.lead-rank td:not(:first-child),.lead-rank th:last-child,.lead-rank td:last-child{width:auto;padding:2px 0 10px;border:0;text-align:left}
+.card>.table-scroll:has(.lead-rank){margin:0}
+.card>.table-scroll .lead-rank th:first-child,.card>.table-scroll .lead-rank td:first-child{padding-left:0}
+.card>.table-scroll .lead-rank th:last-child,.card>.table-scroll .lead-rank td:last-child{padding-right:0}
+/* Financeiro: mesmo formato de rótulo e valor na mesma linha. */
+.finance-record{padding:13px 0}
+.finance-record-grid{margin:10px 0 8px}
+.finance-record-field{display:grid;grid-template-columns:minmax(86px,34%) minmax(0,1fr);align-items:baseline;gap:10px;padding:8px 12px}
+.finance-record-field dt{font-size:13px;font-weight:400}
+.finance-record-field dd{margin:0;font-size:14.5px}
+/* Início: lead novo sem a pasta grande. */
+.dash-lead{padding:12px 14px}
+.dash-lead-avatar{width:38px;height:38px;border-radius:50%;font-size:16px}
+.dash-lead-avatar::before{display:none}
+.dash-lead h3{margin-top:4px;font-size:16px}
+.dash-lead-actions{margin-top:8px}
+}

@@ -18,10 +18,10 @@
             
 @include('customers.partials.contract-fields',['contractCustomer'=>null,'contractBag'=>'customerCreate'])
 <div class="span-2">@include('components.customer-acquisition',['acquisitionCustomer'=>null,'acquisitionBag'=>'customerCreate'])</div>
-            <label class="field">Unidade do cadastro <span>*</span><select name="originating_franchise_id" required>
+            @if($franchises->count()===1)<input type="hidden" name="originating_franchise_id" value="{{ $franchises->first()->id }}">@else<label class="field">Unidade do cadastro <span>*</span><select name="originating_franchise_id" required>
                 <option value="">Selecione a unidade</option>
                 @foreach($franchises as $franchise)<option value="{{ $franchise->id }}" @selected((string)old('originating_franchise_id',auth()->user()->franchise_id ?? ($franchises->count()===1?$franchises->first()->id:null))===(string)$franchise->id)>{{ $franchise->name }}</option>@endforeach
-            </select></label>
+            </select></label>@endif
         </div>
     </section>
     <section class="card workspace-section form-card">

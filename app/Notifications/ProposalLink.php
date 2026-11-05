@@ -19,6 +19,6 @@ class ProposalLink extends Notification
             ->line('Preparamos o contrato de '.$this->proposal->productVersion->name.' para '.$this->proposal->pet->name.'.')
             ->line('Leia o documento, confirme as condições e assine. Em seguida, você seguirá direto para o pagamento.')
             ->action('Ler e assinar o contrato',$this->url)
-            ->line('Este link é pessoal e vale até '.$expires.'. Se você não reconhece esta proposta, ignore este e-mail.');
+            ->line('Você não precisa de senha: basta confirmar seu CPF. Este link é pessoal e vale até '.$expires.'. Se você não reconhece esta proposta, ignore este e-mail.');
     }
 }

@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Customer, Franchise, Pet, Proposal, ProductVersion, Subscription};
+use App\Models\{Customer, Franchise, Pet, Proposal, ProductVersion, Subscription, User};
 use App\Services\AccessService;
 use App\Services\Contracts\{ContractService,SigningEvidence};
 use App\Services\Domain\{ProposalService, CancellationService};
 use App\Services\Attribution\{AttributionService,MarketingLinkService,TrackingSanitizer};
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\{Auth,RateLimiter};
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProposalController extends Controller
 {
@@ -186,11 +189,58 @@ class ProposalController extends Controller
     {
         abort_unless(strlen($token)>=32 && strlen($token)<=128,404);
         $proposal=Proposal::where('link_token_hash',hash('sha256',$token))->firstOrFail();
+        if(!$request->user()) {
+            if($proposal->accepted_at) return redirect()->route('login')->with('success','Este contrato já foi assinado. Para ver seu painel, entre com sua senha.');
+            abort_unless($this->linkOpen($proposal),404);
+            return view('proposals.link-identity',compact('token'));
+        }
         $completedOwn=$proposal->accepted_at && $request->user()->role==='customer' && (int)$request->user()->customer_id===(int)$proposal->customer_id;
         abort_unless($completedOwn || (!$proposal->link_revoked_at && $proposal->link_expires_at?->isFuture() && $proposal->status!=='cancelled'),404);
         $this->access->record($request->user(),$proposal);
         abort_unless($request->user()->role==='customer',403,'Entre com o acesso do titular para revisar e aceitar.');
         return redirect()->route('proposals.show',$proposal);
+    }
+
+    /** Confirma o CPF de quem recebeu o link e abre uma sessão que só alcança este contrato (ver ActiveUser). */
+    public function confirmLink(Request $request,string $token)
+    {
+        abort_unless(strlen($token)>=32 && strlen($token)<=128,404);
+        $proposal=Proposal::with('customer')->where('link_token_hash',hash('sha256',$token))->firstOrFail();
+        abort_unless($this->linkOpen($proposal),404);
+        if($request->user()) return redirect()->route('sales.proposal',$token);
+        $data=$request->validate(['document'=>'required|string|max:20'],['document.required'=>'Informe o CPF do titular.']);
+        $key='signing-link:'.hash('sha256',$token);
+        if(RateLimiter::tooManyAttempts($key,5)) throw ValidationException::withMessages(['document'=>'Muitas tentativas. Aguarde alguns minutos ou fale com a unidade.']);
+        $cpf=preg_replace('/\D/','',$data['document']);
+        if($cpf==='' || !hash_equals((string)$proposal->customer->document,$cpf)) {
+            RateLimiter::hit($key,900);
+            throw ValidationException::withMessages(['document'=>'Este CPF não é o do titular do contrato. Confira os números.']);
+        }
+        RateLimiter::clear($key);
+        $user=$this->signingUser($proposal->customer);
+        if(!$user) throw ValidationException::withMessages(['document'=>'Não foi possível abrir o contrato por este link. Fale com a unidade.']);
+        Auth::login($user);
+        $request->session()->regenerate();
+        $request->session()->put('signing_link_proposal',$proposal->id);
+        // Receber o link pessoal e conhecer o CPF confirma o contato do titular, como a assinatura exige.
+        if(!$proposal->customer->contact_verified_at) $proposal->customer->update(['contact_verified_at'=>now()]);
+        \App\Services\Domain\Audit::record('proposal.signing_link_opened',$proposal,$user);
+        return redirect()->route('proposals.show',$proposal);
+    }
+
+    private function linkOpen(Proposal $proposal): bool
+    {
+        return !$proposal->link_revoked_at && $proposal->link_expires_at?->isFuture() && $proposal->status!=='cancelled' && $proposal->signature_method==='digital';
+    }
+
+    /** A assinatura precisa de um acesso do titular. Quem não tem ganha um com senha aleatória, que só é usado pelo link. */
+    private function signingUser(Customer $customer): ?User
+    {
+        if(!$customer->active) return null;
+        $user=User::where('customer_id',$customer->id)->where('role','customer')->first();
+        if($user) return $user->active ? $user : null;
+        if(!filter_var($customer->email,FILTER_VALIDATE_EMAIL) || User::where('email',$customer->email)->exists()) return null;
+        return User::create(['name'=>$customer->name,'email'=>$customer->email,'password'=>Str::random(40),'role'=>'customer','customer_id'=>$customer->id,'active'=>true]);
     }
 
     public function accept(Request $request, Proposal $proposal, ProposalService $service, ContractService $contracts, SigningEvidence $signing)
@@ -205,6 +255,7 @@ class ProposalController extends Controller
         $evidence=['accepted'=>true,'affirmative'=>true,'customer_acceptance'=>true,'signer_name'=>$proposal->customer->name,'session_hash'=>hash('sha256',$request->session()->getId()),'contact_verified'=>(bool)$proposal->customer->contact_verified_at]
             +$this->signatureEvidence($signature)+$signing->collect($request,$data['device_info']??null);
         $evidence['review_fingerprint']=$request->input('review_fingerprint');
+        if((int)$request->session()->get('signing_link_proposal')===$proposal->id) $evidence['source']='signature_link';
         $subscription=$service->accept($proposal,$request->user(),$evidence);
         $request->session()->put('checkout_after_signing.'.$proposal->id,true);
         if(data_get($subscription->contract_snapshot,'version.contract_layout.source')) return redirect()->route('proposals.show',$proposal)->with('success','Assinatura registrada. Seu PDF será preparado nesta tela; você não precisa assinar novamente.');

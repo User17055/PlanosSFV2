@@ -326,6 +326,7 @@ class ContractService
             'Signatário: '.($evidence['signer_name'] ?? data_get($snapshot, 'customer.name')).' · CPF '.data_get($snapshot, 'customer.document'),
             'Data e hora da assinatura: '.$at,
             'Forma: '.(($evidence['signature_method'] ?? 'digital') === 'tablet' ? 'presencial, no tablet da unidade, com foto do titular' : 'eletrônica, pelo próprio aparelho do titular').', com confirmação dos termos e assinatura desenhada',
+            ($evidence['source'] ?? null) === 'signature_link' ? 'Identificação: link pessoal enviado ao titular, com confirmação do CPF' : null,
             'Endereço IP: '.($evidence['ip'] ?? 'não informado').(isset($evidence['ip_port']) ? ' · porta '.$evidence['ip_port'] : ''),
             'Navegador: '.($evidence['user_agent'] ?? 'não informado'),
             'Aparelho: '.($deviceText ?: 'não informado'),

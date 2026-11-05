@@ -13,7 +13,7 @@ $saoPaulo=fn($date,$format='d/m H:i')=>$date->timezone('America/Sao_Paulo')->for
 <div class="lead-head lead-black">
 <div class="lead-head-top"><h1>Leads</h1><div class="lead-head-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.dashboard') }}">Ver painel</a></div></div>
 <div class="lead-head-tools">
-<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@if($origin)<input type="hidden" name="origem" value="{{ $origin }}">@endif<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Pesquise por nome, telefone ou e-mail"></div></form>
+<form class="filter-bar" method="GET" action="{{ route('leads.index') }}" data-live-search>@if($origin)<input type="hidden" name="origem" value="{{ $origin }}">@endif<div class="search-input">@include('components.icon',['name'=>'search'])<input type="search" name="q" value="{{ $q }}" maxlength="80" aria-label="Buscar lead" placeholder="Nome, telefone ou e-mail"></div></form>
 <details class="lead-filter-menu">
 <summary>@include('components.icon',['name'=>'filter'])Filtros @if($origin)<b>{{ $origin }}</b>@endif</summary>
 <div class="lead-filter-panel">

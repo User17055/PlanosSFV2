@@ -6,7 +6,7 @@ Referência: especificação V2, 18/10/2026. As propostas técnicas precisam de 
 |---|---|---|
 | Catálogo | Valores, coberturas, carências, espécies, idades, unidades, validade, renovação e texto integral | Exemplos demonstrativos sem autorização de venda |
 | Vigência | Confirmar marco quando todos os requisitos forem verificados ou data futura contratada, se posterior | Regra central proposta; evento atrasado não retroage vigência |
-| Aceite | Instrumento jurídico, identidade, confirmação de contato, tablet e conferência em papel | Evidências técnicas e hash não suprem aprovação jurídica |
+| Aceite | Instrumento jurídico, identidade, confirmação de contato, tablet e conferência em papel; validar a assinatura por link com confirmação de CPF, sem senha | Evidências técnicas e hash não suprem aprovação jurídica |
 | Presencial | Caixa/PIX/maquininha ou Vindi; comprovação, conciliação e próximas parcelas | Assinatura aguarda financeiro; confirmação simulada só no demo |
 | Vindi | Conta central ou por franquia, recebedor, repasses, mapa de produtos e meios de pagamento | Uma conta configurada explicitamente; emissão bloqueada |
 | Pacotes | Validade, renovação, término e bloqueio de dívidas originadas em Pacotes a prazo | Cobrança única com validade; parcelamento não liberado |
