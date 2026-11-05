@@ -18,6 +18,7 @@ class JobRole extends DomainModel
         'dashboard.export' => ['Exportar resumo', ['dashboard.export']],
         'leads.view' => ['Ver lista e painel de leads', ['leads.index', 'leads.dashboard']],
         'leads.update' => ['Mudar a situação do lead', ['leads.update']],
+        'leads.assign' => ['Escolher com quem o lead fica', ['leads.assign']],
         'leads.destroy' => ['Apagar lead de teste', ['leads.destroy']],
         'customers.view' => ['Ver tutores e pets', ['customers.index', 'customers.show', 'pets.photo']],
         'customers.create' => ['Cadastrar novo tutor', ['customers.create', 'customers.store']],

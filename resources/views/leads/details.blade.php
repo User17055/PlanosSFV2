@@ -5,7 +5,7 @@ $answers=collect($extra)->except(['anuncio','formulario','trafego',...\App\Model
 $groups=[
     'De onde veio'=>['Rede'=>$origin['label'] ?? 'Não informada','Tráfego'=>$lead->traffic(),'Campanha'=>$lead->campaign && !ctype_digit((string) $lead->campaign) ? $lead->campaignLabel() : null,'Anúncio'=>$extra['anuncio'] ?? null,'Formulário'=>$extra['formulario'] ?? null],
     'Dados do formulário'=>['E-mail'=>$lead->email,'Pet'=>$lead->pet_name]+$answers,
-    // O sistema guarda só a última pessoa que mudou a situação, não o histórico.
+    // Atendido por é o responsável atual: quem pegou o lead da fila ou quem o administrador escolheu. Não há histórico.
     'Atendimento'=>['Chegou'=>$when($lead->created_at),'Situação'=>\App\Models\Lead::STATUSES[$lead->status] ?? $lead->status,'Atendido por'=>$lead->handler?->name ?? 'Ninguém ainda','Primeiro contato'=>$when($lead->contacted_at),'Última mudança'=>$lead->handler ? $when($lead->updated_at) : null],
 ];
 @endphp

@@ -134,6 +134,8 @@
     buttons.forEach(button => { button.disabled = true; });
     try {
       const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+      // Outra pessoa pegou o lead da fila primeiro: a linha some na atualização.
+      if (response.status === 403) { toast('Este lead já está com outra pessoa.'); await load(); return; }
       if (!response.ok) throw new Error(String(response.status));
       const doc = parse(await response.text());
       const message = doc.querySelector('.alert-success div')?.textContent;

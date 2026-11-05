@@ -11,6 +11,9 @@ class Lead extends DomainModel
 
     public const TRAFFIC = ['Pago', 'Orgânico'];
 
+    /** Estes perfis veem todos os leads e escolhem com quem cada um fica. */
+    public const SEE_ALL = ['central_admin', 'manager'];
+
     /** Campos de "extra" em que o Pluga pode mandar a rede de origem. */
     public const CHANNEL_FIELDS = ['plataforma', 'platform', 'origem', 'canal', 'rede_social'];
 
@@ -22,6 +25,12 @@ class Lead extends DomainModel
     public function handler()
     {
         return $this->belongsTo(User::class, 'handled_by');
+    }
+
+    /** Fora os administradores, cada pessoa vê os seus leads e a fila: os que ainda não são de ninguém. */
+    public function scopeVisibleTo($query, User $user)
+    {
+        return in_array($user->role, self::SEE_ALL, true) ? $query : $query->where(fn ($w) => $w->whereNull('handled_by')->orWhere('handled_by', $user->id));
     }
 
     /** O Pluga pode mandar o id numérico da campanha, que não diz nada na tela; o fim do número ainda separa uma campanha da outra. */

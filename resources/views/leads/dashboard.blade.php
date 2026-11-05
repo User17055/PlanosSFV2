@@ -12,7 +12,7 @@ $labelEvery=$days<=7 ? 1 : (int) ceil($days/6);
 $today=$perDay->last();
 $change=$previous ? round(($totals['total']-$previous)/$previous*100) : null;
 $funnel=[['Chegaram',$totals['total'],'step-1'],['Foram chamados',$totals['called'],'step-2'],['Viraram cliente',$totals['converted'],'step-3']];
-$tables=[['Pago ou orgânico','Tráfego',$traffic,''],['De onde veio','Origem',$origins,''],['Por campanha','Campanha',$campaigns,'lead-span-2'],['Por anúncio','Anúncio',$ads,''],['Cachorro ou gato','Espécie',$species,''],['Quem atendeu','Pessoa',$team,'']];
+$tables=[['Pago ou orgânico','Tráfego',$traffic,''],['De onde veio','Origem',$origins,''],['Por campanha','Campanha',$campaigns,'lead-span-2'],['Por anúncio','Anúncio',$ads,''],['Cachorro ou gato','Espécie',$species,''],['Por responsável','Pessoa',$team,'']];
 @endphp
 <div class="page-heading lead-heading"><div><h1>Painel de leads</h1><p>De onde vieram, quantos a equipe chamou e quantos viraram cliente.</p></div><div class="lead-heading-side">@include('leads.live-status')<a class="text-link" href="{{ route('leads.index') }}">Ver lista</a></div></div>
 <div class="lead-topline">
@@ -52,8 +52,8 @@ $tables=[['Pago ou orgânico','Tráfego',$traffic,''],['De onde veio','Origem',$
 @foreach($rows as $label=>$row)<tr><td><strong>{{ $label }}</strong></td><td>{{ $row['total'] }}</td><td>{{ $row['called'] }}</td><td class="lead-rank-won"><strong>{{ $row['converted'] }}</strong> <small>{{ $pct($row['converted'],$row['total']) }}</small></td></tr>@endforeach
 </tbody></table></div>@endif</section>
 @endif @endforeach
-@if($converted->isNotEmpty())<section class="card lead-span-2"><div class="card-heading"><div><h2>Quem converteu</h2><p>Leads finalizados no período e quem marcou.</p></div></div>
-<div class="table-scroll"><table class="lead-rank lead-converted" data-no-stack><thead><tr><th>Cliente</th><th>Origem</th><th>Atendeu</th><th>Em</th></tr></thead><tbody>
+@if($converted->isNotEmpty())<section class="card lead-span-2"><div class="card-heading"><div><h2>Quem converteu</h2><p>Leads finalizados no período e com quem estavam.</p></div></div>
+<div class="table-scroll"><table class="lead-rank lead-converted" data-no-stack><thead><tr><th>Cliente</th><th>Origem</th><th>Responsável</th><th>Em</th></tr></thead><tbody>
 @foreach($converted as $lead)<tr><td><strong>{{ $lead->name }}</strong></td><td>{{ $lead->originGroup() }}<small>{{ $lead->traffic() }}</small></td><td>{{ $lead->handler?->name ?? '—' }}</td><td>{{ $lead->updated_at->timezone('America/Sao_Paulo')->format('d/m') }}</td></tr>@endforeach
 </tbody></table></div></section>@endif
 </div>

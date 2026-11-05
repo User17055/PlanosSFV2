@@ -7,6 +7,7 @@ use App\Services\AccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Cache,Log};
 use Illuminate\Support\{Arr,Carbon,Str};
+use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
 {
@@ -135,7 +136,7 @@ class LeadController extends Controller
             'trafego' => fn (Lead $lead) => $lead->traffic(),
             'origem' => fn (Lead $lead) => $lead->originGroup(),
             'campanha' => fn (Lead $lead) => $lead->campaign ? $lead->campaignLabel() : 'Sem nome de campanha',
-            'responsavel' => fn (Lead $lead) => $lead->handler?->name ?? 'Ninguém ainda',
+            'responsavel' => fn (Lead $lead) => $lead->handler?->name ?? 'Na fila',
         ];
     }
 
@@ -169,7 +170,9 @@ class LeadController extends Controller
         $input = $request->validate(self::FILTERS + ['q' => 'nullable|string|max:80', 'situacao' => 'nullable|in:'.implode(',', array_keys(Lead::STATUSES))]);
         $status = $input['situacao'] ?? null;
         $q = trim((string) ($input['q'] ?? ''));
-        $query = $access->scope(Lead::query(), $request->user())->with('handler');
+        $user = $request->user();
+        $seesAll = in_array($user->role, Lead::SEE_ALL, true);
+        $query = $access->scope(Lead::visibleTo($user), $user)->with('handler');
         if ($q !== '') {
             $like = '%'.addcslashes($q, '%_\\').'%';
             $digits = preg_replace('/\D/', '', $q);
@@ -184,7 +187,7 @@ class LeadController extends Controller
         $chosen = array_filter(Arr::only($input, array_keys($dimensions)));
         // shortcut: separa os filtros em memória, com a mesma regra da tela; troque por colunas próprias se passar de ~20 mil leads.
         $rows = (clone $query)->get(['id', 'status', 'campaign', 'extra', 'source', 'handled_by']);
-        $filterOptions = collect(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'origem' => ['Instagram', 'Facebook', 'Google']])
+        $filterOptions = collect(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC, 'origem' => ['Instagram', 'Facebook', 'Google']] + ($seesAll ? ['responsavel' => ['Na fila']] : []))
             ->map(fn ($names, $key) => collect($names)->mapWithKeys(fn ($name) => [$name => 0])->merge($rows->countBy($dimensions[$key])));
         if ($chosen) {
             $query->whereIn('id', $rows->filter($this->matcher($chosen))->pluck('id'));
@@ -193,7 +196,9 @@ class LeadController extends Controller
         $counts = (clone $query)->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
         // Quem ainda não foi chamado fica no topo, mesmo em "Todos": lead novo não pode se perder no meio do histórico.
         $leads = $query->when($status, fn ($w) => $w->where('status', $status))->orderByRaw("case when status = 'new' then 0 else 1 end")->orderByDesc('id')->paginate(20)->withQueryString();
-        return view('leads.index', compact('leads', 'counts', 'status', 'q', 'filterOptions', 'start', 'end') + [
+        $canAssign = $seesAll && $user->canUse('leads.assign');
+        return view('leads.index', compact('leads', 'counts', 'status', 'q', 'filterOptions', 'start', 'end', 'seesAll', 'canAssign') + [
+            'assignees' => $canAssign ? $leads->pluck('originating_franchise_id')->unique()->mapWithKeys(fn ($id) => [$id => $this->assignees((int) $id)]) : collect(),
             'applied' => array_filter(['q' => $q] + Arr::only($input, array_keys(self::FILTERS))),
             'filtersOn' => count($chosen) + ($start ? 1 : 0),
             'intake' => $this->intakeStatus($request->user(), $access),
@@ -209,7 +214,8 @@ class LeadController extends Controller
         $dimensions = $this->dimensions();
         $chosen = array_filter(Arr::only($input, array_keys($dimensions)));
         $matches = $this->matcher($chosen);
-        $real = fn () => $access->scope(Lead::query(), $request->user())->where('source', '!=', 'teste')->with('handler:id,name');
+        $seesAll = in_array($request->user()->role, Lead::SEE_ALL, true);
+        $real = fn () => $access->scope(Lead::visibleTo($request->user()), $request->user())->where('source', '!=', 'teste')->with('handler:id,name');
         // shortcut: soma os leads do período em memória; troque por consultas agrupadas se um período passar de ~20 mil leads.
         $between = fn ($from, $to) => $real()->whereBetween('created_at', [$from->copy()->utc(), $to->copy()->endOfDay()->utc()])
             ->get(['id', 'name', 'status', 'campaign', 'extra', 'source', 'created_at', 'updated_at', 'contacted_at', 'handled_by']);
@@ -229,7 +235,7 @@ class LeadController extends Controller
             'endsToday' => $end->isSameDay(now('America/Sao_Paulo')),
             'chosen' => $chosen,
             // O valor escolhido fica na lista mesmo sem lead no período, para o filtro ativo continuar visível.
-            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'origem' => 'Origem', 'campanha' => 'Campanha', 'responsavel' => 'Quem atendeu'])
+            'filterOptions' => collect(['conversao' => 'Conversão', 'trafego' => 'Tráfego', 'origem' => 'Origem', 'campanha' => 'Campanha'] + ($seesAll ? ['responsavel' => 'Com quem está'] : []))
                 ->map(fn ($label, $key) => [$label, $inPeriod->toBase()->map($dimensions[$key])->merge(['conversao' => array_keys(Lead::CONVERSIONS), 'trafego' => Lead::TRAFFIC][$key] ?? [])->push($chosen[$key] ?? null)->filter()->unique()->sort()->values()]),
             'intake' => $this->intakeStatus($request->user(), $access),
             'totals' => $sum($leads) + ['lost' => $leads->where('status', 'lost')->count()],
@@ -243,7 +249,7 @@ class LeadController extends Controller
             'campaigns' => $breakdown($dimensions['campanha']),
             'ads' => $leads->contains(fn ($lead) => isset($lead->extra['anuncio'])) ? $breakdown(fn ($lead) => $lead->extra['anuncio'] ?? 'Não informado') : collect(),
             'species' => $leads->contains(fn ($lead) => isset($lead->extra['especie_do_pet'])) ? $breakdown(fn ($lead) => isset($lead->extra['especie_do_pet']) ? mb_convert_case($lead->extra['especie_do_pet'], MB_CASE_TITLE) : 'Não informado') : collect(),
-            'team' => $breakdown($dimensions['responsavel'])->forget('Ninguém ainda')->sortByDesc('converted'),
+            'team' => $seesAll ? $breakdown($dimensions['responsavel'])->forget('Na fila')->sortByDesc('converted') : collect(),
             'converted' => $leads->where('status', 'converted')->sortByDesc('updated_at')->take(10),
         ]);
     }
@@ -253,7 +259,7 @@ class LeadController extends Controller
     {
         $admin = in_array($user->role, ['central_admin', 'manager'], true);
         return [
-            'last' => $access->scope(Lead::query(), $user)->latest('id')->first(['id', 'name', 'created_at']),
+            'last' => $access->scope(Lead::visibleTo($user), $user)->latest('id')->first(['id', 'name', 'created_at']),
             'off' => $admin && (string) config('services.leads.token') === '',
             'refused' => $admin ? Cache::get(self::REFUSED) : null,
             'admin' => $admin,
@@ -271,9 +277,32 @@ class LeadController extends Controller
 
     public function update(Request $request, Lead $lead, AccessService $access)
     {
-        $access->franchise($request->user(), (int) $lead->originating_franchise_id);
+        $user = $request->user();
+        $access->franchise($user, (int) $lead->originating_franchise_id);
         $data = $request->validate(['status' => 'required|in:'.implode(',', array_keys(Lead::STATUSES))]);
-        $lead->update(['status' => $data['status'], 'handled_by' => $request->user()->id, 'contacted_at' => $data['status'] === 'new' ? $lead->contacted_at : ($lead->contacted_at ?? now())]);
+        // Quem mexe primeiro em um lead da fila fica com ele. A condição no próprio UPDATE resolve duas pessoas clicando juntas.
+        if ($data['status'] !== 'new') {
+            Lead::whereKey($lead->id)->whereNull('handled_by')->update(['handled_by' => $user->id]);
+        }
+        abort_unless(Lead::visibleTo($user)->whereKey($lead->id)->exists(), 403, 'Este lead já está com outra pessoa.');
+        $lead->refresh()->update(['status' => $data['status'], 'contacted_at' => $data['status'] === 'new' ? $lead->contacted_at : ($lead->contacted_at ?? now())]);
         return back()->with('success', 'Lead atualizado.');
+    }
+
+    /** Escolhe com quem o lead fica; vazio devolve para a fila. A rota é só de Administração central e Gestão da unidade. */
+    public function assign(Request $request, Lead $lead, AccessService $access)
+    {
+        $access->franchise($request->user(), (int) $lead->originating_franchise_id);
+        $data = $request->validate(['handled_by' => ['nullable', 'integer', Rule::in($this->assignees((int) $lead->originating_franchise_id)->pluck('id'))]]);
+        $lead->update(['handled_by' => $data['handled_by'] ?? null]);
+        return back()->with('success', 'Responsável atualizado.');
+    }
+
+    /** Quem pode ficar com um lead: conta ativa, com acesso à tela de leads e à unidade dele. */
+    private function assignees(int $franchiseId)
+    {
+        return User::where('active', true)->whereIn('role', User::AREAS['leads'][2])
+            ->where(fn ($q) => $q->where('role', 'central_admin')->orWhereHas('franchises', fn ($f) => $f->whereKey($franchiseId)->where('user_franchises.active', true)))
+            ->with('jobRole')->orderBy('name')->get()->filter->canOpen('leads')->values();
     }
 }

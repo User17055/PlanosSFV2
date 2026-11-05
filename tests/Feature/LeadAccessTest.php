@@ -148,6 +148,89 @@ class LeadAccessTest extends TestCase
         $this->actingAs($this->attendant)->get(route('leads.index', ['de' => 'ontem']))->assertSessionHasErrors('de');
     }
 
+    private function teammate(string $name, string $role = 'attendant'): User
+    {
+        $user = User::create(['name' => $name, 'email' => mb_strtolower(strtok($name, ' ')).'@example.test', 'password' => 'Example123!!!', 'role' => $role, 'active' => true, 'franchise_id' => $this->unit->id]);
+        $user->franchises()->sync([$this->unit->id => ['active' => true]]);
+        return $user;
+    }
+
+    public function test_each_person_sees_only_their_leads_and_the_queue(): void
+    {
+        $bia = $this->teammate('Bia Vendas');
+        $this->lead(['name' => 'Lead Da Ana', 'external_id' => 'o1', 'status' => 'contacted', 'handled_by' => $this->attendant->id]);
+        $this->lead(['name' => 'Lead Da Bia', 'external_id' => 'o2', 'status' => 'contacted', 'handled_by' => $bia->id]);
+        $this->lead(['name' => 'Lead Da Fila', 'external_id' => 'o3']);
+
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Fila')->assertDontSee('Lead Da Bia')->assertDontSee('Com quem está')->assertDontSee('Bia Vendas');
+        $this->actingAs($this->attendant)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 2)->assertDontSee('Lead Da Bia')->assertDontSee('Com quem está');
+        // Nem pelo filtro nem pelo endereço direto se chega ao lead de outra pessoa.
+        $this->actingAs($this->attendant)->get(route('leads.index', ['responsavel' => 'Bia Vendas']))->assertDontSee('Lead Da Bia');
+        $this->actingAs($this->attendant)->post(route('leads.update', Lead::where('name', 'Lead Da Bia')->sole()), ['status' => 'lost'])->assertForbidden();
+        $this->assertSame('contacted', Lead::where('name', 'Lead Da Bia')->sole()->status);
+
+        foreach ([$this->admin, $this->teammate('Gabi Gestora', 'manager')] as $boss) {
+            $this->actingAs($boss)->get(route('leads.index'))->assertSee('Lead Da Ana')->assertSee('Lead Da Bia')->assertSee('Lead Da Fila')->assertSee('Com quem está')->assertSee('<option value="'.$bia->id.'" selected>Bia Vendas</option>', false);
+            $this->actingAs($boss)->get(route('leads.dashboard'))->assertViewHas('totals', fn ($totals) => $totals['total'] === 3)->assertSee('Com quem está');
+        }
+    }
+
+    public function test_first_to_act_on_a_queued_lead_keeps_it_and_the_menu_follows(): void
+    {
+        $bia = $this->teammate('Bia Vendas');
+        $lead = $this->lead(['name' => 'Lead Da Fila', 'external_id' => 'q1']);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('<b class="nav-count">1</b>', false);
+
+        // Olhar ou devolver para "Esperando" não pega o lead.
+        $this->actingAs($bia)->post(route('leads.update', $lead), ['status' => 'new'])->assertRedirect();
+        $this->assertNull($lead->fresh()->handled_by);
+
+        $this->actingAs($this->attendant)->post(route('leads.update', $lead), ['status' => 'contacted'])->assertRedirect();
+        $this->assertSame($this->attendant->id, $lead->fresh()->handled_by);
+        $this->actingAs($bia)->post(route('leads.update', $lead), ['status' => 'lost'])->assertForbidden();
+        $this->actingAs($bia)->get(route('leads.index'))->assertDontSee('Lead Da Fila');
+
+        // O administrador muda a situação sem tirar o lead de quem está com ele.
+        $this->actingAs($this->admin)->post(route('leads.update', $lead), ['status' => 'converted'])->assertRedirect();
+        $this->assertSame(['converted', $this->attendant->id], [$lead->fresh()->status, $lead->fresh()->handled_by]);
+    }
+
+    public function test_only_administrators_choose_who_keeps_a_lead(): void
+    {
+        $bia = $this->teammate('Bia Vendas');
+        $lead = $this->lead(['name' => 'Lead Da Fila', 'external_id' => 'a1', 'handled_by' => $this->attendant->id]);
+        $assign = fn (User $user, $to) => $this->actingAs($user)->post(route('leads.assign', $lead), ['handled_by' => $to]);
+
+        $assign($this->attendant, $bia->id)->assertForbidden();
+        $this->assertSame($this->attendant->id, $lead->fresh()->handled_by);
+
+        $assign($this->teammate('Gabi Gestora', 'manager'), $bia->id)->assertRedirect();
+        $this->assertSame($bia->id, $lead->fresh()->handled_by);
+        $assign($this->admin, '')->assertRedirect();
+        $this->assertNull($lead->fresh()->handled_by);
+
+        // Só vale para quem é da equipe, está ativo e tem acesso à unidade.
+        $other = Franchise::create(['name' => 'Outra', 'code' => 'OUTRA', 'active' => true]);
+        $outsider = $this->teammate('Otto Fora');
+        $outsider->franchises()->sync([$other->id => ['active' => true]]);
+        $tutor = $this->teammate('Tina Tutora', 'customer');
+        $off = $this->teammate('Ivo Inativo');
+        $off->update(['active' => false]);
+        foreach ([$outsider, $tutor, $off] as $invalid) {
+            $assign($this->admin, $invalid->id)->assertSessionHasErrors('handled_by');
+        }
+        $this->assertNull($lead->fresh()->handled_by);
+    }
+
+    public function test_manager_job_roles_that_update_leads_can_assign_them_after_the_migration(): void
+    {
+        $withLeads = \App\Models\JobRole::create(['name' => 'Recepção', 'base_role' => 'manager', 'permissions' => ['leads.view', 'leads.update']]);
+        $withoutLeads = \App\Models\JobRole::create(['name' => 'Financeiro', 'base_role' => 'manager', 'permissions' => ['customers.view']]);
+        (require database_path('migrations/2026_11_05_000001_grant_lead_assign_to_manager_job_roles.php'))->up();
+        $this->assertTrue($withLeads->fresh()->allows('leads.assign'));
+        $this->assertFalse($withoutLeads->fresh()->allows('leads.assign'));
+    }
+
     public function test_going_back_to_waiting_never_counts_as_first_contact(): void
     {
         $lead = $this->lead();

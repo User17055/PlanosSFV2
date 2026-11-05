@@ -1802,7 +1802,9 @@ html body.admin-body .lead-black h1{font-family:var(--font);font-size:26px;font-
 .lead-tags{width:27%;max-width:0}
 .lead-tag{display:flex;width:fit-content;max-width:100%;align-items:center;padding:1px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;line-height:1.5;color:var(--text-3)}
 .lead-tag span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.lead-step{width:1%;white-space:nowrap}
+.lead-step,.lead-owner{width:1%;white-space:nowrap}
+.lead-owner form{margin:0}
+.lead-owner .lead-status{max-width:150px}
 .lead-step>div{display:flex;align-items:center;justify-content:flex-end;gap:8px}
 .lead-step form{margin:0}
 .lead-status{width:auto;min-height:30px;padding:0 26px 0 9px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;color:#2a2a2a;cursor:pointer}
@@ -2091,7 +2093,7 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* As datas ficam em uma linha; o anúncio e o botão, na seguinte. */
 .card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-nowrap+td.lead-nowrap{flex:1 1 55%}
 .card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-tags{flex:1 1 150px;width:auto;min-width:0}
-.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-step{flex:none;width:auto}
+.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-step,.card.lead-list>.table-scroll .lead-table tr[data-lead-id] td.lead-owner{flex:none;width:auto}
 .lead-tag{max-width:100%}
 /* Painel de leads: o nome ocupa a linha inteira, com os números embaixo, sem coluna espremida. */
 .lead-rank,.lead-rank thead,.lead-rank tbody{display:block;width:100%}
