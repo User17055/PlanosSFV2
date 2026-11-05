@@ -91,9 +91,9 @@
 .chat-message.is-outgoing .chat-media{background:#ffffff1f;color:#fff}
 /* Fotos, áudios, vídeos e documentos dentro do balão */
 .chat-photo{display:block;margin:-5px -9px 6px;overflow:hidden;border-radius:12px;line-height:0}
-.chat-photo img{display:block;max-width:min(320px,100%);max-height:380px;background:#e9eef4}
+.chat-photo img{display:block;max-width:min(320px,72vw);max-height:380px;background:#e9eef4}
 .chat-photo.is-sticker img{max-width:150px;background:transparent}
-.chat-message video{display:block;max-width:min(340px,100%);max-height:380px;margin:-5px -9px 6px;border-radius:12px;background:#000}
+.chat-message video{display:block;max-width:min(340px,72vw);max-height:380px;margin:-5px -9px 6px;border-radius:12px;background:#000}
 .chat-message audio{display:block;width:290px;max-width:100%;height:40px;margin:2px 0 4px}
 .chat-file{display:flex;align-items:center;gap:10px;margin:0 0 4px;padding:10px 12px;border-radius:10px;background:var(--chat-bg);color:var(--chat-text);font-size:14px;font-weight:500;line-height:1.4;overflow-wrap:anywhere;text-decoration:none}
 .chat-file::before{content:'';flex-shrink:0;width:20px;height:20px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M14 3H6v18h12V7z M14 3v4h4'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M14 3H6v18h12V7z M14 3v4h4'/%3E%3C/svg%3E") center/contain no-repeat}

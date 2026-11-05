@@ -26,7 +26,7 @@
   const mediaLabel = { image: 'Imagem', audio: 'Áudio', ptt: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha' };
   let page = 1, loading = false, sending = false, stopped = false, timer;
   let requestId = null, requestText = null, lastSendError = '', idleAt = Date.now();
-  let attachment = null, recorder = null, recordTimer = null, avatarUrl = '';
+  let attachment = null, recorder = null, recordTimer = null, avatarUrl = '', atBottom = true;
   const paused = () => document.documentElement.dataset.chatPaused === 'true';
 
   function showError(message) {
@@ -131,6 +131,8 @@
       image.loading = 'lazy';
       image.decoding = 'async';
       image.addEventListener('error', stale);
+      // A foto carrega depois do balão: quem estava no fim da conversa continua no fim.
+      image.addEventListener('load', () => { if (atBottom) history.scrollTop = history.scrollHeight; });
       image.src = url;
       link.append(image);
       return link;
@@ -359,6 +361,7 @@
   });
   form?.querySelector('[data-chat-attachment-remove]')?.addEventListener('click', () => { setAttachment(null); textarea.focus(); });
 
+  history.addEventListener('scroll', () => { atBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 100; }, { passive: true });
   refresh.addEventListener('click', () => { idleAt = Date.now(); load(false, true); });
   older.addEventListener('click', () => load(true, true));
   root.addEventListener('pointerdown', () => { idleAt = Date.now(); });
