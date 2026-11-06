@@ -19,7 +19,18 @@ class Lead extends DomainModel
 
     protected function casts(): array
     {
-        return ['extra' => 'array', 'contacted_at' => 'datetime'];
+        return ['extra' => 'array', 'contacted_at' => 'datetime', 'photo_synced_at' => 'datetime'];
+    }
+
+    protected static function booted(): void
+    {
+        static::deleted(fn (Lead $lead) => $lead->photo_path && \Illuminate\Support\Facades\Storage::disk('local')->delete($lead->photo_path));
+    }
+
+    /** A data da consulta vai no endereço para o navegador trocar a foto quando ela muda. */
+    public function photoUrl(): ?string
+    {
+        return $this->photo_path ? route('leads.chat.photo', $this).'?v='.$this->photo_synced_at?->timestamp : null;
     }
 
     public function handler()

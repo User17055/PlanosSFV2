@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\{DigisacConnection, Franchise, JobRole, Lead, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
-use Illuminate\Support\Facades\{Cache, DB, Http};
+use Illuminate\Support\Facades\{Cache, DB, Http, Storage};
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -251,6 +251,56 @@ class LeadChatTest extends TestCase
             ->assertJsonPath('messages.0.file', null);
         $response->assertDontSee('segredo-conta')->assertDontSee('interno')->assertDontSee('javascript');
         Http::assertSent(fn (HttpRequest $request) => str_contains($request->url(), '/messages') && json_decode($request['query'], true)['include'] === ['file']);
+    }
+
+    public function test_contact_photo_is_saved_with_the_lead_and_shown_only_to_who_sees_it(): void
+    {
+        Storage::fake('local');
+        $this->connection($this->ana);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact() + ['thumbAvatar' => ['url' => 'https://storage.example.test/thumb.png?X-Amz-Signature=1']]]]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => []]),
+            'https://storage.example.test/*' => Http::response($png, 200, ['Content-Type' => 'image/png']),
+        ]);
+        $updated = (string) $this->mine->updated_at;
+        $this->travel(5)->minutes();
+        $this->actingAs($this->ana)->getJson(route('leads.chat.messages', $this->mine))->assertOk()
+            ->assertJsonPath('avatar', fn ($url) => str_starts_with($url, route('leads.chat.photo', $this->mine)));
+        $lead = $this->mine->fresh();
+        $this->assertSame('lead-photos/'.$lead->id.'.png', $lead->photo_path);
+        $this->assertSame($updated, (string) $lead->updated_at, 'A foto não muda a ordem das conversas.');
+        $this->get(route('leads.chat.photo', $lead))->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->get(route('leads.chat.index'))->assertSee(e($lead->photoUrl()), false);
+        $this->actingAs($this->bia)->get(route('leads.chat.photo', $lead))->assertForbidden();
+        // Abrir de novo no mesmo dia não baixa a foto outra vez.
+        $before = count(Http::recorded());
+        $this->actingAs($this->ana)->getJson(route('leads.chat.messages', $this->mine))->assertOk();
+        $this->assertCount($before + 2, Http::recorded());
+        $lead->delete();
+        Storage::disk('local')->assertMissing('lead-photos/'.$lead->id.'.png');
+    }
+
+    public function test_scheduled_sync_saves_photos_without_opening_the_chat(): void
+    {
+        Storage::fake('local');
+        $this->connection($this->ana);
+        $this->connection($this->admin, 'token-do-admin');
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact() + ['thumbAvatar' => ['url' => 'https://storage.example.test/thumb.png']]]]),
+            'https://storage.example.test/*' => Http::response($png),
+        ]);
+        $this->artisan('leads:digisac-photos')->assertSuccessful();
+        foreach ([$this->mine, $this->theirs, $this->queue] as $lead) $this->assertNotNull($lead->fresh()->photo_path, $lead->name);
+        // O lead da Ana usa o token dela; o da Bia (sem conexão) e o da fila usam o do administrador.
+        $tokens = collect(Http::recorded())->map(fn ($pair) => $pair[0]->header('Authorization')[0] ?? null)->filter()->countBy()->all();
+        ksort($tokens);
+        $this->assertSame(['Bearer token-do-admin' => 2, 'Bearer token-secreto-ana' => 1], $tokens);
+        // Conferidos há menos de 7 dias: a próxima rodada não consulta de novo.
+        $before = count(Http::recorded());
+        $this->artisan('leads:digisac-photos')->assertSuccessful();
+        $this->assertCount($before, Http::recorded());
     }
 
     public function test_photo_and_recorded_audio_are_sent_with_the_type_read_from_the_content(): void

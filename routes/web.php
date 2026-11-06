@@ -43,6 +43,7 @@ Route::middleware(['auth','active'])->group(function () {
         Route::post('/leads/chat/desconectar', [\App\Http\Controllers\DigisacConnectionController::class, 'destroy'])->middleware('throttle:10,1')->name('leads.chat.connection.destroy');
         Route::get('/leads/chat/{lead}', [\App\Http\Controllers\LeadChatController::class, 'index'])->name('leads.chat.show');
         Route::post('/leads/chat/{lead}/assumir', [\App\Http\Controllers\LeadChatController::class, 'claim'])->middleware('throttle:30,1')->name('leads.chat.claim');
+        Route::get('/leads/chat/{lead}/foto', [\App\Http\Controllers\LeadChatController::class, 'photo'])->name('leads.chat.photo');
         Route::get('/leads/chat/{lead}/mensagens', [\App\Http\Controllers\LeadChatController::class, 'messages'])->middleware('throttle:60,1')->name('leads.chat.messages');
         Route::post('/leads/chat/{lead}/mensagens', [\App\Http\Controllers\LeadChatController::class, 'send'])->middleware('throttle:20,1')->name('leads.chat.send');
     });

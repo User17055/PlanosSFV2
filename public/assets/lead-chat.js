@@ -100,7 +100,8 @@
   function showAvatar(url) {
     if (!url || avatarUrl) return;
     avatarUrl = url;
-    for (const holder of document.querySelectorAll('.chat-contact .chat-avatar, .chat-lead.is-selected .chat-avatar')) {
+    // Foto já guardada no sistema vem pronta na página; aqui só entra a primeira vez.
+    for (const holder of document.querySelectorAll('.chat-contact .chat-avatar:not(.has-photo), .chat-lead.is-selected .chat-avatar:not(.has-photo)')) {
       const image = new Image();
       image.alt = '';
       image.addEventListener('load', () => { holder.replaceChildren(image); holder.classList.add('has-photo'); });

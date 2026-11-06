@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\{DigisacConnection, Lead};
 use App\Services\AccessService;
-use App\Services\Integrations\DigisacClient;
+use App\Services\Integrations\{DigisacClient, LeadPhotoSync};
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\{Cache, Storage};
 
 class LeadChatController extends Controller
 {
@@ -71,7 +71,15 @@ class LeadChatController extends Controller
         return redirect()->route('leads.chat.show', $lead);
     }
 
-    public function messages(Request $request, Lead $lead, AccessService $access, DigisacClient $client)
+    /** Foto guardada do contato: quem vê o lead na lista vê a foto. */
+    public function photo(Request $request, Lead $lead, AccessService $access)
+    {
+        abort_unless($this->available($request, $access)->whereKey($lead->id)->exists(), 403);
+        abort_unless($lead->photo_path && Storage::disk('local')->exists($lead->photo_path), 404);
+        return Storage::disk('local')->response($lead->photo_path, null, ['Cache-Control' => 'private, max-age=86400']);
+    }
+
+    public function messages(Request $request, Lead $lead, AccessService $access, DigisacClient $client, LeadPhotoSync $photos)
     {
         $this->readable($request, $lead, $access);
         $data = $request->validate(['page' => 'nullable|integer|min:1|max:10000']);
@@ -81,7 +89,10 @@ class LeadChatController extends Controller
         $contact = $client->contact($connection, $phone);
         $result = $contact ? $client->messages($connection, (string) $contact['id'], (int) ($data['page'] ?? 1))
             : ['messages' => [], 'has_more' => false];
-        $result['avatar'] = $contact ? (DigisacClient::fileUrl($contact['thumbAvatar'] ?? null) ?? DigisacClient::fileUrl($contact['avatar'] ?? null)) : null;
+        // Abrir a conversa também atualiza a foto guardada, no máximo uma vez por dia. Falha na foto nunca derruba a conversa.
+        if ($contact && (! $lead->photo_synced_at || $lead->photo_synced_at->lt(now()->subDay()))) rescue(fn () => $photos->store($lead, $contact), report: false);
+        $result['avatar'] = $lead->photo_path ? $lead->photoUrl()
+            : ($contact ? (DigisacClient::fileUrl($contact['thumbAvatar'] ?? null) ?? DigisacClient::fileUrl($contact['avatar'] ?? null)) : null);
         // Revalida caso o responsável tenha sido trocado durante a consulta externa.
         $this->readable($request, $lead, $access);
         return response()->json($result)->header('Cache-Control', 'private, no-store');
