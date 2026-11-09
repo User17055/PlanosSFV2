@@ -5,7 +5,7 @@
 $state=data_get($financialState,'status','pending');
 @endphp
 @php $activePlans=$customer->subscriptions->reject(fn($subscription)=>$subscription->isTerminal())->count(); $petCount=$customer->pets->count(); @endphp
-<section class="portal-hero"><div class="portal-hero-text"><span class="portal-hero-eyebrow">Mais vida para viver juntos</span><h1>Olá, {{ \Illuminate\Support\Str::title(mb_strtolower(explode(' ',$customer->name)[0])) }}</h1><p>Aqui você acompanha os planos dos seus pets e os pagamentos.</p><ul class="portal-hero-facts"><li><strong>{{ $petCount }}</strong> {{ $petCount===1?'pet':'pets' }}</li><li><strong>{{ $activePlans }}</strong> {{ $activePlans===1?'plano ativo':'planos ativos' }}</li></ul></div><div class="portal-hero-actions"><a class="button portal-hero-cta" href="{{ route('proposals.create') }}">Contratar um plano</a><a class="button portal-hero-ghost" href="{{ route('customers.edit',$customer) }}">@include('components.icon',['name'=>'users']) Meus dados</a></div></section>
+<section class="portal-hero is-home"><div class="portal-hero-text"><span class="portal-hero-eyebrow">Mais vida para viver juntos</span><h1>Olá, {{ \Illuminate\Support\Str::title(mb_strtolower(explode(' ',$customer->name)[0])) }}</h1><p>Aqui você acompanha os planos dos seus pets e os pagamentos.</p><ul class="portal-hero-facts"><li><strong>{{ $petCount }}</strong> {{ $petCount===1?'pet':'pets' }}</li><li><strong>{{ $activePlans }}</strong> {{ $activePlans===1?'plano ativo':'planos ativos' }}</li></ul></div><div class="portal-hero-actions"><a class="button portal-hero-cta" href="{{ route('proposals.create') }}">Contratar um plano</a><a class="button portal-hero-ghost" href="{{ route('customers.edit',$customer) }}">@include('components.icon',['name'=>'users']) Meus dados</a></div></section>
 
 @if($state==='blocked' || $pendingProposals->isNotEmpty())
 <section class="portal-section" aria-labelledby="portal-actions-title"><h2 class="portal-section-title" id="portal-actions-title">Precisa da sua atenção</h2>
@@ -37,5 +37,8 @@ $traits=collect([['dog'=>'Cão','cat'=>'Gato'][$pet->species] ?? $pet->species,$
 @endforelse
 </div>
 </section>
+@if($activeSubscriptions->isNotEmpty())
+<section class="portal-section" aria-label="Benefício Tudo pra Pet"><div class="card portal-tpp"><img class="portal-tpp-logo" src="{{ asset('assets/brand/tpp-logo.svg') }}" alt="Tudo pra Pet" width="174" height="30"><div class="portal-tpp-text"><strong>Preços exclusivos na Tudo pra Pet</strong><p>Quem tem plano São Francisco também tem preços especiais na Tudo pra Pet para cuidar do seu pet em casa.</p></div></div></section>
+@endif
 
 @endsection
