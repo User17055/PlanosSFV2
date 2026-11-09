@@ -77,8 +77,9 @@ class PortalApiController extends Controller
         ]+($r->has('pets') ? [
             // Cadastro em etapas: um ou mais pets de uma vez (máx. 5).
             'pets'=>'required|array|min:1|max:5','pets.*.name'=>'required|string|max:100','pets.*.species'=>'required|in:dog,cat',
-            'pets.*.birth_date'=>'required|date|before_or_equal:today','pets.*.breed'=>'nullable|string|max:100',
-            'pets.*.color'=>'nullable|string|max:100','pets.*.sex'=>'nullable|in:male,female,unknown',
+            // Raça, cor e sexo entram no contrato: são obrigatórios.
+            'pets.*.birth_date'=>'required|date|before_or_equal:today','pets.*.breed'=>'required|string|max:100',
+            'pets.*.color'=>'required|string|max:100','pets.*.sex'=>'required|in:male,female',
         ] : [
             'pet_name'=>'required|string|max:100','pet_species'=>'required|in:dog,cat','pet_birth_date'=>'required|date|before_or_equal:today',
             'pet_breed'=>'nullable|string|max:100','pet_color'=>'nullable|string|max:100','pet_sex'=>'nullable|in:male,female,unknown',
@@ -250,7 +251,7 @@ class PortalApiController extends Controller
     {
         $this->verified($r);
         $data=$r->validate(['name'=>'required|string|max:100','species'=>'required|in:dog,cat','birth_date'=>'required|date|before_or_equal:today',
-            'breed'=>'nullable|string|max:100','color'=>'nullable|string|max:100','sex'=>'nullable|in:male,female,unknown']);
+            'breed'=>'required|string|max:100','color'=>'required|string|max:100','sex'=>'required|in:male,female']);
         $pet=$r->user()->customer->pets()->create($data);
         Audit::record('portal.pet_created',$pet,$r->user());
         return response()->json(['id'=>$pet->id,'message'=>'Pet cadastrado.'],201);

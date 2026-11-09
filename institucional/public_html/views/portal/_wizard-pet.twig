@@ -4,12 +4,9 @@
 <div class="form-grid">
 <label>Espécie <span>*</span><select name="pets[{{i}}][species]" required><option value="dog" {{p.species|default('dog')=='dog'?'selected':''}}>Cão</option><option value="cat" {{p.species|default('')=='cat'?'selected':''}}>Gato</option></select></label>
 <label>Data de nascimento <span>*</span><input type="date" name="pets[{{i}}][birth_date]" required max="{{'now'|date('Y-m-d')}}" value="{{p.birth_date|default('')}}"></label>
+<label>Raça <span>*</span><input name="pets[{{i}}][breed]" required maxlength="100" value="{{p.breed|default('')}}" placeholder="Ex.: SRD (sem raça definida)"></label>
+<label>Cor / pelagem <span>*</span><input name="pets[{{i}}][color]" required maxlength="100" value="{{p.color|default('')}}"></label>
+<label>Sexo <span>*</span><select name="pets[{{i}}][sex]" required><option value="">Selecione</option><option value="male" {{p.sex|default('')=='male'?'selected':''}}>Macho</option><option value="female" {{p.sex|default('')=='female'?'selected':''}}>Fêmea</option></select></label>
 </div>
-<details class="wiz-more"><summary>Mais detalhes do pet <small>(opcional)</small></summary>
-<div class="form-grid">
-<label>Raça<input name="pets[{{i}}][breed]" maxlength="100" value="{{p.breed|default('')}}" placeholder="Se conhecida"></label>
-<label>Cor / pelagem<input name="pets[{{i}}][color]" maxlength="100" value="{{p.color|default('')}}"></label>
-<label>Sexo<select name="pets[{{i}}][sex]"><option value="unknown">Não informado</option><option value="male" {{p.sex|default('')=='male'?'selected':''}}>Macho</option><option value="female" {{p.sex|default('')=='female'?'selected':''}}>Fêmea</option></select></label>
-</div></details>
 </fieldset>
 {% endmacro %}

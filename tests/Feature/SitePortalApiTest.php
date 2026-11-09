@@ -81,7 +81,10 @@ class SitePortalApiTest extends TestCase
     public function test_registration_accepts_several_pets_and_opens_one_proposal_per_pet(): void
     {
         $data=$this->data(); foreach(['pet_name','pet_species','pet_birth_date'] as $k) unset($data[$k]);
-        $data['pets']=[['name'=>'Lua','species'=>'dog','birth_date'=>'2020-01-01'],['name'=>'Mel','species'=>'cat','birth_date'=>'2021-05-05']];
+        $data['pets']=[['name'=>'Lua','species'=>'dog','birth_date'=>'2020-01-01','breed'=>'SRD','color'=>'Caramelo','sex'=>'female'],['name'=>'Mel','species'=>'cat','birth_date'=>'2021-05-05','breed'=>'Siamês','color'=>'Creme','sex'=>'male']];
+        // Raça, cor e sexo vão para o contrato: sem eles o cadastro é recusado.
+        $missing=$data; unset($missing['pets'][1]['sex']); $missing['pets'][0]['breed']='';
+        $this->postJson('/api/site/v1/register',$missing,$this->headers())->assertUnprocessable()->assertJsonValidationErrors(['pets.0.breed','pets.1.sex']);
         $result=$this->postJson('/api/site/v1/register',$data,$this->headers())->assertCreated()->assertJsonCount(2,'proposal_ids')->json();
         $this->assertDatabaseCount('pets',2); $this->assertDatabaseCount('proposals',2);
         $this->assertSame($result['proposal_ids'][0],$result['proposal_id']);
