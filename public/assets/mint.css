@@ -2178,3 +2178,5 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .pet-hero-nav h1{overflow-wrap:anywhere}
 /* Cartão de cima da mesma altura na página inicial e na do pet */
 @media(min-width:900px){.portal-hero.is-home,.portal-hero.pet-hero-nav{min-height:264px}}
+/* Ilustração da espécie sobre fundo claro (esconde a bordinha branca do desenho no azul), esmaecendo com a imagem */
+.pet-hero-art.is-illustration{background:#e4f0cc}
