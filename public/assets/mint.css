@@ -2148,10 +2148,10 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .plan-benefit.is-used .plan-benefit-state{color:#8a3a2a}
 .plan-benefit.is-info .plan-benefit-state{color:#0b4f7d}
 
-/* Meu cuidado: cartão de boas-vindas do azul-marinho (#14264b) ao azul da marca (#08649a), com brilho verde-lima, círculos e o logo bem discreto */
+/* Meu cuidado: cartão de boas-vindas do azul-marinho (#14264b) ao azul da marca (#08649a), com brilho verde-lima, círculos e o logo da São Francisco */
 .portal-hero.is-home{position:relative;overflow:hidden;background:radial-gradient(circle at 92% 8%,rgba(131,172,56,.32),transparent 34%),linear-gradient(120deg,rgba(20,38,75,.96),rgba(8,100,154,.9)),url(brand/login-fundo.jpg) center/cover}
 .portal-hero.is-home::before,.portal-hero.is-home::after{content:"";position:absolute;pointer-events:none}
 .portal-hero.is-home::after{right:-90px;top:-120px;width:300px;height:300px;border-radius:50%;border:2px solid rgba(194,228,235,.2);box-shadow:0 0 0 34px rgba(194,228,235,.05),0 0 0 70px rgba(194,228,235,.03)}
-.portal-hero.is-home::before{right:34px;bottom:14px;width:112px;height:80px;background:url(brand/sao-francisco-logo.png) no-repeat center/contain;filter:brightness(0) invert(1);opacity:.1}
+.portal-hero.is-home::before{right:22px;bottom:10px;width:108px;height:77px;background:url(brand/sao-francisco-logo.png) no-repeat center/contain;opacity:.6}
 .portal-hero.is-home>*{position:relative;z-index:1}
-@media(max-width:560px){.portal-hero.is-home::before{display:none}}
+@media(max-width:560px){.portal-hero.is-home::before{top:14px;right:14px;bottom:auto;width:64px;height:46px}}
