@@ -53,6 +53,9 @@ class OriginalWordContractTest extends TestCase
             $this->assertMatchesRegularExpression('/\{\{pet_(idade|nascimento)\}\}/',$xml);
             $this->assertStringContainsString('assinatura_contratante',$xml);
             $this->assertStringNotContainsString('mailto:',$xml);
+            // Cada campo do cliente sai no mesmo tamanho de letra do rótulo (o CPF do Felino estava menor).
+            $dom=new \DOMDocument; $dom->loadXML($xml); $xp=new \DOMXPath($dom); $xp->registerNamespace('w','http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+            $this->assertSame(0,app(\App\Services\Contracts\OriginalWordContract::class)->matchFieldSizes($xp),$entry['source']);
             $this->assertStringNotContainsString('mailto:', $zip->getFromName('word/_rels/document.xml.rels'));
             $zip->close();
         }

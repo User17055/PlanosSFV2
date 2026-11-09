@@ -72,6 +72,7 @@ class OriginalWordContract
             foreach($changes as [$start,$length,$value]) { $this->replaceRange($xp,$p,$start,$length,$value); $replaced[]=$value; }
         }
         $this->removeMailtoFields($xp);
+        $this->matchFieldSizes($xp);
         // Personal mailto relationships also belong to the replaced customer data.
         $removed=[];
         foreach(iterator_to_array($xp->query('//w:hyperlink[contains(., "{{contratante_email}}") ]')) as $link) {
@@ -86,6 +87,31 @@ class OriginalWordContract
         }
         $zip->addFromString('word/document.xml',$xml->saveXML()); $zip->close();
         return $replaced;
+    }
+
+    /**
+     * Os Word de origem são contratos preenchidos: o dado do cliente antigo pode ter outro tamanho de letra
+     * (o CPF do Felino estava em 10,5 e o rótulo em 12). O campo herda o tamanho do texto que vem antes dele.
+     */
+    public function matchFieldSizes(DOMXPath $xp): int
+    {
+        $count=0;
+        foreach($xp->query('//w:body//w:p') as $paragraph) {
+            $previous=null;
+            foreach($xp->query('.//w:r[w:t]',$paragraph) as $run) {
+                $text=''; foreach($xp->query('w:t',$run) as $t) $text.=$t->textContent;
+                if (trim($text)==='') continue;
+                if (str_contains($text,'{{') && $previous) {
+                    foreach(['sz','szCs'] as $tag) {
+                        $want=$xp->query('w:rPr/w:'.$tag,$previous)->item(0)?->getAttributeNS(self::W_NS,'val');
+                        $have=$xp->query('w:rPr/w:'.$tag,$run)->item(0);
+                        if ($want && $have && $have->getAttributeNS(self::W_NS,'val')!==$want) { $have->setAttributeNS(self::W_NS,'w:val',$want); $count++; }
+                    }
+                }
+                $previous=$run;
+            }
+        }
+        return $count;
     }
 
     /** O e-mail do cliente antigo também fica em campos HYPERLINK "mailto:..."; tira o campo e deixa o texto exibido. */

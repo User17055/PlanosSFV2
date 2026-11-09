@@ -30,8 +30,8 @@
     "69de6187e8473d3c2f3c0f8174f6c884655c96e3a626155ad677e35560815368": {
         "source": "PLANO ECONOMICO FELINO.docx",
         "source_sha256": "e4185d52b25bffd59233a2c1f851651e33df991796887b2666445e0a6e3dd1fc",
-        "docx_sha256": "411873044bb3b5a76c9a8aa12ade36309f63c822ecdf251d727805d22e1ce2ea",
+        "docx_sha256": "274861aaed73582419628896176e5af66232bd479e61e14190272a2af924feb4",
         "text_sha256": "f90face1963de77ec3a2fefaccc29db5cd7efb7052ad33258179a1b4407ed656",
-        "changes": "Removido o desconto em ração, como nos outros planos (09/11/2026)."
+        "changes": "Removido o desconto em ração, como nos outros planos (09/11/2026). Campos do cliente no mesmo tamanho de letra dos rótulos (CPF estava em 10,5) (09/11/2026)."
     }
 }
