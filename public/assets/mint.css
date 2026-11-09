@@ -2128,8 +2128,8 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .portal-pet-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:6px 12px}
 .portal-pet-head h3{min-width:0;overflow-wrap:anywhere}
 .portal-pet-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-left:auto}
-.portal-pet-pill{display:inline-flex;align-items:center;gap:6px;color:#4a7a0e;font-size:15px;font-weight:800;line-height:1.3;white-space:nowrap}
-.portal-pet-pill.is-waiting{color:#6b7f3a;font-weight:700}
+.portal-pet-pill{display:inline-flex;align-items:center;gap:6px;color:var(--success-text);font-size:14px;font-weight:600;line-height:1.3;white-space:nowrap}
+.portal-pet-pill.is-waiting{color:var(--text-3)}
 .portal-pet-pill.is-overdue{color:#b3261e}
 .portal-pet-link .portal-pet-tags{gap:6px;margin:10px 0 0}
 .portal-pet-link .portal-pet-tags li{padding:4px 10px;border:0;border-radius:999px;background:#eef3f7;color:#33475e;font-size:13px}
