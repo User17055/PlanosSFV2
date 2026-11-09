@@ -51,9 +51,7 @@ class EligibilityService
         if (! $valid) {
             $issues[] = $this->issue('CONTRACT_PENDING', 'Contrato final válido pendente.');
         }
-        if (! $s->customer->contact_verified_at && \App\Models\User::where('customer_id', $s->customer_id)->where('role', 'customer')->exists()) {
-            $issues[] = $this->issue('CONTACT_NOT_VERIFIED', 'Confirmação do e-mail do titular pendente.');
-        }
+        // Decisão de 09/11/2026: o plano ativa com o pagamento; confirmar o e-mail é um aviso para o tutor não perder o acesso à conta.
         $initial = $s->invoices()->where('is_initial', true)->get()->filter(fn ($i) => $i->status === 'paid' && $i->paid_cents >= $i->amount_cents && $i->confirmed_at && $i->reconciliation_status === 'verified');
         if ($initial->isEmpty()) {
             $issues[] = $this->issue('FIRST_PAYMENT_PENDING', 'Primeiro pagamento integral ainda não confirmado.');

@@ -4,9 +4,6 @@
 @php
 $state=data_get($financialState,'status','pending');
 @endphp
-@if(! auth()->user()->email_verified_at)
-<div class="alert alert-info portal-email-notice" role="status">@include('components.icon',['name'=>'mail'])<div class="portal-email-text"><strong>Confirme seu e-mail.</strong><span>Assim ativamos seu plano.</span></div><form method="POST" action="{{ route('verification.resend') }}">@csrf<button class="button button-primary button-small" data-busy="Enviando...">Reenviar e-mail</button></form></div>
-@endif
 @php $activePlans=$customer->subscriptions->reject(fn($subscription)=>$subscription->isTerminal())->count(); $petCount=$customer->pets->count(); @endphp
 <section class="portal-hero"><div class="portal-hero-text"><span class="portal-hero-eyebrow">Mais vida para viver juntos</span><h1>Olá, {{ \Illuminate\Support\Str::title(mb_strtolower(explode(' ',$customer->name)[0])) }}</h1><p>Aqui você acompanha os planos dos seus pets e os pagamentos.</p><ul class="portal-hero-facts"><li><strong>{{ $petCount }}</strong> {{ $petCount===1?'pet':'pets' }}</li><li><strong>{{ $activePlans }}</strong> {{ $activePlans===1?'plano ativo':'planos ativos' }}</li></ul></div><div class="portal-hero-actions"><a class="button portal-hero-cta" href="{{ route('proposals.create') }}">@include('components.icon',['name'=>'plus']) Contratar um plano</a><a class="button portal-hero-ghost" href="{{ route('customers.edit',$customer) }}">@include('components.icon',['name'=>'users']) Meus dados</a></div></section>
 

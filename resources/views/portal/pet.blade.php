@@ -37,7 +37,7 @@ $awaiting=$pendingSubscriptions->where('pet_id',$pet->id)->values();
 <div class="pet-plans">
 @foreach($awaiting as $waiting)@php $waitingInvoice=$openInvoices->first(fn($invoice)=>$invoice->subscription_id===$waiting->id); $waitingDocument=$waiting->contractDocuments->where('status','valid')->where('kind','final_contract')->sortByDesc('version')->first(); @endphp
 <article class="card portal-awaiting"><span class="portal-pet-pending-chip">Aguardando validação da proposta</span><h3>{{ $waiting->productVersion->name }}</h3>
-<p>Assinado em {{ $date($waiting->proposal?->accepted_at ?? $waiting->created_at) }}. Falta pagar e confirmar o e-mail.</p>
+<p>Assinado em {{ $date($waiting->proposal?->accepted_at ?? $waiting->created_at) }}. Falta pagar.</p>
 @if($waitingInvoice)<div class="portal-awaiting-pay"><span>{{ $money($waitingInvoice->outstanding_cents) }}</span>@if($waitingInvoice->payment_url)<a class="button button-primary" href="{{ route('portal.invoice.open',$waitingInvoice) }}" target="_blank" rel="noopener">Pagar agora</a>@else<a class="button button-primary" href="{{ route('portal.invoices') }}">Ver fatura</a>@endif</div>@endif
 @if($waitingDocument)<a class="text-link portal-awaiting-doc" href="{{ route('contracts.download',$waitingDocument) }}">@include('components.icon',['name'=>'download']) Baixar contrato</a>@endif
 </article>

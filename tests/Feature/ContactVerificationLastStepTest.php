@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Notification;
 use Tests\Concerns\BuildsActiveSubscription;
 use Tests\TestCase;
 
-/** A confirmação do e-mail vem por último: assina e paga antes, e ela libera a ativação. */
+/** Decisão de 09/11/2026: o plano ativa com o pagamento; o e-mail confirmado fica como aviso, para o tutor não perder o acesso. */
 class ContactVerificationLastStepTest extends TestCase
 {
     use BuildsActiveSubscription, RefreshDatabase;
@@ -23,29 +23,18 @@ class ContactVerificationLastStepTest extends TestCase
         $this->setUpScenario();
     }
 
-    public function test_activation_waits_for_the_email_and_resumes_when_it_is_confirmed(): void
+    public function test_plan_activates_after_payment_without_waiting_for_the_email(): void
     {
-        $subscription = $this->activeSubscription();
         $this->customer->update(['contact_verified_at' => null]);
         $this->client->forceFill(['email_verified_at' => null])->save();
-
-        $codes = array_column(app(EligibilityService::class)->activationImpediments($subscription->fresh()), 'code');
-        $this->assertContains('CONTACT_NOT_VERIFIED', $codes);
-        $this->assertFalse(app(ActivationService::class)->activate($subscription->fresh())['eligible']);
-
-        $this->customer->update(['contact_verified_at' => now()]);
-        $this->client->forceFill(['email_verified_at' => now()])->save();
-        app(ContactVerificationService::class)->activatePending($this->customer->id);
-        $this->assertSame('active', $subscription->fresh()->status);
-    }
-
-    public function test_customers_without_portal_access_are_not_held_back_by_the_email(): void
-    {
         $subscription = $this->activeSubscription();
-        $this->client->forceFill(['customer_id' => null])->save();
-        $this->customer->update(['contact_verified_at' => null]);
+
         $codes = array_column(app(EligibilityService::class)->activationImpediments($subscription->fresh()), 'code');
         $this->assertNotContains('CONTACT_NOT_VERIFIED', $codes);
+        $this->assertSame('active', $subscription->fresh()->status);
+        // O aviso continua na área do cliente enquanto o e-mail não for confirmado.
+        $this->actingAs($this->client)->get(route('portal'))->assertOk()->assertSee('Confirme seu e-mail');
+        $this->actingAs($this->client)->get(route('portal.invoices'))->assertOk()->assertSee('Confirme seu e-mail');
     }
 
     public function test_confirmation_email_is_requested_after_payment_only_once_per_hour(): void
