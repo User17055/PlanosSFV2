@@ -1,8 +1,9 @@
-{% macro pet_block(i, p) %}
+{% macro pet_block(i, p, species) %}
+{% set allowed = species|default(['dog','cat']) %}
 <fieldset class="wiz-pet" data-pet>
 <label class="wiz-pet-name">Qual o nome do seu pet? <span>*</span><input name="pets[{{i}}][name]" required maxlength="100" value="{{p.name|default('')}}" placeholder="Ex.: Lua" autocomplete="off"></label>
 <div class="form-grid">
-<label>Espécie <span>*</span><select name="pets[{{i}}][species]" required><option value="dog" {{p.species|default('dog')=='dog'?'selected':''}}>Cão</option><option value="cat" {{p.species|default('')=='cat'?'selected':''}}>Gato</option></select></label>
+<label>Espécie <span>*</span><select name="pets[{{i}}][species]" required>{% for s in ['dog','cat'] %}{% if s in allowed %}<option value="{{s}}" {{p.species|default(allowed|first)==s?'selected':''}}>{{s=='dog'?'Cão':'Gato'}}</option>{% endif %}{% endfor %}</select></label>
 <label>Data de nascimento <span>*</span><input type="date" name="pets[{{i}}][birth_date]" required max="{{'now'|date('Y-m-d')}}" value="{{p.birth_date|default('')}}"></label>
 <label>Raça <span>*</span><input name="pets[{{i}}][breed]" required maxlength="100" value="{{p.breed|default('')}}" placeholder="Ex.: SRD (sem raça definida)"></label>
 <label>Cor / pelagem <span>*</span><input name="pets[{{i}}][color]" required maxlength="100" value="{{p.color|default('')}}"></label>

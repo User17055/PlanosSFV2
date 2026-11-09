@@ -191,14 +191,15 @@
   const checkAccount = async () => {
     const step = steps[current], cpf = step.querySelector('[name=document]'), email = step.querySelector('[name=email]');
     if (!cpf || !email || !form.dataset.checkUrl) return true;
-    const notice = step.querySelector('[data-check-notice]') || cpf.closest('label').appendChild(Object.assign(document.createElement('small'), { role: 'alert' }));
-    notice.setAttribute('data-check-notice', ''); notice.textContent = '';
+    step.querySelectorAll('[data-check-notice]').forEach(old => old.remove());
+    const notice = Object.assign(document.createElement('small'), { role: 'alert' }); notice.setAttribute('data-check-notice', '');
     try {
       const body = new FormData(); body.set('_token', form.querySelector('[name=_token]').value); body.set('document', cpf.value); body.set('email', email.value);
       const response = await fetch(form.dataset.checkUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
       const data = await response.json();
       if (data.redirect) { window.location.assign(data.redirect); return false; }
-      if (data.message) { notice.textContent = data.message; cpf.focus(); return false; }
+      // O aviso aparece no campo com problema (CPF inválido, e-mail já usado ou cadastro sem acesso).
+      if (data.message) { const field = data.field === 'email' ? email : cpf; field.closest('label').appendChild(notice); notice.textContent = data.message; field.focus(); return false; }
     } catch { /* sem resposta: segue, o envio final confere de novo */ }
     return true;
   };

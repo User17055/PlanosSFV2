@@ -48,8 +48,15 @@ class PortalApiController extends Controller
     public function accountCheck(Request $r)
     {
         $data=$r->validate(['document'=>'nullable|string|max:20','email'=>'nullable|email|max:180']);
-        $existing=$this->existingAccount(preg_replace('/\D/','',(string)($data['document']??'')),trim((string)($data['email']??'')));
-        return response()->json($existing??['code'=>'AVAILABLE']);
+        $cpf=preg_replace('/\D/','',(string)($data['document']??'')); $email=trim((string)($data['email']??''));
+        // Confere na etapa dos dados o que o cadastro final recusaria, para o cliente não chegar ao fim e preencher tudo de novo.
+        if ($cpf!=='') {
+            try { app(CustomerController::class)->validateCpf($cpf); }
+            catch(ValidationException) { return response()->json(['code'=>'INVALID_CPF','field'=>'document','message'=>'Confira o CPF: os números digitados não formam um CPF válido.']); }
+        }
+        if ($existing=$this->existingAccount($cpf,$email)) return response()->json($existing);
+        if ($email!=='' && User::where('email',$email)->exists()) return response()->json(['code'=>'EMAIL_IN_USE','field'=>'email','message'=>'Este e-mail já é usado em outro acesso. Use outro e-mail.']);
+        return response()->json(['code'=>'AVAILABLE']);
     }
 
     public function login(Request $r)

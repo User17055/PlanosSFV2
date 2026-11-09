@@ -76,6 +76,10 @@ class SitePortalApiTest extends TestCase
         $this->postJson('/api/site/v1/account-check',['document'=>'529.982.247-25','email'=>'outro@example.test'],$this->headers())->assertOk()->assertJsonPath('code','ACCOUNT_EXISTS')->assertJsonPath('by','document');
         $this->postJson('/api/site/v1/account-check',['document'=>'11144477735','email'=>'site@example.test'],$this->headers())->assertOk()->assertJsonPath('code','ACCOUNT_EXISTS')->assertJsonPath('by','email');
         $this->postJson('/api/site/v1/account-check',['document'=>'11144477735','email'=>'novo@example.test'],$this->headers())->assertOk()->assertJsonPath('code','AVAILABLE');
+        // O que o cadastro final recusaria aparece já no "Prosseguir" dos dados.
+        $this->postJson('/api/site/v1/account-check',['document'=>'111.444.777-30','email'=>'novo@example.test'],$this->headers())->assertOk()->assertJsonPath('code','INVALID_CPF')->assertJsonPath('field','document');
+        \App\Models\User::factory()->create(['role'=>'manager','email'=>'equipe@example.test']);
+        $this->postJson('/api/site/v1/account-check',['document'=>'11144477735','email'=>'equipe@example.test'],$this->headers())->assertOk()->assertJsonPath('code','EMAIL_IN_USE')->assertJsonPath('field','email');
     }
 
     public function test_registration_accepts_several_pets_and_opens_one_proposal_per_pet(): void

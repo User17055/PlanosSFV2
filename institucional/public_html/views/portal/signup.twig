@@ -14,7 +14,7 @@
 
 <section class="wiz-step is-active" data-step="1" aria-labelledby="wiz-t1">
 <div class="section-heading"><span class="section-number">1</span><div><h2 id="wiz-t1">Qual o nome do seu pet?</h2><p>Cada plano é de um pet só.</p></div></div>
-<div data-pets>{% for p in (oldpets|length ? oldpets : [{}]) %}{{ w.pet_block(loop.index0, p) }}{% endfor %}</div>
+<div data-pets>{% for p in (oldpets|length ? oldpets : [{}]) %}{{ w.pet_block(loop.index0, p, offer.species|default(null)) }}{% endfor %}</div>
 <div class="wiz-nav"><button type="button" class="button button-primary" data-next hidden>Prosseguir</button></div>
 </section>
 

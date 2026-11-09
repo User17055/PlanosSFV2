@@ -50,6 +50,9 @@ class PortalController
                 $fields=['name','document','email','phone','rg','street','number','complement','neighborhood','city','state','zip',
                     'pet_name','pet_species','pet_birth_date','pet_breed','pet_color','pet_sex','species','birth_date','breed','color','sex','reason','signer_name','acquisition_source','referrer_name'];
                 $old=array_intersect_key($r->request->all(),array_flip($fields));
+                // Os pets do cadastro em etapas também voltam preenchidos (só os campos do pet, até 5).
+                $pets=$r->request->all()['pets']??null;
+                if (is_array($pets)) $old['pets']=array_map(fn($p)=>is_array($p)?array_map(fn($v)=>mb_substr(is_scalar($v)?(string)$v:'',0,100),array_intersect_key($p,array_flip(['name','species','birth_date','breed','color','sex']))):[],array_slice(array_values($pets),0,5));
                 $r->getSession()->set('portal_old',$old);
                 $errors=$e->result->data['errors']??[];
                 $messages=[];
@@ -130,6 +133,7 @@ class PortalController
         return match($data['code']??'') {
             'ACCOUNT_EXISTS'=>new JsonResponse(['redirect'=>$this->existingLoginUrl($r,$data)]),
             'CUSTOMER_WITHOUT_ACCESS'=>new JsonResponse(['message'=>(string)($data['message']??'')]),
+            'INVALID_CPF','EMAIL_IN_USE'=>new JsonResponse(['message'=>(string)($data['message']??''),'field'=>($data['field']??'')==='email'?'email':'document']),
             default=>new JsonResponse(['ok'=>true]),
         };
     }
