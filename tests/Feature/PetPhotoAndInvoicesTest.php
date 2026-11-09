@@ -34,8 +34,8 @@ class PetPhotoAndInvoicesTest extends TestCase
         $this->assertNotNull($pet->photo_path);
         Storage::disk('local')->assertExists($pet->photo_path);
         $this->get(route('pets.photo',$pet))->assertOk();
-        $this->get(route('portal'))->assertOk()->assertSee(route('pets.photo',$pet),false)->assertSee('Nasc.');
-        $this->get(route('portal.pet',$pet))->assertOk()->assertSee('pet-hero-art',false);
+        $this->get(route('portal'))->assertOk()->assertSee(route('pets.photo',$pet),false);
+        $this->get(route('portal.pet',$pet))->assertOk()->assertSee('pet-hero-art',false)->assertSee('Nasc.');
 
         $first=$pet->photo_path;
         $this->post(route('pets.photo.store',$pet),['photo'=>UploadedFile::fake()->image('nova.png',200,200)])->assertRedirect();

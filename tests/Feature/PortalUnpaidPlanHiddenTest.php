@@ -24,7 +24,7 @@ class PortalUnpaidPlanHiddenTest extends TestCase
             'product_version_id' => $this->version->id, 'originating_franchise_id' => $this->unit->id, 'channel' => 'site'], $this->client);
         $subscription = app(ProposalService::class)->accept($proposal, $this->client, ['accepted' => true]);
 
-        $this->actingAs($this->client)->get(route('portal'))->assertOk()->assertDontSee('class="portal-pet-plan-name"',false);
+        $this->actingAs($this->client)->get(route('portal'))->assertOk()->assertDontSee('class="portal-pet-pill',false);
         $this->get(route('portal.pet', $this->pet))->assertOk()->assertDontSee('Ver plano, saldo');
         $this->get(route('portal.plan', [$this->pet, $subscription]))->assertNotFound();
         $this->get(route('portal.invoices'))->assertOk()->assertSee('Versão teste');
@@ -35,6 +35,6 @@ class PortalUnpaidPlanHiddenTest extends TestCase
         $invoice = $subscription->invoices()->firstOrFail();
         app(\App\Services\Domain\FinancialService::class)->applyVerifiedInvoice($invoice, ['status' => 'paid', 'paid_cents' => $invoice->amount_cents,
             'paid_at' => now()->toIso8601String(), 'provider_updated_at' => now()->toIso8601String(), 'reference' => 'transaction-'.$invoice->id, 'source' => 'test_verified']);
-        $this->get(route('portal'))->assertOk()->assertSee('class="portal-pet-plan-name"',false)->assertDontSee('Aguardando validação da proposta');
+        $this->get(route('portal'))->assertOk()->assertSee('class="portal-pet-pill',false)->assertDontSee('Aguardando validação da proposta');
     }
 }
