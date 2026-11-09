@@ -36,7 +36,13 @@ Route::post('/webhooks/vindi',function(Request $request) {
 
 Route::post('/webhooks/leads/{token}',[\App\Http\Controllers\LeadController::class,'intake'])->middleware('throttle:120,1')->name('webhooks.leads');
 
+// "Entrar com São Francisco" na Tudo pra Pet: troca do código e dados do cliente (servidor a servidor).
+Route::post('/oauth/token',[\App\Http\Controllers\OAuthController::class,'token'])->middleware('throttle:30,1')->name('oauth.token');
+Route::get('/oauth/usuario',[\App\Http\Controllers\OAuthController::class,'userinfo'])->middleware('throttle:60,1')->name('oauth.userinfo');
+
 Route::middleware(['auth','active'])->group(function () {
+    Route::get('/oauth/autorizar',[\App\Http\Controllers\OAuthController::class,'authorize'])->middleware(['role:customer','throttle:30,1'])->name('oauth.authorize');
+    Route::post('/oauth/autorizar',[\App\Http\Controllers\OAuthController::class,'approve'])->middleware(['role:customer','throttle:30,1'])->name('oauth.approve');
     Route::middleware('role:central_admin,manager,sales,operator,attendant')->group(function () {
         Route::get('/leads/chat', [\App\Http\Controllers\LeadChatController::class, 'index'])->name('leads.chat.index');
         Route::get('/leads/chat/conexao', [\App\Http\Controllers\DigisacConnectionController::class, 'edit'])->name('leads.chat.connection');

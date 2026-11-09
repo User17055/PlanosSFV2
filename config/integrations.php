@@ -24,6 +24,9 @@ return [
         'payment_hosts' => array_filter(array_map('trim',explode(',',env('VINDI_PAYMENT_HOSTS','app.vindi.com.br,sandbox-app.vindi.com.br')))),
     ],
     'simplesvet' => ['enabled' => false, 'mode' => 'manual', 'reason' => 'Documentação e autorização de escrita não fornecidas.'],
+    // "Entrar com São Francisco" na loja da Tudo pra Pet (OAuth 2.0 com PKCE). Sem segredo, os endereços recusam tudo.
+    'sso_tudoprapet' => ['client_id' => env('SSO_TPP_CLIENT_ID', 'tudoprapet'), 'client_secret' => env('SSO_TPP_CLIENT_SECRET'),
+        'redirect_uris' => array_values(array_filter(array_map('trim', explode(',', (string) env('SSO_TPP_REDIRECT_URIS', '')))))],
     // Grupo "Plano São Francisco" no site da Tudo pra Pet (preço do Clube). Sem chave, segue manual como antes.
     'tudoprapet' => ['enabled' => (bool) env('TUDOPRAPET_ENABLED', false), 'url' => env('TUDOPRAPET_URL'), 'api_key' => env('TUDOPRAPET_API_KEY'),
         'timeout' => (int) env('TUDOPRAPET_TIMEOUT', 15), 'mode' => 'manual', 'reason' => 'Chave da API do Plano São Francisco ainda não configurada.'],

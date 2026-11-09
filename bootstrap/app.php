@@ -13,7 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['active'=>\App\Http\Middleware\ActiveUser::class,'role'=>\App\Http\Middleware\RequireRole::class]);
-        $middleware->validateCsrfTokens(except:['webhooks/vindi','webhooks/leads/*']);
+        $middleware->validateCsrfTokens(except:['webhooks/vindi','webhooks/leads/*','oauth/token']);
         $middleware->redirectUsersTo(fn (\Illuminate\Http\Request $request) => $request->user()?->role === 'customer' ? '/portal' : '/painel');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
