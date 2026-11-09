@@ -37,8 +37,4 @@ $traits=collect([['dog'=>'Cão','cat'=>'Gato'][$pet->species] ?? $pet->species,$
 @endforelse
 </div>
 </section>
-@if($activeSubscriptions->isNotEmpty())
-<section class="portal-section" aria-label="Benefício Tudo pra Pet"><div class="card portal-tpp"><img class="portal-tpp-logo" src="{{ asset('assets/brand/tpp-logo.svg') }}" alt="Tudo pra Pet" width="174" height="30"><div class="portal-tpp-text"><strong>Preços exclusivos na Tudo pra Pet</strong><p>Quem tem plano São Francisco também tem preços especiais na Tudo pra Pet para cuidar do seu pet em casa.</p></div></div></section>
-@endif
-
 @endsection
