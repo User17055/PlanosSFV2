@@ -62,6 +62,8 @@ class AuthController extends Controller
         $role=$request->user()->role;
         // Um destino guardado antes do login (ex.: /painel) só vale se o perfil pode abri-lo; senão o cliente cairia num 403.
         if (! $this->roleCanOpen($role,(string)$request->session()->get('url.intended',''))) $request->session()->forget('url.intended');
+        // A administração central escolhe entre o painel e a própria área de cliente; o destino guardado vale para o painel.
+        if ($role === 'central_admin') return redirect()->route('account.choose');
         return redirect()->intended($role === 'customer' ? $customerDestination : route($role === 'attendant' ? 'leads.index' : 'dashboard'));
     }
 

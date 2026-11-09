@@ -2120,3 +2120,6 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-lead h3{margin-top:4px;font-size:16px}
 .dash-lead-actions{margin-top:8px}
 }
+
+/* Escolha de entrada da administração central */
+.auth-subtitle{margin:26px 0 10px;font-size:16px;font-weight:700;color:#3d5a80;text-align:center}

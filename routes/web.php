@@ -53,6 +53,10 @@ Route::middleware(['auth','active'])->group(function () {
     Route::post('/leads/{lead}/responsavel',[\App\Http\Controllers\LeadController::class,'assign'])->middleware(['role:central_admin,manager','throttle:60,1'])->name('leads.assign');
     Route::post('/leads/{lead}/excluir',[\App\Http\Controllers\LeadController::class,'destroy'])->middleware(['role:central_admin,manager','throttle:30,1'])->name('leads.destroy');
     Route::post('/sair',[AuthController::class,'logout'])->name('logout');
+    Route::get('/entrar/escolher',[\App\Http\Controllers\AccountSwitchController::class,'choose'])->middleware('role:central_admin')->name('account.choose');
+    Route::post('/entrar/escolher/painel',[\App\Http\Controllers\AccountSwitchController::class,'admin'])->middleware('role:central_admin')->name('account.admin');
+    Route::post('/entrar/escolher/cliente',[\App\Http\Controllers\AccountSwitchController::class,'customer'])->middleware(['role:central_admin','throttle:10,1'])->name('account.customer');
+    Route::post('/voltar-ao-painel',[\App\Http\Controllers\AccountSwitchController::class,'back'])->middleware(['role:customer','throttle:10,1'])->name('account.back');
     Route::get('/l/{token}/contrato',[\App\Http\Controllers\MarketingLinkController::class,'contractPreview'])->middleware('role:central_admin,manager,sales')->name('attribution_links.contract-preview');
     Route::get('/l/{token}/contrato/pdf',[\App\Http\Controllers\MarketingLinkController::class,'contractPreviewPdf'])->middleware('role:central_admin,manager,sales')->name('attribution_links.contract-preview-pdf');
     Route::get('/verificar-email/{user}/{hash}',[RegistrationController::class,'verify'])->middleware(['signed','throttle:6,1','role:customer'])->name('verification.verify');
