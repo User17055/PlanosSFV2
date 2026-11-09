@@ -45,6 +45,15 @@ class SigningReliabilityTest extends TestCase
             'signature_data'=>$this->signatureData(),'selfie_data'=>$this->selfieData()];
     }
 
+    public function test_customer_from_the_site_signs_before_confirming_the_email(): void
+    {
+        // Pelo site o e-mail é confirmado depois do pagamento; a área do cliente não pode esconder a assinatura antes disso.
+        $proposal=$this->proposal();
+        $proposal->customer->update(['contact_verified_at'=>null]);
+        $this->owner->update(['email_verified_at'=>null]);
+        $this->actingAs($this->owner)->get(route('proposals.show',$proposal))->assertOk()->assertSee('name="signer_name"',false);
+    }
+
     public function test_failed_review_and_incorrect_signer_cannot_commit_acceptance(): void
     {
         $proposal=$this->proposal();

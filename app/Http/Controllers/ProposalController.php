@@ -120,7 +120,8 @@ class ProposalController extends Controller
         $nativeContract=(bool)data_get($proposal->snapshot,'version.contract_layout.source');
         $review=$request->session()->get('contract_review.'.$proposal->id,[]);
         $signatureReviewRequired=$nativeContract && (empty($review['fingerprint']) || !hash_equals($reviewFingerprint,$review['fingerprint']) || ($review['reviewed_at']??0)<now()->subHours(2)->timestamp);
-        $signingAvailable=!$proposal->locked_at && in_array($proposal->status,['draft','awaiting_acceptance'],true) && $proposal->expires_at->isFuture() && $proposal->productVersion->isOffered() && (bool)$proposal->customer->contact_verified_at;
+        $signingAvailable=!$proposal->locked_at && in_array($proposal->status,['draft','awaiting_acceptance'],true) && $proposal->expires_at->isFuture() && $proposal->productVersion->isOffered();
+        // O e-mail é confirmado depois do pagamento, como no site (ver ContactVerificationLastStepTest); a ativação é que espera por ele.
         $autoCheckout=$request->user()->role==='customer' && $proposal->subscription?->document_status==='valid' && $request->session()->pull('checkout_after_signing.'.$proposal->id,false);
         return view('proposals.show',compact('proposal','publicUrl','reviewFingerprint','nativeContract','signatureReviewRequired','signingAvailable','autoCheckout'));
     }
