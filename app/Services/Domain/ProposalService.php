@@ -70,6 +70,10 @@ class ProposalService
         if ($issues) {
             throw new DomainException($issues[0]['code'], $issues[0]['message'], 422, ['impediments' => $issues]);
         }
+        // A mesma trava da assinatura, já na abertura: sem ela o cliente só descobre o impedimento ao assinar.
+        if (PetProductSlot::where('pet_id', $pet->id)->where('product_category', $version->product->category)->where('state', '<>', 'released')->exists()) {
+            throw new DomainException('PET_CATEGORY_OCCUPIED', 'Este pet já possui contratação ou reserva desta categoria. Encerre o vínculo anterior para contratar novamente.', 422);
+        }
         if (! in_array($version->billing_cycle, ['monthly', 'annual', 'one_time'], true)) {
             throw new DomainException('BILLING_UNSUPPORTED', 'Modalidade de cobrança não habilitada.', 422);
         }

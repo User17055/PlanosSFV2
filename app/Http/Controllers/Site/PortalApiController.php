@@ -160,7 +160,9 @@ class PortalApiController extends Controller
         return response()->json($basic+[
             'customer'=>['name'=>$customer->name,'phone'=>$customer->phone,'address'=>CustomerAddress::display($customer->address)],
             'financial'=>$financial->customerStatus($customer),
-            'pets'=>$customer->pets->map(fn($p)=>$p->only(['id','name','species','breed','color','sex','birth_date'])),
+            // occupied: categorias em que o pet já tem contrato ou reserva (o site não oferece outro plano delas).
+            'pets'=>$customer->pets->map(fn($p)=>$p->only(['id','name','species','breed','color','sex','birth_date'])
+                +['occupied'=>\App\Models\PetProductSlot::where('pet_id',$p->id)->where('state','<>','released')->pluck('product_category')->unique()->values()]),
             'subscriptions'=>$customer->subscriptions->map(function($s) use($eligibility,$checkout) {
                 $result=$eligibility->subscription($s);
                 $document=$s->documents->where('kind','final_contract')->where('status','valid')->sortByDesc('version')->first();

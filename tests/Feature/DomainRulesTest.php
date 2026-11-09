@@ -164,6 +164,18 @@ class DomainRulesTest extends TestCase
         $this->assertNull($s->fresh()->activated_at);
     }
 
+    public function test_a_second_plan_of_the_same_category_is_refused_when_opening_not_only_when_signing(): void
+    {
+        $this->signed();
+        try {
+            $this->proposal();
+            $this->fail('A proposta não podia ser aberta.');
+        } catch (DomainException $e) {
+            $this->assertSame('PET_CATEGORY_OCCUPIED', $e->errorCode);
+        }
+        $this->assertSame(1, Proposal::count());
+    }
+
     public function test_acceptance_is_idempotent_and_category_slot_exclusive_but_package_allowed(): void
     {
         $p = $this->proposal();
