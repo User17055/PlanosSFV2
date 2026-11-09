@@ -37,6 +37,8 @@ Route::post('/webhooks/vindi',function(Request $request) {
 Route::post('/webhooks/leads/{token}',[\App\Http\Controllers\LeadController::class,'intake'])->middleware('throttle:120,1')->name('webhooks.leads');
 
 // "Entrar com São Francisco" na Tudo pra Pet: troca do código e dados do cliente (servidor a servidor).
+Route::get('/.well-known/openid-configuration',[\App\Http\Controllers\OAuthController::class,'discovery'])->middleware('throttle:60,1')->name('oauth.discovery');
+Route::get('/oauth/jwks',[\App\Http\Controllers\OAuthController::class,'jwks'])->middleware('throttle:60,1')->name('oauth.jwks');
 Route::post('/oauth/token',[\App\Http\Controllers\OAuthController::class,'token'])->middleware('throttle:30,1')->name('oauth.token');
 Route::get('/oauth/usuario',[\App\Http\Controllers\OAuthController::class,'userinfo'])->middleware('throttle:60,1')->name('oauth.userinfo');
 

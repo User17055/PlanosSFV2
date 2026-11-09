@@ -6,7 +6,7 @@ use App\Models\{Customer, Franchise, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/** "Entrar com São Francisco" na Tudo pra Pet: OAuth 2.0 com código de autorização e PKCE. */
+/** "Entrar com São Francisco" na Tudo pra Pet: OpenID Connect com código de autorização (PKCE opcional). */
 class SsoTudoPraPetTest extends TestCase
 {
     use RefreshDatabase;
@@ -28,7 +28,8 @@ class SsoTudoPraPetTest extends TestCase
     private function params(array $extra = []): array
     {
         $challenge = rtrim(strtr(base64_encode(hash('sha256', $this->verifier, true)), '+/', '-_'), '=');
-        return $extra + ['response_type' => 'code', 'client_id' => 'tudoprapet', 'redirect_uri' => self::BACK, 'state' => 'estado-123', 'code_challenge' => $challenge, 'code_challenge_method' => 'S256'];
+        return $extra + ['response_type' => 'code', 'client_id' => 'tudoprapet', 'redirect_uri' => self::BACK, 'state' => 'estado-123', 'scope' => 'openid email profile phone',
+            'nonce' => 'nonce-abc', 'code_challenge' => $challenge, 'code_challenge_method' => 'S256'];
     }
 
     private function codeFrom(string $location): string
@@ -50,10 +51,23 @@ class SsoTudoPraPetTest extends TestCase
         $this->actingAs($this->tutor)->get(route('oauth.authorize', $this->params()))->assertOk()->assertSee('Permitir e continuar')->assertSee('Sua senha não é compartilhada');
         $location = $this->post(route('oauth.approve'), $this->params(['decision' => 'allow']))->assertRedirect()->headers->get('Location');
         $this->assertStringStartsWith(self::BACK.'?', $location);
-        $token = $this->exchange($this->codeFrom($location))->assertOk()->assertJsonPath('token_type', 'Bearer')->json('access_token');
-        $this->getJson(route('oauth.userinfo'), ['Authorization' => 'Bearer '.$token])->assertOk()
-            ->assertExactJson(['sub' => 'sf-'.$this->tutor->customer_id, 'name' => 'Maria Tutora', 'email' => 'maria@example.test', 'email_verified' => true,
-                'cpf' => '52998224725', 'phone' => '18999990000', 'plano_ativo' => false]);
+        $answer = $this->exchange($this->codeFrom($location))->assertOk()->assertJsonPath('token_type', 'Bearer');
+        $claims = ['sub' => 'sf-'.$this->tutor->customer_id, 'name' => 'Maria Tutora', 'email' => 'maria@example.test', 'email_verified' => true,
+            'phone_number' => '+5518999990000', 'cpf' => '52998224725', 'plano_ativo' => false];
+        $this->getJson(route('oauth.userinfo'), ['Authorization' => 'Bearer '.$answer->json('access_token')])->assertOk()->assertExactJson($claims);
+
+        // id_token assinado com a chave publicada no jwks, para esta loja e com o nonce pedido.
+        [$head, $body, $signature] = explode('.', $answer->json('id_token'));
+        $decode = fn ($part) => base64_decode(strtr($part, '-_', '+/'));
+        $key = $this->getJson(route('oauth.jwks'))->assertOk()->json('keys.0');
+        $this->assertSame(json_decode($decode($head), true)['kid'], $key['kid']);
+        $public = openssl_pkey_get_details(openssl_pkey_get_private(file_get_contents(storage_path('app/private/oidc-tudoprapet.pem'))));
+        $this->assertSame(rtrim(strtr(base64_encode($public['rsa']['n']), '+/', '-_'), '='), $key['n']);
+        $this->assertSame(1, openssl_verify($head.'.'.$body, $decode($signature), $public['key'], OPENSSL_ALGO_SHA256));
+        $token = json_decode($decode($body), true);
+        $this->assertSame([rtrim(config('app.url'), '/'), 'tudoprapet', 'nonce-abc'], [$token['iss'], $token['aud'], $token['nonce']]);
+        $this->assertGreaterThan(time(), $token['exp']);
+        $this->assertSame($claims, array_intersect_key($token, $claims));
         // Na segunda vez não pergunta de novo.
         $this->assertStringStartsWith(self::BACK.'?', $this->get(route('oauth.authorize', $this->params()))->assertRedirect()->headers->get('Location'));
     }
@@ -76,5 +90,19 @@ class SsoTudoPraPetTest extends TestCase
         $this->assertStringContainsString('error=access_denied', $location);
         $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
         $this->actingAs($admin)->get(route('oauth.authorize', $this->params()))->assertForbidden();
+    }
+
+    public function test_discovery_points_to_the_endpoints_and_basic_auth_without_pkce_works(): void
+    {
+        $base = rtrim(config('app.url'), '/');
+        $this->getJson('/.well-known/openid-configuration')->assertOk()->assertJsonPath('issuer', $base)
+            ->assertJsonPath('authorization_endpoint', $base.'/oauth/autorizar')->assertJsonPath('token_endpoint', $base.'/oauth/token')
+            ->assertJsonPath('userinfo_endpoint', $base.'/oauth/usuario')->assertJsonPath('jwks_uri', $base.'/oauth/jwks')
+            ->assertJsonPath('id_token_signing_alg_values_supported', ['RS256']);
+        $this->actingAs($this->tutor)->post(route('oauth.approve'), $this->params(['decision' => 'allow']));
+        $plain = array_diff_key($this->params(), ['code_challenge' => 1, 'code_challenge_method' => 1, 'nonce' => 1]);
+        $code = $this->codeFrom($this->get(route('oauth.authorize', $plain))->headers->get('Location'));
+        $this->post(route('oauth.token'), ['grant_type' => 'authorization_code', 'code' => $code, 'redirect_uri' => self::BACK],
+            ['Authorization' => 'Basic '.base64_encode('tudoprapet:segredo-de-teste')])->assertOk()->assertJsonStructure(['access_token', 'id_token']);
     }
 }
