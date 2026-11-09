@@ -2169,3 +2169,5 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .portal-email-resend{padding:8px 16px;border:1px solid #b9d7e3;border-radius:999px;background:#fff;color:#0b5988;font:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .2s}
 .portal-email-resend:hover,.portal-email-resend:focus-visible{background:#e8f4f8}
 @media(max-width:520px){.portal-email-notice.is-soft form{width:100%;padding-left:60px}.portal-email-notice.is-soft form .portal-email-resend{width:auto}}
+/* Área do cliente: logo centralizado no menu lateral */
+.sidebar-customer .sidebar-brand{align-items:center;width:100%}
