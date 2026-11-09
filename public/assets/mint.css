@@ -2124,13 +2124,11 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* Escolha de entrada da administração central */
 .auth-subtitle{margin:26px 0 10px;font-size:16px;font-weight:700;color:#3d5a80;text-align:center}
 
-/* Meu cuidado: plano de saúde em destaque no cartão do pet */
-.portal-pet-plan{display:flex;flex-direction:column;gap:3px;margin-top:10px;padding:10px 12px;border-radius:10px;background:#f2f7ea;border:1px solid #dfe9cc}
-.portal-pet-plan-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.portal-pet-plan-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4d6b1a}
-.portal-pet-plan-name{font-size:15px;color:#14264b}
-.portal-pet-plan-meta{font-size:13px;color:var(--text-2)}
-.portal-pet-plan-benefits{font-size:13px;color:#3f5f12}
+/* Meu cuidado: só o essencial do plano no cartão do pet, no verde da marca (#83ac38) */
+.portal-pet-plan{display:flex;flex-direction:column;gap:2px;margin-top:10px;padding:10px 14px;border-radius:10px;background:#83ac38;color:#122657}
+.portal-pet-plan-eyebrow{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.portal-pet-plan-dot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.35)}
+.portal-pet-plan-name{font-size:15px;font-weight:700}
 /* Página do pet: benefícios do plano à mostra, com situação e saldo */
 .plan-benefits{list-style:none;margin:4px 0 16px;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .plan-benefit{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:10px;border:1px solid #e3e8ef;background:#fff}
