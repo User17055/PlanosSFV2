@@ -10,8 +10,9 @@ $nextInvoice=$petInvoices->first();
 $species=['dog'=>'Cão','cat'=>'Gato'][$pet->species] ?? $pet->species;
 $awaiting=$pendingSubscriptions->where('pet_id',$pet->id)->values();
 @endphp
-<section class="portal-hero pet-hero-nav{{ $pet->photo_path ? ' has-art' : '' }}">
-@if($pet->photo_path)<span class="pet-hero-art"><img src="{{ route('pets.photo',[$pet,'v'=>$pet->updated_at?->timestamp]) }}" alt="Foto de {{ $pet->name }}"></span>@else<div class="pet-hero-photo"><img class="pet-avatar pet-avatar-species" src="{{ asset('assets/brand/pet-'.($pet->species==='cat'?'gato':'cao').'.png') }}" alt="" width="88" height="88"></div>@endif
+<section class="portal-hero pet-hero-nav has-art">
+{{-- Com ou sem foto, o mesmo modelo: a imagem à esquerda; sem foto, a ilustração da espécie (sem círculo nem borda). --}}
+<span class="pet-hero-art{{ $pet->photo_path ? '' : ' is-illustration' }}"><img src="{{ $pet->photo_path ? route('pets.photo',[$pet,'v'=>$pet->updated_at?->timestamp]) : asset('assets/brand/pet-'.($pet->species==='cat'?'gato':'cao').'.png') }}" alt="{{ $pet->photo_path ? 'Foto de '.$pet->name : '' }}"></span>
 @if($pet->birth_date)<span class="pet-birth-corner">Nasc. {{ $pet->birth_date->format('d/m/Y') }}</span>@endif
 <div class="portal-hero-text">
 <span class="portal-hero-eyebrow"><span class="eyebrow-label">Seu pet</span>@if($pet->birth_date)<span class="pet-hero-birth"><span class="eyebrow-label"> · </span>Nasc. {{ $pet->birth_date->format('d/m/Y') }}</span>@endif</span>
