@@ -14,7 +14,7 @@ class HealthPlanImportTest extends TestCase
     public function test_four_real_plans_keep_their_original_text_prices_and_individual_layouts(): void
     {
         $versions=app(HealthPlanInstaller::class)->installAll();
-        $this->assertCount(4,$versions);
+        $this->assertCount(5,$versions);
         foreach($versions as $version) {
             $this->assertFalse($version->is_demo);
             $this->assertSame(12,$version->duration_months);
@@ -36,12 +36,17 @@ class HealthPlanImportTest extends TestCase
             if ($hasConverter) $this->assertStringStartsWith('%PDF-',app(ContractService::class)->templatePdf($version));
             else $this->assertThrows(fn()=>app(ContractService::class)->templatePdf($version),\RuntimeException::class);
         }
-        $this->assertSame([5200,8600,28200,33000],array_map(fn($v)=>$v->price_cents,$versions));
+        $this->assertSame([5200,8600,28200,33000,2400],array_map(fn($v)=>$v->price_cents,$versions));
+        $felino=$versions[4];
+        $this->assertSame(['cat'],$felino->species);
+        $this->assertSame(['CONSULTA','VACINA','HEMOGRAMA'],$felino->benefitRules()->orderBy('id')->pluck('code')->all());
+        $this->assertStringContainsString('{{contratante_rg}}',$felino->contract_template);
+        $this->assertStringContainsString('{{contratante_email}}',$felino->contract_template);
         $this->assertStringContainsString('plano Master',$versions[3]->contract_template);
         $this->assertSame(10,$versions[2]->benefitRules()->where('code','CONSULTA')->sole()->quantity_limit);
         $this->assertNull($versions[3]->benefitRules()->where('code','CONSULTA')->sole()->quantity_limit);
         app(HealthPlanInstaller::class)->installAll();
-        $this->assertDatabaseCount('product_versions',4);
+        $this->assertDatabaseCount('product_versions',5);
         $admin=\App\Models\User::factory()->create(['role'=>'central_admin','active'=>true]);
         $this->actingAs($admin)->get(route('catalog.index'))->assertOk()->assertSee('Plano Super Econômico')->assertSee('Plano Prime');
         if (PHP_OS_FAMILY==='Windows') $this->get(route('catalog.template-pdf',$versions[0]))->assertOk()->assertHeader('Content-Type','application/pdf');
@@ -58,6 +63,8 @@ class HealthPlanImportTest extends TestCase
             $zip=new \ZipArchive; $zip->open(resource_path('contracts/word/'.$entry['docx_sha256'].'.docx'));
             $text=strip_tags($zip->getFromName('word/document.xml')); $zip->close();
             $this->assertDoesNotMatchRegularExpression('/desconto na compra de ração|desconto em produtos franpet/iu',$text);
+            // Os Word de origem são contratos já preenchidos: CPF e e-mail do cliente não podem ficar no modelo.
+            $this->assertDoesNotMatchRegularExpression('/\d{3}\.\d{3}\.\d{3}-\d{2}|@(gmail|hotmail)\./i',$text);
         }
     }
 

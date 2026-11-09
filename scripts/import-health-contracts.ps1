@@ -1,11 +1,12 @@
-﻿param([string]$SourceDirectory='C:\Users\André Junior\OneDrive\SERVIDOR\PLANOS DE SAUDE (NAO USAR)\CONTRATOS 2026')
+﻿param([string]$SourceDirectory='C:\Users\André Junior\OneDrive\SERVIDOR\PLANOS DE SAUDE (NAO USAR)\CONTRATOS 2026',[string]$Only='')
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $root=Split-Path -Parent $PSScriptRoot
 $enc=[System.Text.UTF8Encoding]::new($false)
 function XmlEntry($zip,$name){$entry=$zip.GetEntry($name);if(!$entry){return $null};$reader=[System.IO.StreamReader]::new($entry.Open());try{return [xml]$reader.ReadToEnd()}finally{$reader.Dispose()}}
 function Attr($node,$name,$fallback=''){if(!$node){return $fallback};$value=$node.GetAttribute($name,'http://schemas.openxmlformats.org/wordprocessingml/2006/main');if($value -eq ''){return $fallback};return $value}
-foreach($item in @(@('PLANO ECONOMICO.docx','plano-economico'),@('PLANO ESSENCIAL.docx','plano-essencial'),@('PLANO PRIME.docx','plano-prime'),@('PLANO SUPER ECONOMICO.docx','plano-super-economico'))){
+foreach($item in @(@('PLANO ECONOMICO.docx','plano-economico'),@('PLANO ESSENCIAL.docx','plano-essencial'),@('PLANO PRIME.docx','plano-prime'),@('PLANO SUPER ECONOMICO.docx','plano-super-economico'),@('PLANO ECONOMICO FELINO.docx','plano-economico-felino'))){
+if($Only -and $item[1] -ne $Only){continue}
 $zip=[System.IO.Compression.ZipFile]::OpenRead((Join-Path $SourceDirectory $item[0]))
 try{
 $xml=XmlEntry $zip 'word/document.xml'
@@ -20,17 +21,20 @@ $text=($p.SelectNodes('.//w:t',$ns)|ForEach-Object{$_.'#text'})-join ''
 $replacement=$null
 if($text -match 'CAR.*DO PET'){ $pet=$true }
 if($text -match '^CONTRATADO:'){ $pet=$false }
-if($text -match '^Nome\s*:'){if($pet){$replacement='Nome: {{pet_nome}}'}else{$replacement='Nome: {{contratante_nome}}'}}
+# Decisão de 28/10/2026: os planos não oferecem desconto em ração nem em produtos Franpet.
+if($text -match 'desconto na compra de ração|desconto em produtos Franpet'){continue}
+# O Felino traz nome, endereço, cidade e documentos na mesma linha.
+if($text -match '^Nome\s*:'){if($pet){$replacement='Nome: {{pet_nome}}'}else{$replacement='Nome: {{contratante_nome}}';if($text -match 'Endereço\s*:'){$replacement+="`nEndereço: {{contratante_endereco}}"};if($text -match 'Cidade\s*:'){$replacement+="`nCidade: {{contratante_cidade}}    Estado: {{contratante_uf}}    CEP: {{contratante_cep}}"};if($text -match 'CPF\s*:'){$replacement+="`nRG: {{contratante_rg}}    CPF: {{contratante_cpf}}"}}}
 elseif($text -match '^Endereço\s*:'){$replacement='Endereço: {{contratante_endereco}}'}
 elseif($text -match '^Cidade\s*:'){$replacement='Cidade: {{contratante_cidade}}    Estado: {{contratante_uf}}    CEP: {{contratante_cep}}'}
 elseif($text -match '^(RG|CPF)\s*:'){$replacement='RG: {{contratante_rg}}    CPF: {{contratante_cpf}}';if($text -match 'Telefone'){$replacement+="`nTelefone Celular: {{contratante_telefone}}"};if($text -match 'E-mail'){$replacement+="`nE-mail: {{contratante_email}}"}}
-elseif($text -match '^Telefone Celular\s*:'){$replacement='Telefone Celular: {{contratante_telefone}}'}
+elseif($text -match '^Telefone Celular\s*:'){$replacement='Telefone Celular: {{contratante_telefone}}';if($text -match 'E-mail'){$replacement+="`nE-mail: {{contratante_email}}"}}
 elseif($text -match '^E-mail\s*:'){$replacement='E-mail: {{contratante_email}}'}
 elseif($pet -and $text -match '^Raça\s*:'){$replacement='Raça: {{pet_raca}}'}
 elseif($pet -and $text -match '^Espécie\s*:'){$replacement='Espécie: {{pet_especie}}'}
 elseif($pet -and $text -match '^Cor\s*:'){$replacement='Cor: {{pet_cor}}'}
 elseif($pet -and $text -match '^Sexo\s*:'){$replacement='Sexo: {{pet_sexo}}'}
-elseif($pet -and $text -match '^Idade\s*:'){$replacement='Data de nascimento: {{pet_nascimento}}'}
+elseif($pet -and $text -match '^(Idade|Nasc\.?)\s*:'){$replacement='Data de nascimento: {{pet_nascimento}}'}
 elseif($text.Trim() -match '^Presidente Prudente\s*[–,\-]'){$replacement='{{cidade_assinatura}}, {{data_assinatura_extenso}}'}
 elseif($text.Trim() -eq 'CONTRATANTE'){$replacement="{{contratante_nome}}`nCPF: {{contratante_cpf}}`nCONTRATANTE"}
 $first=$p.SelectSingleNode('./w:r/w:rPr',$ns)

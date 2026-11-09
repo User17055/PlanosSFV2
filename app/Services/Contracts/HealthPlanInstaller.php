@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class HealthPlanInstaller
 {
-    public const PLANS = ['super-economico'=>['Super Econômico','SF-SUPER-ECONOMICO',5200], 'economico'=>['Econômico','SF-ECONOMICO',8600], 'essencial'=>['Essencial','SF-ESS',28200], 'prime'=>['Prime','SF-PRIME',33000]];
+    public const PLANS = ['super-economico'=>['Super Econômico','SF-SUPER-ECONOMICO',5200], 'economico'=>['Econômico','SF-ECONOMICO',8600], 'essencial'=>['Essencial','SF-ESS',28200], 'prime'=>['Prime','SF-PRIME',33000], 'economico-felino'=>['Econômico Felino','SF-ECONOMICO-FELINO',2400]];
 
     public function installOne(string $slug): ProductVersion
     {
@@ -21,7 +21,7 @@ class HealthPlanInstaller
             $same=$product->versions()->where('contract_template',$text)->whereNotNull('published_at')->first();
             if ($same && Fingerprint::sha256($same->contract_layout)===Fingerprint::sha256($layout)) return $same;
             $version=$product->versions()->whereNull('published_at')->where('is_demo',false)->latest('version')->first();
-            $attributes=['name'=>'Plano '.$name,'price_cents'=>$price,'billing_cycle'=>'monthly','duration_months'=>12,'renewal_policy'=>'automatic','species'=>['dog','cat'],'contract_template'=>$text,'contract_layout'=>$layout,'is_demo'=>false,'status'=>'draft','description'=>'Contrato original do Plano '.$name.' com preenchimento automático dos dados do tutor e do pet.'];
+            $attributes=['name'=>'Plano '.$name,'price_cents'=>$price,'billing_cycle'=>'monthly','duration_months'=>12,'renewal_policy'=>'automatic','species'=>$slug==='economico-felino'?['cat']:['dog','cat'],'contract_template'=>$text,'contract_layout'=>$layout,'is_demo'=>false,'status'=>'draft','description'=>'Contrato original do Plano '.$name.' com preenchimento automático dos dados do tutor e do pet.'];
             if ($version) { $version->update($attributes); $version->benefitRules()->delete(); }
             else $version=$product->versions()->create($attributes+['version'=>1+(int)$product->versions()->max('version')]);
             $rules=[];
@@ -32,11 +32,14 @@ class HealthPlanInstaller
                 $rules[]=['code'=>$code,'name'=>$name,'discount_basis_points'=>$percentage*100,'waiting_days'=>$wait,'period_type'=>'contract_year','coverage_type'=>'discount','requires_authorization'=>$manual];
             };
             $add('CONSULTA','Consultas em horário comercial (exceto especialistas)',match($slug){'prime'=>null,'essencial'=>10,default=>6});
-            $add('PLANTAO','Consultas de plantão',2);
-            $discount('DESC_PLANTAO','Demais consultas de plantão',30);
+            // O contrato do Felino não cobre plantão (cláusula terceira).
+            if ($slug!=='economico-felino') {
+                $add('PLANTAO','Consultas de plantão',2);
+                $discount('DESC_PLANTAO','Demais consultas de plantão',30);
+            }
             $add('VACINA','Vacinas conforme contrato',1,30,'calendar_month',$slug==='super-economico'?'Uma dose de cada vacina relacionada no contrato; no máximo uma por mês. Conferir histórico de doses.':'Todas as doses das vacinas relacionadas no contrato; no máximo uma por mês.',$slug==='super-economico');
-            if ($slug==='super-economico') {
-                $discount('DESC_VACINA','Demais doses das vacinas',30);
+            if (in_array($slug,['super-economico','economico-felino'],true)) {
+                if ($slug==='super-economico') $discount('DESC_VACINA','Demais doses das vacinas',30);
                 $add('HEMOGRAMA','Hemograma a cada seis meses',2,30,'contract_year','Um hemograma a cada seis meses, totalizando dois no plano. Conferir intervalo semestral antes de autorizar.',true);
             } elseif($slug==='economico') {
                 $add('HEMOGRAMA','Hemogramas',2,30);

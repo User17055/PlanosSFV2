@@ -1,0 +1,111 @@
+CLÍNICA VETERINÁRIA, PET SHOP E BANHO E TOSA
+
+CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+PLANO ECONOMICO FELINO (12 MESES)
+
+
+CONTRATANTE:
+
+Nome: {{contratante_nome}}
+Endereço: {{contratante_endereco}}
+Cidade: {{contratante_cidade}}    Estado: {{contratante_uf}}    CEP: {{contratante_cep}}
+RG: {{contratante_rg}}    CPF: {{contratante_cpf}}
+Telefone Celular: {{contratante_telefone}}
+E-mail: {{contratante_email}}
+CARACTERÍSTICA DO PET: 
+
+Nome: {{pet_nome}}
+Raça: {{pet_raca}}
+Espécie: {{pet_especie}}
+Cor: {{pet_cor}}
+Sexo: {{pet_sexo}}
+Data de nascimento: {{pet_nascimento}}
+
+
+CONTRATADO: Franpet Ltda, pessoa jurídica de direito privado com CNPJ nº 34.460.755/0001-90com sede na Rua Doutor Gurgel, nº 387, Centro CEP 19010-020 na Comarca de Presidente Prudente – SP; Juliana Da Costa Lisboa (PP); Thaís Cabrera Lopes (PP).
+
+
+CLÁUSULA PRIMEIRA
+DO OBJETO DA CONTRATAÇÃO- DOS USUARIOS 
+
+Com a contratação ora feita, ocontratante adquire os serviços médico-veterinários e ou de Pet Shop oferecidos pelo contratado e seus associados, parao petacima descrito, no pacote especificado abaixo discriminado,sendo este contrato individual e intransferível, ou seja, somente este pet poderá usufruir os direitos do pacote, não vale para outros pets, mesmo que sejam do mesmo proprietário.
+
+
+CLÁUSULA SEGUNDA
+DOS DIREITOS DA CONTRATANTE
+
+A contratante por essa contratação terá direito para seu pet dos seguintes serviços: 
+
+Plano Econômico Felino: 
+6 (SEIS) consultas por ano em horário comercial excluindo especialistas (oftalmologista, cardiologista, ortopedista e outros)
+
+Vacina quadrupla ou quíntupla felina e vacina raiva (INDEPENDENTE DA MARCA OU LABORATÓRIO, SENDO OBRIGATORIAMENTE MÁXIMO DE UMA POR MÊS)
+
+01 (UM) hemograma a cada 6 meses, totalizando 2 (DOIS) no pacote.
+
+
+Carência de 30 dias para os serviços acima exceto para consulta.
+
+
+CLÁUSULA TERCEIRA
+DO HORÁRIO DE ATENDIMENTO
+
+Fica estabelecido que os atendimentos serão realizados nos seguintes horários:
+De Segunda à Sexta-feira: das 8:00 às 18:00 horas
+Sábados: das 08:00 às 12:00 horas
+
+Parágrafo único: Fora dos horários acima especificados, bem como aos domingos e feriados, o atendimento será considerado horário de plantão, não coberto pelo plano de saúde. Nesses casos, o pagamento da consulta de plantão deverá ser realizado diretamente pelo cliente, conforme tabela vigente.
+
+CLÁUSULA QUARTA
+DOS PREÇOS E PRAZOS
+O contratante pagará pelos serviços contratados o valor da anuidade de R$ 288,00 (DUZENTOS E OITENTA E OITO REAIS) divididos em 12 (DOZE) parcelas mensais e consecutivas de R$ 24,00 (VINTEE QUATRO REAIS).
+A cada período de 12 (DOZE) meses, será cobrada do contratante, na forma aqui estabelecida, nova anuidade, a título de permanência nos serviços contratados do pacote Econômico Felino. 
+O contratado poderá aplicar o reajuste no aniversário do contrato (ANUAL) por índice e na periodicidade legalmente admitida.
+As parcelas deverão ser pagas pela contratante até o 10º (DÉCIMO) dia de cada mês incluindo o mês da assinatura deste contrato.  Após o vencimento da parcela, haverá incidência de multa contratual de 2%(DOIS POR CENTO), mais correção monetária e juros de 1% ao mês. 
+No caso de falta de pagamento da parcela mensal até a data do último dia do mês o pet do contratante perdera o direito de usufruir dos serviços contratados, além da rescisão contratual e a cobrança de juros e correção conforme estipulado nesse contrato.  
+CLÁUSULA QUINTA
+DOS ÍTENS NÃO COBERTOS
+
+O presente contrato não cobre nenhum item que não esteja incluso na relação de itens cobertos pelo plano, disposto na cláusula 2ª desse instrumento. 
+
+CLÁUSULA SEXTA
+DA FORMA DE REAJUSTE
+
+Os custos previstos neste contrato serão reajustados anualmente,de acordo com os seguintes parâmetros:
+
+Variação brusca dos custos dos serviços médico-veterinários e do preço dos insumos utilizados na prestação desses mesmos serviços.
+Utilização do IGPM do mês anterior ao reajuste. 
+
+CLÁUSULA SÉTIMA
+DA VIGÊNCIA DO CONTRATO
+
+O presente contrato é firmado para o prazo de 12 meses, com vigência a partir da assinatura do presente termo, sendo renovado automaticamente a partir do 13º mês por prazo indeterminado podendo ser rescindido a partir desse período por ambas as partes mediante carta de rescisão apresentada com 30(TRINTA) dias de antecedência.
+Quem aderir ao pacote após o dia 25 fica obrigado a pagar o valor total da mensalidade sendo isento no mês seguinte.  
+No caso de morte comprovada do pet o contrato poderá ser rescindido, sem multa.
+CLÁUSULA OITAVA
+DA RESCISÃO CONTRATUAL - MULTA
+
+Em caso de desejo de rescisão do primeiro contrato,antes do vencimento do prazo ajustado na cláusula sétima deste contrato (12 meses), com exceção da morte do animal o contratante pagará à contratada a multa compensatória no valor 80% (OITENTA POR CENTO) do valor das mensalidades vincendas.CLÁUSULA NONA
+DAS DISPOSIÇÕES FINAIS
+
+As partes, concordam que o referido instrumento, é celebrado com direitos e obrigações recíprocas, não se constituindo quaisquer das cláusulas em arbítrio da contratada, por se tratar de um contrato bilateral, não sendo, portanto, de adesão ou unilateral.
+CLÁUSULA DÉCIMA
+DO FORO
+
+Fica eleito o foro da cidade de Presidente Prudente, Estado de São Paulo, para nele ser dirimida qualquer questão que se origine do presente contrato, com renúncia expressa e recíproca de qualquer outro, por mais privilegiado que seja.
+E assim justos e contratados, firmam o presente em 2(DUAS) vias de igual teor e para um só efeito, na presença de 2(DUAS) testemunhas.
+
+{{cidade_assinatura}}, {{data_assinatura_extenso}}
+
+
+_________________________________
+{{contratante_nome}}
+CPF: {{contratante_cpf}}
+CONTRATANTE
+
+_________________________________
+CONTRATADO
+SÃO FRANCISCO CLÍNICA E PET SHOP
+JULIANA DA COSTA LISBOA(PP)
+THAIS CABRERA LOPES (PP)

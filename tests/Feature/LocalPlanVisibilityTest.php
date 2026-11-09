@@ -30,7 +30,7 @@ class LocalPlanVisibilityTest extends TestCase
     public function test_real_plans_load_on_staff_selection_without_fictitious_offers(): void
     {
         $this->actingAs(User::where('role','central_admin')->firstOrFail())->get(route('proposals.create'))
-            ->assertOk()->assertViewHas('versions',fn($versions)=>$versions->count()===4 && $versions->every(fn($v)=>$v->status==='local_preview'));
+            ->assertOk()->assertViewHas('versions',fn($versions)=>$versions->count()===5 && $versions->every(fn($v)=>$v->status==='local_preview'));
     }
 
     public function test_imported_plan_continues_from_registration_to_review_and_final_contract_locally(): void

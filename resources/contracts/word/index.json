@@ -16,9 +16,9 @@
     "cf2f6f998d0fc27b13ab0d530bf6a7622711590b41501acebb479c41fb65670b": {
         "source": "PLANO PRIME.docx",
         "source_sha256": "a15773521bf2f255891610297040d7e7f56972a0d48ddd16ec3bee582990210d",
-        "docx_sha256": "14b3a3ace3cd24b35efcffb894158eae9b76d8d6f674999888a8fd1893ac1a30",
+        "docx_sha256": "f02155488195d9a7054bd9fcd83964a32ebe08c006c76cdd4b8636d562e4621d",
         "text_sha256": "c689ff1eefc878dda4c38a555d86e66d7c23ed4f92661faed522567760132861",
-        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026)."
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Removido o link de e-mail de um cliente antigo que ficou escondido no campo E-mail (09/11/2026)."
     },
     "a7efd7a124cffe5582916671d9cd690c68280a99d65d547b5dd9edad8024536c": {
         "source": "PLANO SUPER ECONOMICO.docx",
@@ -26,5 +26,12 @@
         "docx_sha256": "1117916a2dd463addaa2f827dbe57ce62a298577f2d2ca04afe52123293f84c2",
         "text_sha256": "0f77498512c3ad8649116f138843ae2c9c18350c4ba01dbf23652a11b0b99a16",
         "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026)."
+    },
+    "69de6187e8473d3c2f3c0f8174f6c884655c96e3a626155ad677e35560815368": {
+        "source": "PLANO ECONOMICO FELINO.docx",
+        "source_sha256": "e4185d52b25bffd59233a2c1f851651e33df991796887b2666445e0a6e3dd1fc",
+        "docx_sha256": "411873044bb3b5a76c9a8aa12ade36309f63c822ecdf251d727805d22e1ce2ea",
+        "text_sha256": "f90face1963de77ec3a2fefaccc29db5cd7efb7052ad33258179a1b4407ed656",
+        "changes": "Removido o desconto em ração, como nos outros planos (09/11/2026)."
     }
 }

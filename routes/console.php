@@ -15,11 +15,14 @@ Artisan::command('plans:preview-health-contracts', function () {
     }
 })->purpose('Disponibilizar os planos importados somente no ambiente local demonstrativo');
 
-Artisan::command('plans:install-health-contracts', function () {
-    foreach(app(\App\Services\Contracts\HealthPlanInstaller::class)->installAll() as $version) {
+Artisan::command('plans:install-health-contracts {plano? : Instala só este plano, por exemplo economico-felino}', function () {
+    $installer=app(\App\Services\Contracts\HealthPlanInstaller::class);
+    $slug=$this->argument('plano');
+    if ($slug && !isset(\App\Services\Contracts\HealthPlanInstaller::PLANS[$slug])) return $this->error('Plano desconhecido: '.$slug);
+    foreach($slug?[$installer->installOne($slug)]:$installer->installAll() as $version) {
         $this->info($version->name.' · R$ '.number_format($version->price_cents/100,2,',','.').' · versão '.$version->id.' · '.$version->status);
     }
-})->purpose('Instalar os quatro planos reais e seus contratos originais com campos automáticos');
+})->purpose('Instalar os planos reais e seus contratos originais com campos automáticos');
 
 Artisan::command('plans:install-economic-contract', function () {
     $version = app(\App\Services\Contracts\EconomicContractInstaller::class)->install();

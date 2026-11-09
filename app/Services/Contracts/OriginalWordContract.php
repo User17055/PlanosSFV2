@@ -38,6 +38,8 @@ class OriginalWordContract
             $text=''; foreach($xp->query('.//w:t',$p) as $n) $text.=$n->textContent;
             if (preg_match('/CAR.*DO PET/iu',$text)) $pet=true;
             if (preg_match('/^\s*CONTRATADO:/u',$text)) $pet=false;
+            // Decisão de 28/10/2026: os planos não oferecem desconto em ração nem em produtos Franpet.
+            if (preg_match('/desconto na compra de ração|desconto em produtos Franpet/iu',$text)) { $p->parentNode->removeChild($p); continue; }
             $changes=[];
             if (trim($text)==='CONTRATANTE') {
                 $changes[]=[0,mb_strlen($text),'CONTRATANTE: {{contratante_nome}} – CPF: {{contratante_cpf}}'];
@@ -55,9 +57,9 @@ class OriginalWordContract
             elseif (preg_match('/^\s*Presidente Prudente[^,]*,(.*)$/u',$text,$m,PREG_OFFSET_CAPTURE)) {
                 $changes[]=[mb_strlen(substr($text,0,$m[1][1])),mb_strlen($m[1][0]),' {{data_assinatura_extenso}}'];
             } else {
-                $fields=$pet?['Nome'=>'pet_nome','Raça'=>'pet_raca','Espécie'=>'pet_especie','Cor'=>'pet_cor','Sexo'=>'pet_sexo','Idade'=>'pet_idade']
-                    :['Nome'=>'contratante_nome','Endereço'=>'contratante_endereco','Cidade'=>'contratante_cidade','Estado'=>'contratante_uf','CEP'=>'contratante_cep','RG'=>'contratante_rg','CPF'=>'contratante_cpf','Telefone Celular'=>'contratante_telefone','E-mail'=>'contratante_email'];
-                $labels='Nome|Endereço|Cidade|Estado|CEP|RG|CPF|Telefone Celular|E-mail|Raça|Espécie|Cor|Sexo|Idade';
+                $fields=$pet?['Nome'=>'pet_nome','Raça'=>'pet_raca','Espécie'=>'pet_especie','Cor'=>'pet_cor','Sexo'=>'pet_sexo','Idade'=>'pet_idade','NASC.'=>'pet_nascimento']
+                    :['Nome'=>'contratante_nome','Endereço'=>'contratante_endereco','Cidade'=>'contratante_cidade','CIDADE'=>'contratante_cidade','Estado'=>'contratante_uf','CEP'=>'contratante_cep','RG'=>'contratante_rg','CPF'=>'contratante_cpf','Telefone Celular'=>'contratante_telefone','E-mail'=>'contratante_email'];
+                $labels='Nome|Endereço|Cidade|CIDADE|Estado|CEP|RG|CPF|Telefone Celular|E-mail|Raça|Espécie|Cor|Sexo|Idade|NASC\.';
                 if (!str_contains($text,'CONTRATADO:')) foreach($fields as $label=>$key) {
                     if (preg_match('/(?:^|(?<=\s)|(?<=[\d\pL\-\.]))'.preg_quote($label,'/').'\s*:\s*(.*?)(?=(?:'.$labels.')\s*:|$)/u',$text,$m,PREG_OFFSET_CAPTURE)) {
                         $value=rtrim($m[1][0]);
@@ -69,6 +71,7 @@ class OriginalWordContract
             usort($changes,fn($a,$b)=>$b[0]<=>$a[0]);
             foreach($changes as [$start,$length,$value]) { $this->replaceRange($xp,$p,$start,$length,$value); $replaced[]=$value; }
         }
+        $this->removeMailtoFields($xp);
         // Personal mailto relationships also belong to the replaced customer data.
         $removed=[];
         foreach(iterator_to_array($xp->query('//w:hyperlink[contains(., "{{contratante_email}}") ]')) as $link) {
@@ -83,6 +86,21 @@ class OriginalWordContract
         }
         $zip->addFromString('word/document.xml',$xml->saveXML()); $zip->close();
         return $replaced;
+    }
+
+    /** O e-mail do cliente antigo também fica em campos HYPERLINK "mailto:..."; tira o campo e deixa o texto exibido. */
+    public function removeMailtoFields(DOMXPath $xp): int
+    {
+        $count=0;
+        foreach(iterator_to_array($xp->query('//w:r[w:instrText[contains(., "mailto:")]]')) as $run) {
+            $begin=$run; while($begin && !$xp->query('w:fldChar[@w:fldCharType="begin"]',$begin)->length) $begin=$xp->query('preceding-sibling::w:r[1]',$begin)->item(0);
+            $separate=$run; while($separate && !$xp->query('w:fldChar[@w:fldCharType="separate"]',$separate)->length) $separate=$xp->query('following-sibling::w:r[1]',$separate)->item(0);
+            $end=$separate?$xp->query('following-sibling::w:r[w:fldChar[@w:fldCharType="end"]][1]',$separate)->item(0):null;
+            if (!$begin || !$separate || !$end) throw new \RuntimeException('Campo de e-mail sem início, separador ou fim no Word.');
+            for($node=$begin; $node!==$separate; $node=$next) { $next=$node->nextSibling; $node->parentNode->removeChild($node); }
+            $separate->parentNode->removeChild($separate); $end->parentNode->removeChild($end); $count++;
+        }
+        return $count;
     }
 
     public function entry(array $snapshot): ?array

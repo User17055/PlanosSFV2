@@ -8,6 +8,7 @@ if(!is_dir($directory)) mkdir($directory,0700,true);
 $indexPath=$directory.'/index.json';
 $index=is_file($indexPath)?json_decode(file_get_contents($indexPath),true):[];
 foreach(App\Services\Contracts\HealthPlanInstaller::PLANS as $slug=>$_) {
+    if (isset($argv[2]) && $argv[2]!==$slug) continue;
     $layout=json_decode(file_get_contents(resource_path('contracts/plano-'.$slug.'.json')),true,512,JSON_THROW_ON_ERROR);
     $input=$source.DIRECTORY_SEPARATOR.$layout['source'];
     $temporary=$directory.'/preparing-'.$slug.'.docx';

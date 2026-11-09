@@ -39,17 +39,20 @@ class OriginalWordContractTest extends TestCase
         } finally { unlink($source); unlink($target); }
     }
 
-    public function test_all_four_prepared_packages_have_fields_instead_of_customer_values(): void
+    public function test_all_prepared_packages_have_fields_instead_of_customer_values(): void
     {
         $index=json_decode(file_get_contents(resource_path('contracts/word/index.json')),true);
-        $this->assertCount(4,$index);
+        $this->assertCount(5,$index);
         foreach($index as $entry) {
             $path=resource_path('contracts/word/'.$entry['docx_sha256'].'.docx');
             $this->assertSame($entry['docx_sha256'],hash_file('sha256',$path));
             $zip=new ZipArchive; $zip->open($path);
             $xml=$zip->getFromName('word/document.xml');
-            foreach(['contratante_nome','contratante_cpf','contratante_rg','contratante_endereco','contratante_cidade','contratante_uf','contratante_cep','contratante_telefone','contratante_email','pet_nome','pet_idade','data_assinatura_extenso'] as $field) $this->assertStringContainsString('{{'.$field.'}}',$xml);
+            foreach(['contratante_nome','contratante_cpf','contratante_rg','contratante_endereco','contratante_cidade','contratante_uf','contratante_cep','contratante_telefone','contratante_email','pet_nome','data_assinatura_extenso'] as $field) $this->assertStringContainsString('{{'.$field.'}}',$xml);
+            // O Felino traz "NASC." (data de nascimento); os outros, "Idade".
+            $this->assertMatchesRegularExpression('/\{\{pet_(idade|nascimento)\}\}/',$xml);
             $this->assertStringContainsString('assinatura_contratante',$xml);
+            $this->assertStringNotContainsString('mailto:',$xml);
             $this->assertStringNotContainsString('mailto:', $zip->getFromName('word/_rels/document.xml.rels'));
             $zip->close();
         }
