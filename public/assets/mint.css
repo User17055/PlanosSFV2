@@ -2134,7 +2134,9 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .portal-pet-link .portal-pet-tags{gap:6px;margin:10px 0 0}
 .portal-pet-link .portal-pet-tags li{padding:4px 10px;border:0;border-radius:999px;background:#eef3f7;color:#33475e;font-size:13px}
 .portal-pet-link .portal-pet-tags li+li::before{content:none}
-.portal-pet-go-bottom{display:block;margin-top:12px;text-align:right}
+.portal-pet-go-bottom{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:12px}
+.portal-pet-go-bottom svg{width:18px;height:18px;transition:transform .2s}
+.portal-pet-link:hover .portal-pet-go-bottom svg,.portal-pet-link:focus-visible .portal-pet-go-bottom svg{transform:translateX(3px)}
 /* Página do pet: benefícios do plano à mostra, com situação e saldo */
 .plan-benefits{list-style:none;margin:4px 0 16px;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .plan-benefit{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:10px;border:1px solid #e3e8ef;background:#fff}
