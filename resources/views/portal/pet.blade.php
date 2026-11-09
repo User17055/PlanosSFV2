@@ -19,7 +19,7 @@ $awaiting=$pendingSubscriptions->where('pet_id',$pet->id)->values();
 <ul class="portal-hero-facts"><li>{{ $species }}</li>@if($pet->breed)<li>{{ $pet->breed }}</li>@endif @if($age)<li>{{ $age }}</li>@endif</ul>
 </div>
 <div class="portal-hero-actions">
-@if($current->isNotEmpty())<a class="button portal-hero-cta" href="{{ route('proposals.create',['pet_id'=>$pet->id]) }}">@include('components.icon',['name'=>'plus']) Contratar outro plano</a>@endif
+@if($current->isNotEmpty())<a class="button portal-hero-cta" href="{{ route('proposals.create',['pet_id'=>$pet->id]) }}">Contratar outro plano</a>@endif
 <form method="POST" action="{{ route('pets.photo.store',$pet) }}" enctype="multipart/form-data">@csrf<label class="button portal-hero-ghost portal-photo-label">@include('components.icon',['name'=>'camera']) <span class="btn-label">{{ $pet->photo_path?'Trocar foto':'Adicionar foto' }}</span><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" hidden onchange="this.form.submit()"></label></form>
 <a class="button portal-hero-ghost" href="{{ route('pets.edit',$pet) }}" aria-label="Atualizar dados de {{ $pet->name }}">@include('components.icon',['name'=>'edit']) <span class="btn-label">Editar dados</span></a>
 </div>
