@@ -2124,13 +2124,13 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* Escolha de entrada da administração central */
 .auth-subtitle{margin:26px 0 10px;font-size:16px;font-weight:700;color:#3d5a80;text-align:center}
 
-/* Meu cuidado: cartão do pet com as características em etiquetas (fundo, sem borda) e o plano ativo no canto direito */
+/* Meu cuidado: cartão do pet com as características em etiquetas e o plano ativo, só em texto verde, no canto direito */
 .portal-pet-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:6px 12px}
 .portal-pet-head h3{min-width:0;overflow-wrap:anywhere}
 .portal-pet-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-left:auto}
-.portal-pet-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#83ac38;color:#122657;font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap}
-.portal-pet-pill.is-waiting{background:#e6efd3;color:#4d6b1a}
-.portal-pet-pill.is-overdue{background:#fde8e6;color:#b3261e}
+.portal-pet-pill{display:inline-flex;align-items:center;gap:6px;color:#4a7a0e;font-size:15px;font-weight:800;line-height:1.3;white-space:nowrap}
+.portal-pet-pill.is-waiting{color:#6b7f3a;font-weight:700}
+.portal-pet-pill.is-overdue{color:#b3261e}
 .portal-pet-link .portal-pet-tags{gap:6px;margin:10px 0 0}
 .portal-pet-link .portal-pet-tags li{padding:4px 10px;border:0;border-radius:999px;background:#eef3f7;color:#33475e;font-size:13px}
 .portal-pet-link .portal-pet-tags li+li::before{content:none}
