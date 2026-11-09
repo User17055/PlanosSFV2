@@ -138,6 +138,13 @@ class PortalApiController extends Controller
         return ['token'=>$raw,'expires_at'=>$expires->toIso8601String(),'user'=>['name'=>$user->name,'email'=>$user->email,'verified'=>(bool)$user->email_verified_at]];
     }
 
+    /** Link de entrada na área do cliente da gestão para quem já está com a sessão aberta no site. */
+    public function managementAccess(Request $r)
+    {
+        abort_unless($r->user()->role==='customer' && $r->user()->active,403);
+        return response()->json(['url'=>URL::temporarySignedRoute('login.site',now()->addMinutes(2),['user'=>$r->user()->id])]);
+    }
+
     public function logout(Request $r)
     {
         DB::table('portal_tokens')->where('id',$r->attributes->get('portal_token_id'))->delete();

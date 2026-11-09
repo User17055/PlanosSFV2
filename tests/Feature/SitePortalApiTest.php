@@ -96,6 +96,21 @@ class SitePortalApiTest extends TestCase
         $this->postJson('/api/site/v1/register',$data,$this->headers())->assertUnprocessable();
     }
 
+    public function test_new_account_goes_from_the_site_to_the_customer_area_without_logging_in_again(): void
+    {
+        $result=$this->registered();
+        $url=$this->postJson('/api/site/v1/management-access',[],$this->headers($result['token']))->assertOk()->json('url');
+        $this->assertStringContainsString('/acesso/site/',$url);
+        $this->get($url)->assertRedirect(route('portal'));
+        $this->assertAuthenticated();
+        $this->assertSame('customer',auth()->user()->role);
+        auth()->logout();
+        // O link vale uma vez só e exige a sessão do site.
+        $this->get($url)->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->postJson('/api/site/v1/management-access',[],$this->headers())->assertUnauthorized();
+    }
+
     public function test_registration_creates_same_records_used_by_management_and_only_hashes_the_access_token(): void
     {
         $result=$this->registered();

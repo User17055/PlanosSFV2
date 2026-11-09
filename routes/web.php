@@ -14,6 +14,7 @@ Route::get('/l/{token}',[\App\Http\Controllers\MarketingLinkController::class,'v
 Route::get('/convite/{token}',[ProposalController::class,'publicProposal'])->middleware(['active','throttle:30,1'])->name('sales.proposal');
 Route::post('/convite/{token}',[ProposalController::class,'confirmLink'])->middleware('throttle:10,1')->name('sales.proposal.confirm');
 Route::get('/acesso/confirmado/{user}',[AuthController::class,'confirmedAccess'])->middleware(['signed','throttle:20,1'])->name('login.confirmed');
+Route::get('/acesso/site/{user}',[AuthController::class,'siteAccess'])->middleware(['signed','throttle:20,1'])->name('login.site');
 Route::middleware('guest')->group(function () {
     Route::get('/entrar',[AuthController::class,'login'])->name('login');
     Route::post('/entrar',[AuthController::class,'authenticate'])->name('authenticate');

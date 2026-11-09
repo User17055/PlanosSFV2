@@ -19,6 +19,7 @@ Route::prefix('site/v1')->middleware(SiteGateway::class)->group(function() {
     Route::middleware(PortalToken::class)->group(function() {
         Route::get('me',[Portal::class,'me']);
         Route::post('logout',[Portal::class,'logout']);
+        Route::post('management-access',[Portal::class,'managementAccess']);
         Route::post('verification',[Portal::class,'resendVerification']);
         Route::post('pets',[Portal::class,'addPet']);
         Route::post('proposals',[Portal::class,'createProposal']);

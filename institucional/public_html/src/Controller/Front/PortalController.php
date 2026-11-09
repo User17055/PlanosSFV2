@@ -113,6 +113,13 @@ class PortalController
     // A área do cliente fica na gestão (planos, faturas e pets); o site cuida só da contratação.
     private function home(Request $r): Response
     {
+        // Quem acabou de criar a conta (ou já entrou no site) segue para a área do cliente sem precisar entrar de novo.
+        if ($r->getSession()->get('portal_token')) {
+            try {
+                $url=(string)($this->call($r,'POST','management-access')->data['url']??'');
+                if (str_starts_with($url,$this->api->managementUrl().'/acesso/site/')) return new RedirectResponse($url,302);
+            } catch(PortalApiException) {}
+        }
         return new RedirectResponse($this->api->managementUrl().'/portal',302);
     }
 
@@ -360,6 +367,8 @@ class PortalController
             'subscribe'=>$this->redirect('portal_subscribe',['code'=>$r->attributes->get('code')]),
             'forgot'=>$this->redirect('portal_forgot'),'reset'=>$this->redirect('portal_reset'),
             'pet'=>$this->redirect('portal_pet'),'accept'=>$this->redirect('portal_proposal',['id'=>$r->attributes->get('id')]),
+            // Pagamento recusado: continua na página do contrato, com o aviso, em vez de ir para o login da área do cliente.
+            'checkout'=>ctype_digit((string)$r->request->get('proposal_id'))?$this->redirect('portal_proposal',['id'=>(int)$r->request->get('proposal_id')]):$this->redirect('portal_home'),
             default=>$this->redirect('portal_home'),
         };
     }

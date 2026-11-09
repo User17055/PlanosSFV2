@@ -33,6 +33,18 @@ class AuthController extends Controller
         return redirect()->route('portal');
     }
 
+    // Vindo do site com a sessão do cliente aberta (cadastro, contrato, pagamento): link assinado de 2 minutos e uso único.
+    public function siteAccess(Request $request, \App\Models\User $user)
+    {
+        $used = Cache::add('site-access:'.hash('sha256',(string) $request->query('signature')), 1, now()->addMinutes(5));
+        if (! $used || $user->role !== 'customer' || ! $user->active) {
+            return redirect()->route('login')->with('error','Este link já foi usado ou expirou. Entre com seu e-mail ou CPF e sua senha.');
+        }
+        Auth::login($user);
+        $request->session()->regenerate();
+        return redirect()->route('portal');
+    }
+
     public function login(Request $request)
     {
         $intended=(string)$request->session()->get('url.intended','');

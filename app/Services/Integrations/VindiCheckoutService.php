@@ -128,6 +128,9 @@ class VindiCheckoutService
             },3);
             return $url;
         } catch (\Throwable $exception) {
+            // Our own RuntimeException messages carry no personal data; provider bodies are never logged.
+            \Illuminate\Support\Facades\Log::warning('Vindi: pagamento não iniciado.',['assinatura'=>$subscription->id]+VindiClient::failureReason($exception)
+                +['motivo'=>get_class($exception)===\RuntimeException::class?$exception->getMessage():null]);
             DB::table('vindi_checkouts')->where('subscription_id',$subscription->id)->update(['status'=>'uncertain','updated_at'=>now()]);
             Invoice::where('subscription_id',$subscription->id)->where('is_initial',true)->update(['payment_url'=>null]);
             // Never expose provider response bodies, contact data or authorization headers.
@@ -207,11 +210,12 @@ class VindiCheckoutService
         if ($byCode->count()>1) throw new \RuntimeException('Ambiguous customer.');
         if ($byCode->isNotEmpty()) return $byCode->first();
         $cpf=preg_replace('/\D/','',(string)$local->document);
-        $byCpf=collect($this->client->customersByRegistryCode($cpf))->filter(fn($customer)=>preg_replace('/\D/','',(string)($customer['registry_code']??''))===$cpf)->values();
-        // Several records or an archived one need a person to decide which customer is the right one.
-        if ($byCpf->count()>1) throw new \RuntimeException('More than one provider customer with this CPF.');
-        if ($byCpf->isNotEmpty() && ($byCpf->first()['status']??'active')!=='active') throw new \RuntimeException('Provider customer with this CPF is not active.');
-        return $byCpf->first() ?? $this->client->createCustomer(['code'=>$code,'name'=>$local->name,'email'=>$local->email,'registry_code'=>$cpf]);
+        // Archived records are ignored. A single remaining one (active or inactive) is reused. Several old duplicates
+        // have no active subscription (checked before the first attempt), so a record with this system's code is opened
+        // instead of guessing among them; it is found again by that code next time.
+        $byCpf=collect($this->client->customersByRegistryCode($cpf))->filter(fn($customer)=>preg_replace('/\D/','',(string)($customer['registry_code']??''))===$cpf
+            && ($customer['status']??'active')!=='archived')->values();
+        return $byCpf->count()===1 ? $byCpf->first() : $this->client->createCustomer(['code'=>$code,'name'=>$local->name,'email'=>$local->email,'registry_code'=>$cpf]);
     }
 
     /** O cliente antigo já paga uma assinatura feita direto na Vindi (achado pelo CPF): cobrar de novo aqui seria cobrança em dobro. */

@@ -199,18 +199,26 @@ class VindiCheckoutTest extends TestCase
         $this->assertSame(1,$this->billPosts);
     }
 
-    public function test_duplicate_or_archived_cpf_in_vindi_stops_for_manual_review(): void
+    public function test_old_vindi_records_without_active_plan_do_not_block_the_payment(): void
     {
-        foreach ([[['id'=>555,'registry_code'=>'52998224725','status'=>'active'],['id'=>556,'registry_code'=>'529.982.247-25','status'=>'active']],
-            [['id'=>557,'registry_code'=>'52998224725','status'=>'archived']]] as $matches) {
-            DB::table('vindi_checkouts')->delete();
-            $this->cpfMatches=$matches;
-            $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertSessionHas('error');
-            $this->assertDatabaseHas('vindi_checkouts',['status'=>'uncertain']);
+        // Arquivados são ignorados; vários antigos sem assinatura ativa: abre um cadastro com o código deste sistema.
+        foreach ([[['id'=>557,'registry_code'=>'52998224725','status'=>'archived']],
+            [['id'=>555,'registry_code'=>'52998224725','status'=>'inactive'],['id'=>556,'registry_code'=>'529.982.247-25','status'=>'inactive'],['id'=>557,'registry_code'=>'52998224725','status'=>'archived']]] as $matches) {
+            DB::table('vindi_checkouts')->delete(); Invoice::query()->update(['external_id'=>null,'payment_url'=>null]);
+            Customer::whereKey($this->subscription->customer_id)->update(['vindi_customer_id'=>null]); $this->entryCreated=false;
+            $this->cpfMatches=$matches; $before=$this->customerPosts;
+            $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+            $this->assertSame($before+1,$this->customerPosts);
+            $this->assertSame('111',$this->subscription->customer->fresh()->vindi_customer_id);
         }
-        $this->assertSame(0,$this->customerPosts);
+        // Um único cadastro antigo inativo é reaproveitado.
+        DB::table('vindi_checkouts')->delete(); Invoice::query()->update(['external_id'=>null,'payment_url'=>null]);
+        Customer::whereKey($this->subscription->customer_id)->update(['vindi_customer_id'=>null]); $this->entryCreated=false;
+        $this->remoteCustomerId=558; $this->cpfMatches=[['id'=>558,'registry_code'=>'52998224725','status'=>'inactive']];
+        $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+        $this->assertSame(2,$this->customerPosts);
+        $this->assertSame('558',$this->subscription->customer->fresh()->vindi_customer_id);
         $this->assertSame(0,$this->subscriptionPosts);
-        $this->assertNull($this->subscription->customer->fresh()->vindi_customer_id);
     }
 
     public function test_other_customer_cannot_issue_or_access_checkout(): void
