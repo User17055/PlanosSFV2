@@ -51,7 +51,10 @@ class PetPhotoAndInvoicesTest extends TestCase
         [$user,$pet]=$this->customerWithPet();
         $plan=$pet->subscriptions()->with('productVersion')->firstOrFail()->productVersion->name;
         $this->actingAs($user)->get(route('portal'))->assertOk()->assertSee(route('portal.pet',$pet),false)->assertDontSee('id="minhas-faturas"',false);
-        $this->get(route('portal.pet',$pet))->assertOk()->assertSee($pet->name)->assertSee($plan)->assertSee('Baixar contrato');
+        // O cartão do plano na página do pet é só o básico; o contrato fica na página do plano ("Ver plano").
+        $subscription=$pet->subscriptions()->firstOrFail();
+        $this->get(route('portal.pet',$pet))->assertOk()->assertSee($pet->name)->assertSee($plan)->assertSee(route('portal.plan',[$pet,$subscription]),false);
+        $this->get(route('portal.plan',[$pet,$subscription]))->assertOk()->assertSee('Baixar contrato');
         $this->actingAs(User::where('email','cliente2@saofrancisco.local')->firstOrFail())->get(route('portal.pet',$pet))->assertNotFound();
         $this->actingAs(User::where('role','finance')->firstOrFail())->get(route('portal.pet',$pet))->assertForbidden();
     }
