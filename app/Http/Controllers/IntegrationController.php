@@ -16,7 +16,8 @@ class IntegrationController extends Controller
         $providers=[
             'vindi'=>['name'=>'Vindi','status'=>config('integrations.vindi.enabled')?'configured':'pending','description'=>'Cobrança e conciliação financeira. Homologação e credenciais necessárias.'],
             'simplesvet'=>['name'=>'SimplesVet','status'=>'pending','description'=>'API e permissões ainda precisam ser homologadas.'],
-            'tudoprapet'=>['name'=>'TudoPraPet','status'=>'pending','description'=>'API e política de benefícios comerciais pendentes.'],
+            'tudoprapet'=>['name'=>'TudoPraPet','status'=>app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()?'configured':'pending',
+                'description'=>app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()?'Grupo "Plano São Francisco": entra na ativação, sai no fim do plano ou no atraso após o fim do mês; conferência diária.':'Chave da API do Plano São Francisco ainda não configurada; tarefas ficam manuais.'],
         ];
         return view('integrations.index',compact('events','providers','auditLogs'));
     }

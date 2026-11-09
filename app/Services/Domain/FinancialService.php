@@ -113,6 +113,9 @@ class FinancialService
         foreach (Subscription::where('customer_id', $invoice->customer_id)->whereNotIn('status', Subscription::TERMINAL)->get() as $subscription) {
             app(ActivationService::class)->activate($subscription);
         }
+        if (app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()) {
+            \App\Jobs\SyncTudoPraPetJob::dispatch($invoice->customer_id);
+        }
 
         return $result;
     }

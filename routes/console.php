@@ -30,6 +30,23 @@ Artisan::command('plans:install-economic-contract', function () {
     $this->info('O rascunho conserva os valores e benefícios do documento. Descontos dependem de implementação antes da publicação.');
 })->purpose('Instalar o contrato Econômico com campos de preenchimento, sem alterar contratos existentes');
 
+Artisan::command('plans:sync-tudoprapet {--cliente= : Só este cliente (id)} {--forcar : Reenvia mesmo sem mudança}', function () {
+    if (! app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()) return $this->warn('Integração com a Tudo pra Pet desligada (falta TUDOPRAPET_ENABLED, TUDOPRAPET_URL ou TUDOPRAPET_API_KEY).');
+    $customers=\App\Models\Customer::query()->when($this->option('cliente'),fn($q,$id)=>$q->whereKey($id),fn($q)=>$q->where(fn($w)=>$w->where('tudoprapet_status','active')
+        ->orWhereHas('subscriptions',fn($s)=>$s->where('category','health_plan')->whereNotNull('activated_at')->whereNotIn('status',\App\Models\Subscription::TERMINAL))))->pluck('id');
+    foreach($customers as $id) \App\Jobs\SyncTudoPraPetJob::dispatch((int)$id,(bool)$this->option('forcar'));
+    $this->info('Conferência da Tudo pra Pet enviada para a fila: '.$customers->count().' cliente(s).');
+})->purpose('Coloca ou tira os tutores do grupo "Plano São Francisco" da Tudo pra Pet conforme os planos e o atraso');
+
+Artisan::command('plans:tudoprapet-teste {acao : status, activate ou deactivate} {cpf} {--nome=} {--email=} {--telefone=}', function () {
+    // Só para a conta de teste combinada com a Tudo pra Pet; não grava nada aqui.
+    $data=['cpf'=>preg_replace('/\D/','',(string)$this->argument('cpf'))];
+    if ($this->argument('acao')==='activate') $data+=['name'=>(string)$this->option('nome'),'email'=>(string)$this->option('email'),'phone'=>preg_replace('/\D/','',(string)$this->option('telefone'))];
+    try { $result=app(\App\Services\Integrations\TudoPraPetClient::class)->call((string)$this->argument('acao'),$data); }
+    catch(\App\Services\Integrations\TudoPraPetException $e) { return $this->error($e->getMessage().($e->retryable?' (temporário)':'')); }
+    $this->info(json_encode(\Illuminate\Support\Arr::except($result,['user_id']),JSON_UNESCAPED_UNICODE));
+})->purpose('Testa a API da Tudo pra Pet com a conta de teste');
+
 Artisan::command('plans:recover-events', function () {
     IntegrationEvent::whereIn('status',['pending','error'])->where('attempts','<',8)->chunkById(100,function($events) {
         foreach($events as $event) {
@@ -65,6 +82,8 @@ Artisan::command('plans:import-vindi-customers {--apply : Grava os cadastros; se
 
 Schedule::command('plans:recover-events')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('plans:reconcile')->everyFifteenMinutes()->withoutOverlapping();
+// 03:10 de Brasília: pega quem passou do último dia do mês sem pagar e quem teve o plano encerrado.
+Schedule::command('plans:sync-tudoprapet')->dailyAt('06:10')->withoutOverlapping();
 Artisan::command('leads:digisac-photos',function(\App\Services\Integrations\LeadPhotoSync $photos) {
     $this->info($photos->syncPending().' leads conferidos.');
 })->purpose('Guardar a foto do contato no Digisac dos leads com telefone, sem precisar abrir a conversa');

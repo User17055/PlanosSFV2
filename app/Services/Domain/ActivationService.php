@@ -56,6 +56,10 @@ class ActivationService
     private function outbox(Subscription $s, string $event): void
     {
         foreach (['simplesvet', 'tudoprapet'] as $provider) {
+            if ($provider === 'tudoprapet' && app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()) {
+                \App\Jobs\SyncTudoPraPetJob::dispatch($s->customer_id)->afterCommit();
+                continue;
+            }
             IntegrationEvent::firstOrCreate(['idempotency_key' => "$provider:subscription:$s->id:$event:".$s->updated_at->format('YmdHis.u')],
                 ['provider' => $provider, 'event_type' => 'subscription.'.$event, 'entity_type' => 'subscription', 'entity_id' => $s->id, 'status' => 'manual', 'payload' => ['subscription_id' => $s->id, 'status' => $s->status], 'received_at' => now()]);
         }

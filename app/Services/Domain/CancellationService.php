@@ -31,6 +31,10 @@ class CancellationService
                 BenefitUsage::where('subscription_id', $s->id)->where('status', 'reserved')->update(['status' => 'cancelled', 'reason' => 'Vigência encerrada.']);
                 Audit::record('subscription_ended', $s, null, ['effective_at' => $s->ends_at->toIso8601String()]);
                 foreach (['vindi', 'simplesvet', 'tudoprapet'] as $provider) {
+                    if ($provider === 'tudoprapet' && app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()) {
+                        \App\Jobs\SyncTudoPraPetJob::dispatch($s->customer_id)->afterCommit();
+                        continue;
+                    }
                     IntegrationEvent::firstOrCreate(['idempotency_key' => "$provider:ended:$s->id"],
                         ['provider' => $provider, 'event_type' => 'subscription.ended', 'entity_type' => 'subscription', 'entity_id' => $s->id, 'status' => 'manual', 'payload' => ['subscription_id' => $s->id], 'received_at' => now()]);
                 }

@@ -24,7 +24,9 @@ return [
         'payment_hosts' => array_filter(array_map('trim',explode(',',env('VINDI_PAYMENT_HOSTS','app.vindi.com.br,sandbox-app.vindi.com.br')))),
     ],
     'simplesvet' => ['enabled' => false, 'mode' => 'manual', 'reason' => 'Documentação e autorização de escrita não fornecidas.'],
-    'tudoprapet' => ['enabled' => false, 'mode' => 'manual', 'reason' => 'API de clientes e benefícios comerciais não homologada.'],
+    // Grupo "Plano São Francisco" no site da Tudo pra Pet (preço do Clube). Sem chave, segue manual como antes.
+    'tudoprapet' => ['enabled' => (bool) env('TUDOPRAPET_ENABLED', false), 'url' => env('TUDOPRAPET_URL'), 'api_key' => env('TUDOPRAPET_API_KEY'),
+        'timeout' => (int) env('TUDOPRAPET_TIMEOUT', 15), 'mode' => 'manual', 'reason' => 'Chave da API do Plano São Francisco ainda não configurada.'],
     'contracts' => [
         'disk' => 'local',
         'maximum_upload_kb' => (int) env('CONTRACT_MAX_UPLOAD_KB', 10240),
