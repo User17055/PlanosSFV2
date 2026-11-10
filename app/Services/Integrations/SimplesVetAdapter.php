@@ -86,8 +86,7 @@ class SimplesVetAdapter implements PartnerAdapter
         $private = storage_path('app/private');
         $result = Process::path(base_path('rpa/simplesvet'))->timeout((int) config('integrations.simplesvet.timeout', 200))
             ->env(['SIMPLESVET_USER' => (string) config('integrations.simplesvet.user'), 'SIMPLESVET_PASSWORD' => (string) config('integrations.simplesvet.password'),
-                'PLAYWRIGHT_BROWSERS_PATH' => (string) config('integrations.simplesvet.browsers'), 'SV_STATE_FILE' => $private.'/simplesvet-sessao.json', 'HOME' => $private]
-                + array_filter(['SV_LIVE_FILE' => config('integrations.simplesvet.live_file')]))
+                'PLAYWRIGHT_BROWSERS_PATH' => (string) config('integrations.simplesvet.browsers'), 'SV_STATE_FILE' => $private.'/simplesvet-sessao.json', 'HOME' => $private])
             ->input(json_encode($task, JSON_UNESCAPED_UNICODE))
             ->run([(string) config('integrations.simplesvet.node', 'node'), 'robo.mjs']);
         $data = json_decode((string) collect(explode("\n", trim($result->output())))->last(), true);

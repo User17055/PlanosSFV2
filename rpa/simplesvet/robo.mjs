@@ -437,16 +437,6 @@ try {
   }
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
-  // Ao vivo: a tela atual vai para um arquivo a cada ~0,6 s (a página de acompanhamento mostra esse arquivo).
-  if (process.env.SV_LIVE_FILE) {
-    const live = process.env.SV_LIVE_FILE;
-    const tick = async () => {
-      await page.screenshot({ path: `${live}.tmp.jpg`, type: 'jpeg', quality: 60, timeout: 3000 }).then(() => fs.renameSync(`${live}.tmp.jpg`, live)).catch(() => {});
-      fs.writeFileSync(`${live}.json`, JSON.stringify({ actions, at: new Date().toISOString() }));
-      if (!page.isClosed()) setTimeout(tick, 600);
-    };
-    tick();
-  }
   try {
     await login(page);
     if (stateFile) await context.storageState({ path: stateFile }).then(() => fs.chmodSync(stateFile, 0o600)).catch(() => {});
