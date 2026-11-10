@@ -84,15 +84,17 @@ class PortalApiController extends Controller
         ]+($r->has('pets') ? [
             // Cadastro em etapas: um ou mais pets de uma vez (máx. 5).
             'pets'=>'required|array|min:1|max:5','pets.*.name'=>'required|string|max:100','pets.*.species'=>'required|in:dog,cat',
-            // Raça, cor e sexo entram no contrato: são obrigatórios.
+            // Raça, cor e sexo entram no contrato: são obrigatórios. Sexo do titular e castração: o SimplesVet exige para cadastrar.
             'pets.*.birth_date'=>'required|date|before_or_equal:today','pets.*.breed'=>'required|string|max:100',
-            'pets.*.color'=>'required|string|max:100','pets.*.sex'=>'required|in:male,female',
+            'pets.*.color'=>'required|string|max:100','pets.*.sex'=>'required|in:male,female','pets.*.neutered'=>'required|boolean',
+            'holder_sex'=>'required|in:male,female',
         ] : [
             'pet_name'=>'required|string|max:100','pet_species'=>'required|in:dog,cat','pet_birth_date'=>'required|date|before_or_equal:today',
             'pet_breed'=>'nullable|string|max:100','pet_color'=>'nullable|string|max:100','pet_sex'=>'nullable|in:male,female,unknown',
-        ])+CustomerAcquisition::rules());
+            'pet_neutered'=>'nullable|boolean','holder_sex'=>'nullable|in:male,female',
+        ])+CustomerAcquisition::rules(),['holder_sex.required'=>'Informe o sexo do titular.','pets.*.neutered.required'=>'Informe se o pet é castrado.']);
         $petList=isset($data['pets']) ? array_values($data['pets']) : [['name'=>$data['pet_name'],'species'=>$data['pet_species'],'birth_date'=>$data['pet_birth_date'],
-            'breed'=>$data['pet_breed']??null,'color'=>$data['pet_color']??null,'sex'=>$data['pet_sex']??null]];
+            'breed'=>$data['pet_breed']??null,'color'=>$data['pet_color']??null,'sex'=>$data['pet_sex']??null,'neutered'=>$data['pet_neutered']??null]];
         $customers->validateCpf($data['document']);
         if (Customer::where('document',$data['document'])->exists()) throw ValidationException::withMessages(['document'=>'Não foi possível criar uma conta com estes dados. Entre com seu acesso ou solicite apoio à unidade.']);
         $version=empty($data['product_version_id'])?null:$this->offered((int)$data['product_version_id']);
@@ -100,9 +102,9 @@ class PortalApiController extends Controller
         $proposalIds=[];
         $user=DB::transaction(function() use($r,$data,$petList,$unit,$version,$proposals,$link,&$proposalIds) {
             $customer=Customer::create(['name'=>$data['name'],'document'=>$data['document'],'rg'=>$data['rg']??null,'email'=>$data['email'],
-                'phone'=>$data['phone'],'address'=>CustomerAddress::from($data),'originating_franchise_id'=>$unit->id,'contact_verified_at'=>config('plans.demo')?now():null]);
+                'phone'=>$data['phone'],'sex'=>$data['holder_sex']??null,'address'=>CustomerAddress::from($data),'originating_franchise_id'=>$unit->id,'contact_verified_at'=>config('plans.demo')?now():null]);
             $createdPets=array_map(fn($p)=>Pet::create(['customer_id'=>$customer->id,'name'=>$p['name'],'species'=>$p['species'],'birth_date'=>$p['birth_date'],
-                'breed'=>$p['breed']??null,'color'=>$p['color']??null,'sex'=>$p['sex']??'unknown']),$petList);
+                'breed'=>$p['breed']??null,'color'=>$p['color']??null,'sex'=>$p['sex']??'unknown','neutered'=>isset($p['neutered'])?(bool)$p['neutered']:null]),$petList);
             $user=User::create(['name'=>$data['name'],'email'=>$data['email'],'password'=>$data['password'],'role'=>'customer',
                 'customer_id'=>$customer->id,'active'=>true,'email_verified_at'=>config('plans.demo')?now():null]);
             // Pelo link, a origem e quem indicou vêm dele: o que o cliente digitar nesses campos não vale.
@@ -267,8 +269,9 @@ class PortalApiController extends Controller
     {
         $this->verified($r);
         $data=$r->validate(['name'=>'required|string|max:100','species'=>'required|in:dog,cat','birth_date'=>'required|date|before_or_equal:today',
-            'breed'=>'required|string|max:100','color'=>'required|string|max:100','sex'=>'required|in:male,female']);
-        $pet=$r->user()->customer->pets()->create($data);
+            'breed'=>'required|string|max:100','color'=>'required|string|max:100','sex'=>'required|in:male,female','neutered'=>'required|boolean'],
+            ['neutered.required'=>'Informe se o pet é castrado.']);
+        $pet=$r->user()->customer->pets()->create(['neutered'=>(bool)$data['neutered']]+$data);
         Audit::record('portal.pet_created',$pet,$r->user());
         return response()->json(['id'=>$pet->id,'message'=>'Pet cadastrado.'],201);
     }

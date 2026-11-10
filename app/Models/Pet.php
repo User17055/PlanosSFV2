@@ -6,7 +6,7 @@ class Pet extends DomainModel
 {
     protected function casts(): array
     {
-        return ['birth_date' => 'date', 'active' => 'boolean'];
+        return ['birth_date' => 'date', 'active' => 'boolean', 'neutered' => 'boolean'];
     }
 
     public function customer()

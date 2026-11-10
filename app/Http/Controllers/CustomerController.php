@@ -42,12 +42,13 @@ class CustomerController extends Controller
             'pet_name' => 'required|string|max:100','pet_species' => 'required|in:dog,cat',
             'pet_birth_date' => 'required|date|before_or_equal:today',
             'pet_color' => 'nullable|string|max:100','rg'=>'nullable|string|max:40','city'=>'nullable|string|max:150','neighborhood'=>'nullable|string|max:150','state'=>'nullable|string|size:2','pet_breed' => 'nullable|string|max:100','pet_sex' => 'nullable|in:male,female,unknown',
-            'pet_microchip'=>'nullable|string|max:100|unique:pets,microchip',
+            'pet_microchip'=>'nullable|string|max:100|unique:pets,microchip','holder_sex'=>'required|in:male,female','pet_neutered'=>'required|boolean',
         ] + \App\Services\CustomerAddress::rules() + \App\Services\Attribution\CustomerAcquisition::rules(),'customerCreate',route('customers.create'),[
             'document.unique'=>'Já existe um tutor com este CPF. Abra a ficha existente para adicionar ou atualizar os pets.',
             'pet_name.required'=>'Informe o nome do primeiro pet.',
             'pet_birth_date.required'=>'Informe a data de nascimento do primeiro pet.',
             'pet_microchip.unique'=>'Este microchip já está vinculado a um pet cadastrado.',
+            'holder_sex.required'=>'Informe o sexo do titular.','pet_neutered.required'=>'Informe se o pet é castrado.',
         ]);
         try { $this->validateCpf($data['document']); }
         catch (ValidationException $e) { throw $e->errorBag('customerCreate')->redirectTo(route('customers.create')); }
@@ -57,11 +58,11 @@ class CustomerController extends Controller
         $this->access->franchise($request->user(), (int) $franchiseId);
         $customer = DB::transaction(function () use ($data, $request, $franchiseId) {
             $customer = Customer::create([
-                'name'=>$data['name'],'rg'=>$data['rg']??null,'document'=>$data['document'],'email'=>$data['email'],'phone'=>$data['phone'],
+                'name'=>$data['name'],'rg'=>$data['rg']??null,'document'=>$data['document'],'email'=>$data['email'],'phone'=>$data['phone'],'sex'=>$data['holder_sex'],
                 'address'=>\App\Services\CustomerAddress::from($data),'originating_franchise_id'=>$franchiseId,
             ]);
             app(\App\Services\Attribution\CustomerAcquisition::class)->record($customer,$request->user(),$request,$data);
-            $pet=Pet::create(['customer_id'=>$customer->id,'name'=>$data['pet_name'],'species'=>$data['pet_species'],'birth_date'=>$data['pet_birth_date'],'color'=>$data['pet_color']??null,'breed'=>$data['pet_breed'] ?? null,'sex'=>$data['pet_sex'] ?? 'unknown','microchip'=>$data['pet_microchip']??null]);
+            $pet=Pet::create(['customer_id'=>$customer->id,'name'=>$data['pet_name'],'species'=>$data['pet_species'],'birth_date'=>$data['pet_birth_date'],'color'=>$data['pet_color']??null,'breed'=>$data['pet_breed'] ?? null,'sex'=>$data['pet_sex'] ?? 'unknown','neutered'=>(bool)$data['pet_neutered'],'microchip'=>$data['pet_microchip']??null]);
             AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$franchiseId,'action'=>'customer.created','entity_type'=>'customer','entity_id'=>$customer->id]);
             AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$franchiseId,'action'=>'pet.created','entity_type'=>'pet','entity_id'=>$pet->id,'data'=>['customer_id'=>$customer->id]]);
             return $customer;
@@ -88,7 +89,7 @@ class CustomerController extends Controller
     public function pet(Request $request, Customer $customer)
     {
         $this->access->customer($request->user(), $customer);
-        $data = $this->validateWorkspace($request,['name'=>'required|string|max:100','species'=>'required|in:dog,cat','birth_date'=>'required|date|before_or_equal:today','color'=>'nullable|string|max:100','breed'=>'nullable|string|max:100','sex'=>'nullable|in:male,female,unknown','microchip'=>'nullable|string|max:100|unique:pets,microchip'],
+        $data = $this->validateWorkspace($request,['name'=>'required|string|max:100','species'=>'required|in:dog,cat','birth_date'=>'required|date|before_or_equal:today','color'=>'nullable|string|max:100','breed'=>'nullable|string|max:100','sex'=>'nullable|in:male,female,unknown','neutered'=>'nullable|boolean','microchip'=>'nullable|string|max:100|unique:pets,microchip'],
             $request->user()->role==='customer'?'default':'petCreate',$this->workspaceUrl($request,$customer,'novo-pet'),['microchip.unique'=>'Este microchip já está vinculado a um pet cadastrado.']);
         $pet=DB::transaction(function()use($request,$customer,$data) {
             $locked=Customer::lockForUpdate()->findOrFail($customer->id);
@@ -109,12 +110,12 @@ class CustomerController extends Controller
     public function update(Request $request,Customer $customer)
     {
         $this->access->customer($request->user(),$customer);
-        $data=$this->validateWorkspace($request,['name'=>'required|string|min:3|max:180','phone'=>'required|string|max:30','address'=>'nullable|required_without:street|string|max:500','rg'=>'nullable|string|max:40','city'=>'nullable|string|max:150','neighborhood'=>'nullable|string|max:150','state'=>'nullable|string|size:2','reason'=>'required|string|min:5|max:1000'] + \App\Services\CustomerAddress::rules() + \App\Services\Attribution\CustomerAcquisition::rules(),
+        $data=$this->validateWorkspace($request,['name'=>'required|string|min:3|max:180','phone'=>'required|string|max:30','address'=>'nullable|required_without:street|string|max:500','rg'=>'nullable|string|max:40','city'=>'nullable|string|max:150','neighborhood'=>'nullable|string|max:150','state'=>'nullable|string|size:2','holder_sex'=>'nullable|in:male,female','reason'=>'required|string|min:5|max:1000'] + \App\Services\CustomerAddress::rules() + \App\Services\Attribution\CustomerAcquisition::rules(),
             $request->user()->role==='customer'?'default':'customerEdit',$request->user()->role==='customer'?route('customers.edit',$customer):$this->workspaceUrl($request,$customer,'tutor'));
         DB::transaction(function()use($request,$customer,$data) {
             $locked=Customer::lockForUpdate()->findOrFail($customer->id);
             $before=$locked->only(['name','phone','address','rg','acquisition_profile']);
-            $locked->update(['name'=>$data['name'],'phone'=>$data['phone'],'rg'=>$data['rg']??$locked->rg,'address'=>\App\Services\CustomerAddress::from($data,is_array($locked->address)?$locked->address:[])]);
+            $locked->update(['name'=>$data['name'],'phone'=>$data['phone'],'rg'=>$data['rg']??$locked->rg,'sex'=>$data['holder_sex']??$locked->sex,'address'=>\App\Services\CustomerAddress::from($data,is_array($locked->address)?$locked->address:[])]);
             if(array_intersect_key($data,\App\Services\Attribution\CustomerAcquisition::rules()))app(\App\Services\Attribution\CustomerAcquisition::class)->record($locked,$request->user(),$request,$data);
             AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$locked->originating_franchise_id,'action'=>'customer.updated','entity_type'=>'customer','entity_id'=>$customer->id,'reason'=>$data['reason'],'data'=>['before'=>$before,'after'=>$locked->only(['name','phone','address','rg','acquisition_profile'])]]);
         });
@@ -131,14 +132,14 @@ class CustomerController extends Controller
     public function updatePet(Request $request,Pet $pet)
     {
         $this->access->customer($request->user(),$pet->customer);
-        $data=$this->validateWorkspace($request,['name'=>'required|string|max:100','color'=>'nullable|string|max:100','breed'=>'nullable|string|max:100','sex'=>'required|in:male,female,unknown','birth_date'=>'required|date|before_or_equal:today','reason'=>'required|string|min:5|max:1000'],
+        $data=$this->validateWorkspace($request,['name'=>'required|string|max:100','color'=>'nullable|string|max:100','breed'=>'nullable|string|max:100','sex'=>'required|in:male,female,unknown','neutered'=>'nullable|boolean','birth_date'=>'required|date|before_or_equal:today','reason'=>'required|string|min:5|max:1000'],
             $request->user()->role==='customer'?'default':'petEdit'.$pet->id,$request->user()->role==='customer'?route('pets.edit',$pet):$this->workspaceUrl($request,$pet->customer,'pet-'.$pet->id));
         DB::transaction(function()use($request,$pet,$data) {
             Customer::lockForUpdate()->findOrFail($pet->customer_id);
             $locked=Pet::lockForUpdate()->findOrFail($pet->id);
-            $before=$locked->only(['name','breed','sex','birth_date','color']);
+            $before=$locked->only(['name','breed','sex','neutered','birth_date','color']);
             $locked->update(collect($data)->except('reason')->all());
-            AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$pet->customer->originating_franchise_id,'action'=>'pet.updated','entity_type'=>'pet','entity_id'=>$pet->id,'reason'=>$data['reason'],'data'=>['before'=>$before,'after'=>$locked->only(['name','breed','sex','birth_date','color'])]]);
+            AuditLog::create(['actor_id'=>$request->user()->id,'franchise_id'=>$pet->customer->originating_franchise_id,'action'=>'pet.updated','entity_type'=>'pet','entity_id'=>$pet->id,'reason'=>$data['reason'],'data'=>['before'=>$before,'after'=>$locked->only(['name','breed','sex','neutered','birth_date','color'])]]);
         });
         return redirect()->to($this->workspaceUrl($request,$pet->customer,'pet-'.$pet->id))->with('success','Dados do pet atualizados na ficha. Os contratos existentes preservam os dados do aceite.');
     }

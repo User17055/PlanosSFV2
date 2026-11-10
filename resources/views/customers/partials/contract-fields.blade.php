@@ -7,6 +7,9 @@ $contractFailed = $errors->getBag($contractBag)->any();
 $contractValue = fn($field, $value = null) => $contractFailed ? old($field, $value) : $value;
 @endphp
 @unless($compact ?? false)<label class="field">RG<input name="rg" maxlength="40" value="{{ $contractValue('rg', $contractCustomer?->rg) }}"></label>@endunless
+{{-- O SimplesVet exige o sexo do titular para cadastrar o responsável. --}}
+@php $holderSex = $contractValue('holder_sex', $contractCustomer?->sex); @endphp
+<label class="field">Sexo do titular @unless($contractCustomer)<span>*</span>@endunless<select name="holder_sex" @unless($contractCustomer) required @endunless><option value="">{{ $contractCustomer ? 'Não informado' : 'Selecione' }}</option><option value="female" @selected($holderSex==='female')>Feminino</option><option value="male" @selected($holderSex==='male')>Masculino</option></select></label>
 <input type="hidden" name="_structured_address" value="1">
 <label class="field">CEP <span>*</span><input name="zip" required inputmode="numeric" maxlength="9" pattern="[0-9]{5}-?[0-9]{3}" autocomplete="postal-code" data-postal-lookup="{{ url('/enderecos/cep') }}" value="{{ $contractValue('zip', $contractAddress['zip'] ?? $contractAddress['cep'] ?? '') }}" placeholder="00000-000"><small data-postal-status role="status" aria-live="polite">{{ ($compact ?? false) ? '' : 'Comece pelo CEP para preencher a rua, o bairro e a cidade.' }}</small></label>
 <label class="field">Rua / avenida <span>*</span><input name="street" required maxlength="200" autocomplete="address-line1" value="{{ $contractValue('street', $contractAddress['street'] ?? '') }}" placeholder="Preenchida pelo CEP; você pode corrigir"></label>

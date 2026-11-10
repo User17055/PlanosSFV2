@@ -8,6 +8,7 @@
 <label>Raça <span>*</span><input name="pets[{{i}}][breed]" required maxlength="100" value="{{p.breed|default('')}}" placeholder="Ex.: SRD (sem raça definida)"></label>
 <label>Cor / pelagem <span>*</span><input name="pets[{{i}}][color]" required maxlength="100" value="{{p.color|default('')}}"></label>
 <label>Sexo <span>*</span><select name="pets[{{i}}][sex]" required><option value="">Selecione</option><option value="male" {{p.sex|default('')=='male'?'selected':''}}>Macho</option><option value="female" {{p.sex|default('')=='female'?'selected':''}}>Fêmea</option></select></label>
+<label>Castrado? <span>*</span><select name="pets[{{i}}][neutered]" required><option value="">Selecione</option><option value="1" {{p.neutered|default('')=='1'?'selected':''}}>Sim</option><option value="0" {{p.neutered|default('')=='0'?'selected':''}}>Não</option></select></label>
 </div>
 </fieldset>
 {% endmacro %}

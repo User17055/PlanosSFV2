@@ -48,11 +48,11 @@ class PortalController
                 }
                 // Passwords and recovery tokens are never copied into flash/session form data.
                 $fields=['name','document','email','phone','rg','street','number','complement','neighborhood','city','state','zip',
-                    'pet_name','pet_species','pet_birth_date','pet_breed','pet_color','pet_sex','species','birth_date','breed','color','sex','reason','signer_name','acquisition_source','referrer_name'];
+                    'pet_name','pet_species','pet_birth_date','pet_breed','pet_color','pet_sex','species','birth_date','breed','color','sex','neutered','holder_sex','reason','signer_name','acquisition_source','referrer_name'];
                 $old=array_intersect_key($r->request->all(),array_flip($fields));
                 // Os pets do cadastro em etapas também voltam preenchidos (só os campos do pet, até 5).
                 $pets=$r->request->all()['pets']??null;
-                if (is_array($pets)) $old['pets']=array_map(fn($p)=>is_array($p)?array_map(fn($v)=>mb_substr(is_scalar($v)?(string)$v:'',0,100),array_intersect_key($p,array_flip(['name','species','birth_date','breed','color','sex']))):[],array_slice(array_values($pets),0,5));
+                if (is_array($pets)) $old['pets']=array_map(fn($p)=>is_array($p)?array_map(fn($v)=>mb_substr(is_scalar($v)?(string)$v:'',0,100),array_intersect_key($p,array_flip(['name','species','birth_date','breed','color','sex','neutered']))):[],array_slice(array_values($pets),0,5));
                 $r->getSession()->set('portal_old',$old);
                 $errors=$e->result->data['errors']??[];
                 $messages=[];
@@ -280,7 +280,7 @@ class PortalController
     {
         $account=$this->call($r,'GET','me')->data;
         if ($r->isMethod('POST')) {
-            $this->call($r,'POST','pets',array_intersect_key($r->request->all(),array_flip(['name','species','breed','birth_date','color','sex'])));
+            $this->call($r,'POST','pets',array_intersect_key($r->request->all(),array_flip(['name','species','breed','birth_date','color','sex','neutered'])));
             $this->success($r,'Seu pet foi cadastrado.');
             $code=$r->getSession()->get('portal_plan_code');
             return $code?$this->redirect('portal_subscribe',['code'=>$code]):$this->redirect('portal_home');

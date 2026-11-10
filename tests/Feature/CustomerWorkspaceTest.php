@@ -32,7 +32,7 @@ class CustomerWorkspaceTest extends TestCase
             'rg' => 'RG123456', 'city' => 'Presidente Prudente', 'state' => 'SP', 'zip' => '19000-000',
             'pet_name' => 'Pingo', 'pet_species' => 'dog', 'pet_birth_date' => now()->subYear()->toDateString(),
             'pet_breed' => 'SRD', 'pet_sex' => 'male',
-            'pet_color' => 'Caramelo',
+            'pet_color' => 'Caramelo', 'holder_sex' => 'female', 'pet_neutered' => '0',
         ]);
 
         $customer = Customer::where('email', 'ficha.unica@example.test')->firstOrFail();

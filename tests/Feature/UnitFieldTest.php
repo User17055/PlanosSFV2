@@ -39,7 +39,7 @@ class UnitFieldTest extends TestCase
         }
 
         $this->actingAs($manager)->post(route('customers.store'), ['name' => 'Tutora Nova', 'document' => '52998224725', 'email' => 'tutora@example.test', 'phone' => '18999990000',
-            'originating_franchise_id' => $this->unit->id, 'pet_name' => 'Lua', 'pet_species' => 'dog', 'pet_birth_date' => '2020-01-01'])->assertRedirect();
+            'originating_franchise_id' => $this->unit->id, 'pet_name' => 'Lua', 'pet_species' => 'dog', 'pet_birth_date' => '2020-01-01', 'holder_sex' => 'female', 'pet_neutered' => '1'])->assertRedirect();
         $this->assertSame($this->unit->id, Customer::where('document', '52998224725')->sole()->originating_franchise_id);
     }
 
@@ -64,7 +64,7 @@ class UnitFieldTest extends TestCase
     {
         $other = Franchise::create(['name' => 'Outra unidade', 'code' => 'OUTRA', 'active' => true]);
         $this->actingAs($this->manager([$this->unit]))->post(route('customers.store'), ['name' => 'Tutora Nova', 'document' => '52998224725', 'email' => 'tutora@example.test', 'phone' => '18999990000',
-            'originating_franchise_id' => $other->id, 'pet_name' => 'Lua', 'pet_species' => 'dog', 'pet_birth_date' => '2020-01-01'])->assertForbidden();
+            'originating_franchise_id' => $other->id, 'pet_name' => 'Lua', 'pet_species' => 'dog', 'pet_birth_date' => '2020-01-01', 'holder_sex' => 'female', 'pet_neutered' => '1'])->assertForbidden();
         $this->assertDatabaseMissing('customers', ['document' => '52998224725']);
     }
 }
