@@ -2180,3 +2180,16 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 @media(min-width:900px){.portal-hero.is-home,.portal-hero.pet-hero-nav{min-height:264px}}
 /* Ilustração da espécie sobre fundo claro (esconde a bordinha branca do desenho no azul), esmaecendo com a imagem */
 .pet-hero-art.is-illustration{background:#e4f0cc}
+/* Dashboard simples: números, leads e listas curtas lado a lado */
+.dash-simple-line{margin:-4px 0 18px;font-size:14px;color:var(--text-3)}
+.dash-simple-line strong{color:var(--text);font-weight:500}
+.dash-simple-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.dash-simple-grid>.card{padding:18px 20px;margin:0}
+.dash-simple-grid h2{font-size:16px;margin:0 0 14px}
+.dash-simple-bar{display:block;padding:7px 8px;margin:0 -8px 4px;border-radius:var(--radius);color:inherit}
+.dash-simple-bar>div:first-child{display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;font-size:14px;color:var(--text-2)}
+.dash-simple-bar small{color:var(--text-3)}
+.dash-simple-bar strong{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
+.dash-simple-bar:hover,.dash-simple-bar[aria-current]{background:var(--primary-soft)}
+.dash-simple-note{margin:8px 0 0;font-size:13px;color:var(--text-3)}
+@media(max-width:900px){.dash-simple-grid{grid-template-columns:minmax(0,1fr)}}
