@@ -54,7 +54,7 @@ class SimplesVetSyncTest extends TestCase
         $this->robot(['ok' => true, 'tutor_id' => '157786', 'pet_id' => '72963', 'actions' => ['tutor: põe CLIENTE PLANO']]);
         SyncSimplesVetJob::dispatchSync($this->subscription->id);
         $task = $this->sentTask();
-        $this->assertSame(['activate', false, 'CLIENTE PLANO', 'PLANO ECONÔMICO FELINO DESDE 10/11/2026', 'PLANO ECONÔMICO FELINO DESDE', false],
+        $this->assertSame(['activate', false, 'CLIENTE PLANO', 'PLANO ECONÔMICO FELINO - 10/11/2026', 'PLANO ECONÔMICO FELINO', false],
             [$task['action'], $task['dry_run'], $task['tutor_tag'], $task['pet_tag'], $task['pet_tag_prefix'], $task['keep_tutor_tag']]);
         $this->assertSame(['Google', 'female', '19063-140'], [$task['tutor']['origin'], $task['tutor']['sex'], $task['tutor']['address']['zip']]);
         $this->assertSame(['cat', 'female', true], [$task['pet']['species'], $task['pet']['sex'], $task['pet']['neutered']]);

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Process;
 
 /**
  * Leva o plano para o SimplesVet pelo robô (rpa/simplesvet/robo.mjs): plano ativo põe "CLIENTE PLANO" no tutor e
- * "<PLANO> DESDE dd/mm/aaaa" no pet, cadastrando o que faltar; plano encerrado tira as marcas.
+ * "<PLANO> - dd/mm/aaaa" no pet, cadastrando o que faltar; plano encerrado tira as marcas.
  */
 class SimplesVetAdapter implements PartnerAdapter
 {
@@ -69,7 +69,8 @@ class SimplesVetAdapter implements PartnerAdapter
                     'neighborhood' => 'neighborhood', 'city' => 'city', 'state' => 'state'])],
             'pet' => ['name' => $pet->name, 'species' => $pet->species, 'sex' => $pet->sex, 'neutered' => $pet->neutered, 'birth_date' => $pet->birth_date?->format('Y-m-d'),
                 'breed' => $pet->breed, 'color' => $pet->color, 'simplesvet_id' => $pet->simplesvet_id],
-            'tutor_tag' => self::TUTOR_TAG, 'pet_tag' => "$plan DESDE $since", 'pet_tag_prefix' => "$plan DESDE",
+            // "PLANO ECONÔMICO FELINO - 10/11/2026" (formato pedido pelo usuário); o robô também reconhece o antigo "... DESDE ...".
+            'tutor_tag' => self::TUTOR_TAG, 'pet_tag' => "$plan - $since", 'pet_tag_prefix' => $plan,
             // A marca do tutor só sai quando ele não tem mais nenhum plano ativo.
             'keep_tutor_tag' => Subscription::where('customer_id', $customer->id)->whereKeyNot($s->id)->where('status', 'active')->exists(),
         ];

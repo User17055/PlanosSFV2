@@ -356,9 +356,15 @@ async function createTutor(page, tutor, tag) {
   return setTags(page, TUTOR, (current) => current, 'tutor (conferência)');
 }
 
+// Marca deste plano no pet, em qualquer formato: "PLANO X - 10/11/2026", o antigo "PLANO X DESDE 10/11/2026" ou só "PLANO X".
+function isPlanTag(tag) {
+  const plan = norm(task.pet_tag_prefix);
+  const text = norm(tag);
+  return text === plan || (text.startsWith(`${plan} `) && /^(DESDE )?\d/.test(text.slice(plan.length + 1)));
+}
+
 async function activate(page) {
   const { tutor, pet } = task;
-  const prefix = norm(task.pet_tag_prefix);
   const count = await searchTutor(page, digits(tutor.cpf));
   if (count > 1) throw new Manual(`O CPF tem ${count} cadastros no SimplesVet: conferir qual é o certo`);
   let tutorId;
@@ -380,7 +386,7 @@ async function activate(page) {
   } else {
     say(`animal: "${pet.name}" é "${animal.name}" no SimplesVet`);
     await openAnimal(page, animal, pet);
-    petId = await setTags(page, ANIMAL, (current) => [...current.filter((t) => !norm(t).startsWith(prefix)), task.pet_tag], 'animal');
+    petId = await setTags(page, ANIMAL, (current) => [...current.filter((t) => !isPlanTag(t)), task.pet_tag], 'animal');
   }
   if (pet.simplesvet_id && petId && pet.simplesvet_id !== petId) throw new Manual(`O pet agora aponta para outra ficha no SimplesVet (${petId}, antes ${pet.simplesvet_id})`);
   return { tutor_id: tutorId, pet_id: petId };
@@ -388,7 +394,6 @@ async function activate(page) {
 
 async function deactivate(page) {
   const { tutor, pet } = task;
-  const prefix = norm(task.pet_tag_prefix);
   const count = await searchTutor(page, digits(tutor.cpf));
   if (count === 0) { say('tutor: não está no SimplesVet; nada a tirar'); return { tutor_id: null, pet_id: null }; }
   if (count > 1) throw new Manual(`O CPF tem ${count} cadastros no SimplesVet: conferir qual é o certo`);
@@ -397,7 +402,7 @@ async function deactivate(page) {
   const animal = matchAnimal(await livingAnimals(page), pet.name);
   if (animal) {
     await openAnimal(page, animal, pet);
-    petId = await setTags(page, ANIMAL, (current) => current.filter((t) => !norm(t).startsWith(prefix)), 'animal');
+    petId = await setTags(page, ANIMAL, (current) => current.filter((t) => !isPlanTag(t)), 'animal');
     await searchTutor(page, digits(tutor.cpf));
     await openFirstTutor(page);
   } else {
