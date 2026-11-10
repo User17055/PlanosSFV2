@@ -77,6 +77,19 @@ class VindiClient
         return $this->request()->post('customers', $payload)->throw()->json('customer') ?? [];
     }
 
+    /** Telefone daqui no formato da Vindi (55 + DDD + número); celular quando tem 9 dígitos depois do DDD. */
+    public static function phone(?string $phone): ?array
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+        if (strlen($digits) > 11 && str_starts_with($digits, '55')) {
+            $digits = substr($digits, 2);
+        }
+        if (! preg_match('/^[1-9]{2}(9?)\d{8}$/D', $digits, $match)) {
+            return null;
+        }
+        return ['phone_type' => $match[1] ? 'mobile' : 'landline', 'number' => '55'.$digits];
+    }
+
     public function updateCustomer(string $id, array $payload): array
     {
         $this->assertCreationEnabled();

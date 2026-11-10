@@ -272,7 +272,7 @@ class VindiCheckoutService
         $byCpf=collect($this->client->customersByRegistryCode($cpf))->filter(fn($customer)=>preg_replace('/\D/','',(string)($customer['registry_code']??''))===$cpf
             && ($customer['status']??'active')!=='archived')->values();
         return $byCpf->count()===1 ? $byCpf->first() : $this->client->createCustomer(['code'=>$code,'name'=>$local->name,'email'=>$local->email,'registry_code'=>$cpf]
-            +array_filter(['address'=>\App\Services\CustomerAddress::vindi($local->address)]));
+            +array_filter(['address'=>\App\Services\CustomerAddress::vindi($local->address),'phones'=>array_filter([VindiClient::phone($local->phone)])]));
     }
 
     /** O cliente antigo já paga uma assinatura feita direto na Vindi (achado pelo CPF): cobrar de novo aqui seria cobrança em dobro. */

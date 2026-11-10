@@ -31,6 +31,7 @@ class VindiCheckoutTest extends TestCase
     private int $itemPosts=0;
     private ?string $nextBilling=null;
     private array $subscriptionBills=[];
+    private array $remotePhones=[];
 
     protected function setUp(): void
     {
@@ -57,7 +58,7 @@ class VindiCheckoutTest extends TestCase
         config(['integrations.vindi.checkout_plans'=>[$version->id=>['approved'=>true,'plan_id'=>222]+$version->only(['price_cents','enrollment_fee_cents','billing_cycle','duration_months','renewal_policy'])]]);
         Http::preventStrayRequests();
         Http::fake(function($request) use($customer) {
-            $remoteCustomer=['id'=>111,'code'=>'sao-francisco-tutor-'.$customer->id,'registry_code'=>$customer->document];
+            $remoteCustomer=['id'=>111,'code'=>'sao-francisco-tutor-'.$customer->id,'registry_code'=>$customer->document,'phones'=>$this->remotePhones];
             $remote=['id'=>444,'code'=>'sao-francisco-SF-TEST','customer'=>['id'=>$this->remoteCustomerId],'plan'=>['id'=>222],'status'=>'future',
                 'next_billing_at'=>$this->nextBilling,'product_items'=>$this->items];
             $path=parse_url($request->url(),PHP_URL_PATH);
@@ -192,17 +193,23 @@ class VindiCheckoutTest extends TestCase
     public function test_cep_and_address_filled_here_go_to_the_vindi_customer_and_corrections_follow(): void
     {
         $customer=$this->subscription->customer;
-        $customer->update(['address'=>['street'=>'Rua Tenente Nicolau Maffei','number'=>'123','complement'=>'casa 2','neighborhood'=>'Vila Furquim',
+        $customer->update(['phone'=>'(18) 99777-1234','address'=>['street'=>'Rua Tenente Nicolau Maffei','number'=>'123','complement'=>'casa 2','neighborhood'=>'Vila Furquim',
             'city'=>'Presidente Prudente','state'=>'sp','zip'=>'19010-020','formatted'=>'Rua Tenente Nicolau Maffei, 123, casa 2']]);
         $address=['street'=>'Rua Tenente Nicolau Maffei','number'=>'123','additional_details'=>'casa 2','zipcode'=>'19010020',
             'neighborhood'=>'Vila Furquim','city'=>'Presidente Prudente','state'=>'SP','country'=>'BR'];
         $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
-        Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/customers') && $request['address']===$address);
-        // Correção feita aqui: o cadastro da Vindi recebe o endereço novo.
+        Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/customers') && $request['address']===$address
+            && $request['phones']===[['phone_type'=>'mobile','number'=>'5518997771234']]);
+        // O telefone já está na Vindi: a correção do endereço vai sem repetir o telefone.
+        $this->remotePhones=[['id'=>5,'phone_type'=>'mobile','number'=>'5518997771234']];
         $customer->fresh()->update(['address'=>['zip'=>'19013-200','number'=>'45']+$customer->fresh()->address]);
         Http::assertSent(fn($request)=>$request->method()==='PUT' && str_ends_with($request->url(),'/customers/111')
-            && $request['address']['zipcode']==='19013200' && $request['address']['number']==='45');
+            && $request['address']['zipcode']==='19013200' && $request['address']['number']==='45' && !isset($request['phones']));
+        // Telefone trocado aqui: substitui o de lá (mesmo id), sem acrescentar outro.
+        $customer->fresh()->update(['phone'=>'(18) 3222-1111']);
+        Http::assertSent(fn($request)=>$request->method()==='PUT' && ($request->data()['phones']??null)===[['id'=>5,'phone_type'=>'landline','number'=>'551832221111']]);
         // Endereço incompleto (sem CEP) não é mandado pela metade.
+        $this->remotePhones=[['id'=>5,'phone_type'=>'landline','number'=>'551832221111']];
         $puts=collect(Http::recorded())->filter(fn($pair)=>$pair[0]->method()==='PUT')->count();
         $customer->fresh()->update(['address'=>['formatted'=>'Sem número']]);
         $this->assertSame($puts,collect(Http::recorded())->filter(fn($pair)=>$pair[0]->method()==='PUT')->count());

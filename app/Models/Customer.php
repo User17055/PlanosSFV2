@@ -7,9 +7,10 @@ class Customer extends DomainModel
     protected static function booted(): void
     {
         parent::booted();
-        // Endereço preenchido ou corrigido aqui, ou cliente recém-ligado à Vindi: o cadastro de lá recebe o CEP e o endereço.
+        // Endereço ou telefone preenchido ou corrigido aqui, ou cliente recém-ligado à Vindi: o cadastro de lá recebe os dados.
         static::updated(function (self $customer) {
-            if ($customer->vindi_customer_id && $customer->wasChanged(['address', 'vindi_customer_id']) && \App\Services\CustomerAddress::vindi($customer->address)) {
+            if ($customer->vindi_customer_id && $customer->wasChanged(['address', 'phone', 'vindi_customer_id'])
+                && (\App\Services\CustomerAddress::vindi($customer->address) || \App\Services\Integrations\VindiClient::phone($customer->phone))) {
                 \App\Jobs\SyncVindiCustomerJob::dispatch($customer->id)->afterCommit();
             }
         });
