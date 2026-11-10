@@ -4,6 +4,17 @@ namespace App\Models;
 
 class Customer extends DomainModel
 {
+    protected static function booted(): void
+    {
+        parent::booted();
+        // Endereço preenchido ou corrigido aqui, ou cliente recém-ligado à Vindi: o cadastro de lá recebe o CEP e o endereço.
+        static::updated(function (self $customer) {
+            if ($customer->vindi_customer_id && $customer->wasChanged(['address', 'vindi_customer_id']) && \App\Services\CustomerAddress::vindi($customer->address)) {
+                \App\Jobs\SyncVindiCustomerJob::dispatch($customer->id)->afterCommit();
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return ['address' => 'array', 'acquisition_profile'=>'array', 'active' => 'boolean', 'contact_verified_at' => 'datetime', 'financial_checked_at' => 'datetime'];

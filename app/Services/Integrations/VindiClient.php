@@ -77,6 +77,13 @@ class VindiClient
         return $this->request()->post('customers', $payload)->throw()->json('customer') ?? [];
     }
 
+    public function updateCustomer(string $id, array $payload): array
+    {
+        $this->assertCreationEnabled();
+        $this->assertIdentifier($id);
+        return $this->request()->put('customers/'.$id, $payload)->throw()->json('customer') ?? [];
+    }
+
     public function billsByCode(string $code): array
     {
         return $this->request()->get('bills', ['query' => 'code="'.str_replace('"', '', $code).'"'])->throw()->json('bills') ?? [];

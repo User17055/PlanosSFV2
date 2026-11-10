@@ -189,6 +189,25 @@ class VindiCheckoutTest extends TestCase
         Http::assertSent(fn($request)=>$request->method()==='GET' && str_contains(urldecode($request->url()),'registry_code="52998224725"'));
     }
 
+    public function test_cep_and_address_filled_here_go_to_the_vindi_customer_and_corrections_follow(): void
+    {
+        $customer=$this->subscription->customer;
+        $customer->update(['address'=>['street'=>'Rua Tenente Nicolau Maffei','number'=>'123','complement'=>'casa 2','neighborhood'=>'Vila Furquim',
+            'city'=>'Presidente Prudente','state'=>'sp','zip'=>'19010-020','formatted'=>'Rua Tenente Nicolau Maffei, 123, casa 2']]);
+        $address=['street'=>'Rua Tenente Nicolau Maffei','number'=>'123','additional_details'=>'casa 2','zipcode'=>'19010020',
+            'neighborhood'=>'Vila Furquim','city'=>'Presidente Prudente','state'=>'SP','country'=>'BR'];
+        $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+        Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/customers') && $request['address']===$address);
+        // Correção feita aqui: o cadastro da Vindi recebe o endereço novo.
+        $customer->fresh()->update(['address'=>['zip'=>'19013-200','number'=>'45']+$customer->fresh()->address]);
+        Http::assertSent(fn($request)=>$request->method()==='PUT' && str_ends_with($request->url(),'/customers/111')
+            && $request['address']['zipcode']==='19013200' && $request['address']['number']==='45');
+        // Endereço incompleto (sem CEP) não é mandado pela metade.
+        $puts=collect(Http::recorded())->filter(fn($pair)=>$pair[0]->method()==='PUT')->count();
+        $customer->fresh()->update(['address'=>['formatted'=>'Sem número']]);
+        $this->assertSame($puts,collect(Http::recorded())->filter(fn($pair)=>$pair[0]->method()==='PUT')->count());
+    }
+
     public function test_cpf_already_registered_in_vindi_is_reused_instead_of_duplicated(): void
     {
         $this->remoteCustomerId=555;

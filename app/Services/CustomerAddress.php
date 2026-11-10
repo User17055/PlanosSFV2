@@ -24,6 +24,17 @@ class CustomerAddress
         return $address;
     }
 
+    /** Endereço no formato do cadastro de cliente da Vindi; só vai completo (CEP, rua, número, cidade e UF). */
+    public static function vindi(mixed $address): ?array
+    {
+        if(!is_array($address))return null;
+        $zip=preg_replace('/\D/','',(string)($address['zip']??''));
+        $state=strtoupper(trim((string)($address['state']??'')));
+        if(strlen($zip)!==8 || strlen($state)!==2 || blank($address['street']??null) || blank($address['number']??null) || blank($address['city']??null))return null;
+        return ['street'=>trim($address['street']),'number'=>trim($address['number']),'additional_details'=>trim((string)($address['complement']??'')),
+            'zipcode'=>$zip,'neighborhood'=>trim((string)($address['neighborhood']??'')),'city'=>trim($address['city']),'state'=>$state,'country'=>'BR'];
+    }
+
     public static function display(mixed $address): string
     {
         if(!is_array($address))return (string)$address;
