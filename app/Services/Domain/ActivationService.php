@@ -60,6 +60,10 @@ class ActivationService
                 \App\Jobs\SyncTudoPraPetJob::dispatch($s->customer_id)->afterCommit();
                 continue;
             }
+            if ($provider === 'simplesvet' && app(\App\Services\Integrations\SimplesVetAdapter::class)->enabled()) {
+                \App\Jobs\SyncSimplesVetJob::dispatch($s->id)->afterCommit();
+                continue;
+            }
             IntegrationEvent::firstOrCreate(['idempotency_key' => "$provider:subscription:$s->id:$event:".$s->updated_at->format('YmdHis.u')],
                 ['provider' => $provider, 'event_type' => 'subscription.'.$event, 'entity_type' => 'subscription', 'entity_id' => $s->id, 'status' => 'manual', 'payload' => ['subscription_id' => $s->id, 'status' => $s->status], 'received_at' => now()]);
         }

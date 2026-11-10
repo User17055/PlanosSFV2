@@ -35,6 +35,10 @@ class CancellationService
                         \App\Jobs\SyncTudoPraPetJob::dispatch($s->customer_id)->afterCommit();
                         continue;
                     }
+                    if ($provider === 'simplesvet' && app(\App\Services\Integrations\SimplesVetAdapter::class)->enabled()) {
+                        \App\Jobs\SyncSimplesVetJob::dispatch($s->id)->afterCommit();
+                        continue;
+                    }
                     IntegrationEvent::firstOrCreate(['idempotency_key' => "$provider:ended:$s->id"],
                         ['provider' => $provider, 'event_type' => 'subscription.ended', 'entity_type' => 'subscription', 'entity_id' => $s->id, 'status' => 'manual', 'payload' => ['subscription_id' => $s->id], 'received_at' => now()]);
                 }
@@ -77,7 +81,8 @@ class CancellationService
                 BenefitUsage::where('subscription_id', $s->id)->where('status', 'reserved')->update(['status' => 'cancelled', 'reason' => 'Contrato encerrado: '.$reason]);
             }
             Audit::record('cancellation_'.($at->isFuture() ? 'scheduled' : 'executed'), $s, $actor, ['effective_at' => $at->toIso8601String()], $reason);
-            foreach (['vindi', 'simplesvet', 'tudoprapet'] as $provider) {
+            // Com o robô ligado, quem tira as marcas do SimplesVet é o fim do contrato, não o pedido.
+            foreach (array_diff(['vindi', 'simplesvet', 'tudoprapet'], app(\App\Services\Integrations\SimplesVetAdapter::class)->enabled() ? ['simplesvet'] : []) as $provider) {
                 IntegrationEvent::firstOrCreate(['idempotency_key' => "$provider:cancellation:$s->id:".$at->format('YmdHis')],
                     ['provider' => $provider, 'event_type' => 'subscription.cancellation_requested', 'entity_type' => 'subscription', 'entity_id' => $s->id, 'status' => 'manual', 'payload' => ['subscription_id' => $s->id, 'effective_at' => $at->toIso8601String()], 'received_at' => now()]);
             }

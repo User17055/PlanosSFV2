@@ -1,0 +1,12 @@
+{
+  "name": "planos-simplesvet-robo",
+  "private": true,
+  "type": "module",
+  "description": "Robô que leva os planos da saúde para o SimplesVet (marcações do tutor e do pet).",
+  "scripts": {
+    "install-browser": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}

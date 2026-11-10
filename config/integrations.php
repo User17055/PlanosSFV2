@@ -23,7 +23,11 @@ return [
         'checkout_plans' => json_decode(env('VINDI_CHECKOUT_PLANS', '{}'), true) ?: [],
         'payment_hosts' => array_filter(array_map('trim',explode(',',env('VINDI_PAYMENT_HOSTS','app.vindi.com.br,sandbox-app.vindi.com.br')))),
     ],
-    'simplesvet' => ['enabled' => false, 'mode' => 'manual', 'reason' => 'Documentação e autorização de escrita não fornecidas.'],
+    // Robô (rpa/simplesvet) com conta própria no SimplesVet: marca tutor e pet quando o plano ativa ou termina.
+    'simplesvet' => ['enabled' => (bool) env('SIMPLESVET_ENABLED', false), 'user' => env('SIMPLESVET_USER'), 'password' => env('SIMPLESVET_PASSWORD'),
+        'node' => env('SIMPLESVET_NODE', 'node'), 'browsers' => env('PLAYWRIGHT_BROWSERS_PATH', '/opt/ms-playwright'), 'timeout' => (int) env('SIMPLESVET_TIMEOUT', 200),
+        // Opcional: o robô grava a tela atual neste arquivo para acompanhar ao vivo.
+        'live_file' => env('SIMPLESVET_LIVE_FILE')],
     // "Entrar com São Francisco" na loja da Tudo pra Pet (OAuth 2.0 com PKCE). Sem segredo, os endereços recusam tudo.
     'sso_tudoprapet' => ['client_id' => env('SSO_TPP_CLIENT_ID', 'tudoprapet'), 'client_secret' => env('SSO_TPP_CLIENT_SECRET'),
         'redirect_uris' => array_values(array_filter(array_map('trim', explode(',', (string) env('SSO_TPP_REDIRECT_URIS', '')))))],

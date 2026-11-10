@@ -16,6 +16,8 @@ class SyncPartnerSubscriptionJob implements ShouldQueue
     use Queueable;
 
     public int $tries = 3;
+    // O robô do SimplesVet leva até uns 3 minutos.
+    public int $timeout = 240;
 
     public function __construct(public int $eventId)
     {

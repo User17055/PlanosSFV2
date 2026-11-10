@@ -15,7 +15,8 @@ class IntegrationController extends Controller
         $auditLogs=AuditLog::with('actor')->latest()->take(12)->get();
         $providers=[
             'vindi'=>['name'=>'Vindi','status'=>config('integrations.vindi.enabled')?'configured':'pending','description'=>'Cobrança e conciliação financeira. Homologação e credenciais necessárias.'],
-            'simplesvet'=>['name'=>'SimplesVet','status'=>'pending','description'=>'API e permissões ainda precisam ser homologadas.'],
+            'simplesvet'=>['name'=>'SimplesVet','status'=>app(\App\Services\Integrations\SimplesVetAdapter::class)->enabled()?'configured':'pending',
+                'description'=>app(\App\Services\Integrations\SimplesVetAdapter::class)->enabled()?'Robô com conta própria: no plano ativo põe "CLIENTE PLANO" no tutor e o plano com a data no pet (cadastra o que faltar); no fim do plano tira as marcas.':'Robô desligado ou sem a conta configurada; tarefas ficam manuais.'],
             'tudoprapet'=>['name'=>'TudoPraPet','status'=>app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()?'configured':'pending',
                 'description'=>app(\App\Services\Integrations\TudoPraPetClient::class)->enabled()?'Grupo "Plano São Francisco": entra na ativação, sai no fim do plano ou no atraso após o fim do mês; conferência diária.':'Chave da API do Plano São Francisco ainda não configurada; tarefas ficam manuais.'],
         ];

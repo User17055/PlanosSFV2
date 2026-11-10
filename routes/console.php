@@ -38,6 +38,19 @@ Artisan::command('plans:sync-tudoprapet {--cliente= : Só este cliente (id)} {--
     $this->info('Conferência da Tudo pra Pet enviada para a fila: '.$customers->count().' cliente(s).');
 })->purpose('Coloca ou tira os tutores do grupo "Plano São Francisco" da Tudo pra Pet conforme os planos e o atraso');
 
+Artisan::command('plans:sync-simplesvet {--contrato= : Roda agora só este contrato (id)} {--ensaio : Percorre e preenche no SimplesVet sem salvar}', function (\App\Services\Integrations\SimplesVetAdapter $simplesvet) {
+    if (! $simplesvet->enabled()) return $this->warn('Robô do SimplesVet desligado (falta SIMPLESVET_ENABLED, SIMPLESVET_USER ou SIMPLESVET_PASSWORD).');
+    if ($id = $this->option('contrato')) {
+        $result = $simplesvet->synchronize(\App\Models\Subscription::findOrFail((int) $id), (bool) $this->option('ensaio'));
+        foreach ($result['actions'] ?? [] as $action) $this->line('· '.$action);
+        return $this->info(($this->option('ensaio') ? 'Ensaio (nada salvo). ' : '').'SimplesVet: tutor '.($result['tutor_id'] ?? '-').', pet '.($result['pet_id'] ?? '-').'.');
+    }
+    // Conferência: contratos ativos cujo pet ainda não foi ligado à ficha do SimplesVet.
+    $ids = \App\Models\Subscription::where('status', 'active')->whereHas('pet', fn ($q) => $q->whereNull('simplesvet_id'))->pluck('id');
+    foreach ($ids as $id) \App\Jobs\SyncSimplesVetJob::dispatch((int) $id);
+    $this->info('Contratos enviados ao robô do SimplesVet: '.$ids->count().'.');
+})->purpose('Leva os planos ao SimplesVet: CLIENTE PLANO no tutor e o plano com a data no pet');
+
 Artisan::command('plans:tudoprapet-teste {acao : status, activate ou deactivate} {cpf} {--nome=} {--email=} {--telefone=}', function () {
     // Só para a conta de teste combinada com a Tudo pra Pet; não grava nada aqui.
     $data=['cpf'=>preg_replace('/\D/','',(string)$this->argument('cpf'))];
@@ -84,6 +97,8 @@ Schedule::command('plans:recover-events')->everyFiveMinutes()->withoutOverlappin
 Schedule::command('plans:reconcile')->everyFifteenMinutes()->withoutOverlapping();
 // 03:10 de Brasília: pega quem passou do último dia do mês sem pagar e quem teve o plano encerrado.
 Schedule::command('plans:sync-tudoprapet')->dailyAt('06:10')->withoutOverlapping();
+// 03:40 de Brasília: o que não chegou ao SimplesVet de dia (robô fora, aviso resolvido pela recepção) entra de novo.
+Schedule::command('plans:sync-simplesvet')->dailyAt('06:40')->withoutOverlapping();
 Artisan::command('leads:digisac-photos',function(\App\Services\Integrations\LeadPhotoSync $photos) {
     $this->info($photos->syncPending().' leads conferidos.');
 })->purpose('Guardar a foto do contato no Digisac dos leads com telefone, sem precisar abrir a conversa');
