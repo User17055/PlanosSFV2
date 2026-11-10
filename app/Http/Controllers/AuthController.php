@@ -73,9 +73,17 @@ class AuthController extends Controller
             ? route('proposals.create',['product_version_id'=>$request->session()->get('sf_suggested_product_version_id')]) : route('portal');
         $role=$request->user()->role;
         // Um destino guardado antes do login (ex.: /painel) só vale se o perfil pode abri-lo; senão o cliente cairia num 403.
-        if (! $this->roleCanOpen($role,(string)$request->session()->get('url.intended',''))) $request->session()->forget('url.intended');
+        $intended=(string)$request->session()->get('url.intended','');
+        if (! $this->roleCanOpen($role,$intended)) {
+            $request->session()->forget('url.intended');
+            // Destino só de cliente (ex.: entrar na Tudo pra Pet): o administrador segue para ele se escolher a área de cliente.
+            if ($role === 'central_admin' && $this->roleCanOpen('customer',$intended)) $request->session()->put('customer_intended',$intended);
+        }
         // A administração central escolhe entre o painel e a própria área de cliente; o destino guardado vale para o painel.
-        if ($role === 'central_admin') return redirect()->route('account.choose');
+        if ($role === 'central_admin') {
+            AccountSwitchController::linkSamePerson($request->user(),$data['password']);
+            return redirect()->route('account.choose');
+        }
         return redirect()->intended($role === 'customer' ? $customerDestination : route($role === 'attendant' ? 'leads.index' : 'dashboard'));
     }
 

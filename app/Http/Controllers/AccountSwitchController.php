@@ -13,12 +13,29 @@ class AccountSwitchController extends Controller
 {
     public function choose(Request $request)
     {
-        return view('auth.choose', ['linked' => $this->linkedCustomer($request->user())]);
+        return view('auth.choose', ['linked' => $this->linkedCustomer($request->user()), 'forStore' => $request->session()->has('customer_intended')]);
     }
 
-    public function admin()
+    public function admin(Request $request)
     {
+        $request->session()->forget('customer_intended');
         return redirect()->intended(route('dashboard'));
+    }
+
+    /** Conta de cliente com o mesmo nome e a mesma senha do login de administrador: é a mesma pessoa, liga sem pedir a senha de novo. */
+    public static function linkSamePerson(User $admin, string $password): void
+    {
+        if ($admin->linked_customer_user_id) {
+            return;
+        }
+        $matches = User::where('role', 'customer')->where('active', true)->where('name', 'like', $admin->name.'%')->limit(5)->get()
+            ->filter(fn (User $user) => Hash::check($password, $user->password));
+        $target = $matches->count() === 1 ? $matches->first() : null;
+        if (! $target || User::where('linked_customer_user_id', $target->id)->exists()) {
+            return;
+        }
+        $admin->forceFill(['linked_customer_user_id' => $target->id])->save();
+        Audit::record('auth.customer_account_linked', $admin, $admin, ['customer_user_id' => $target->id, 'via' => 'same_password']);
     }
 
     public function customer(Request $request)
@@ -29,7 +46,8 @@ class AccountSwitchController extends Controller
         Auth::login($target);
         $request->session()->regenerate();
         $request->session()->put('admin_return_id', $admin->id);
-        return redirect()->route('portal');
+        // Veio de um destino de cliente (ex.: "Entrar com São Francisco" na Tudo pra Pet): segue para ele.
+        return redirect()->to($request->session()->pull('customer_intended', route('portal')));
     }
 
     public function back(Request $request)

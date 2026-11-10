@@ -88,8 +88,25 @@ class SsoTudoPraPetTest extends TestCase
     {
         $location = $this->actingAs($this->tutor)->post(route('oauth.approve'), $this->params(['decision' => 'deny']))->headers->get('Location');
         $this->assertStringContainsString('error=access_denied', $location);
+        // Administrador já logado vai para a escolha de área; os outros perfis da equipe não usam.
         $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
-        $this->actingAs($admin)->get(route('oauth.authorize', $this->params()))->assertForbidden();
+        $this->actingAs($admin)->get(route('oauth.authorize', $this->params()))->assertRedirect(route('account.choose'));
+        $manager = User::factory()->create(['role' => 'manager', 'active' => true]);
+        $this->actingAs($manager)->get(route('oauth.authorize', $this->params()))->assertForbidden();
+    }
+
+    public function test_admin_who_is_also_the_tutor_enters_the_store_without_typing_the_password_again(): void
+    {
+        $this->tutor->update(['name' => 'Maria Tutora da Silva', 'password' => 'Senha-Comum-2026']);
+        User::factory()->create(['role' => 'central_admin', 'active' => true, 'name' => 'MARIA TUTORA', 'email' => 'admin@example.test', 'password' => 'Senha-Comum-2026']);
+        $store = route('oauth.authorize', $this->params());
+        $this->get($store)->assertRedirect(route('login'));
+        $this->post(route('authenticate'), ['email' => 'admin@example.test', 'password' => 'Senha-Comum-2026'])->assertRedirect(route('account.choose'));
+        $this->get(route('account.choose'))->assertOk()->assertSee('Para entrar na Tudo pra Pet')->assertDontSee('Senha da conta de cliente');
+        $back = $this->post(route('account.customer'))->assertRedirect()->headers->get('Location');
+        $this->assertStringStartsWith(route('oauth.authorize').'?', $back);
+        $this->assertAuthenticatedAs($this->tutor);
+        $this->get($back)->assertOk()->assertSee('Permitir e continuar');
     }
 
     public function test_discovery_points_to_the_endpoints_and_basic_auth_without_pkce_works(): void

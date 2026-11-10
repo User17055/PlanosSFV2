@@ -9,6 +9,7 @@
 <p>Olá, {{ \Illuminate\Support\Str::title(mb_strtolower(strtok(auth()->user()->name,' '))) }}. Escolha onde quer continuar.</p>
 <form method="POST" action="{{ route('account.admin') }}">@csrf<button class="button button-primary full-width">Painel da administração</button></form>
 <h2 class="auth-subtitle">Minha área de cliente</h2>
+@if($forStore)<p class="auth-note">Para entrar na Tudo pra Pet, escolha a área de cliente.</p>@endif
 @if($linked)
 <form method="POST" action="{{ route('account.customer') }}">@csrf<button class="button button-secondary full-width">Entrar como cliente</button></form>
 @else
