@@ -123,12 +123,35 @@ class SigningLinkTest extends TestCase
         $this->post(route('subscriptions.checkout', $subscription))->assertRedirect();
         $this->assertAuthenticated();
 
-        // Reabrir o link depois de assinado, sem sessão, leva à senha.
+        // Assinado e com a entrada por pagar: o mesmo link, com o CPF, volta ao contrato para pagar (a cliente não tem senha).
+        Auth::logout();
+        $this->flushSession();
+        $this->get(route('sales.proposal', $token))->assertOk()->assertSee('pagar a entrada')->assertDontSee('Maria Titular');
+        $this->post(route('sales.proposal.confirm', $token), ['document' => self::CPF])->assertRedirect(route('proposals.show', $proposal));
+        $this->get(route('proposals.show', $proposal))->assertOk();
+        $this->post(route('subscriptions.checkout', $subscription))->assertRedirect();
+        $this->assertAuthenticated();
+
+        // Entrada paga: reabrir o link sem sessão leva à senha.
+        $subscription->invoices()->where('is_initial', true)->update(['status' => 'paid']);
         Auth::logout();
         $this->flushSession();
         $this->get(route('sales.proposal', $token))->assertRedirect(route('login'));
         $this->get(route('login'))->assertSee('já foi assinado');
         $this->post(route('sales.proposal.confirm', $token), ['document' => self::CPF])->assertNotFound();
+    }
+
+    public function test_link_of_the_second_pet_opened_during_the_first_ones_session_asks_the_cpf_instead_of_the_password(): void
+    {
+        [$first, $firstToken] = $this->link();
+        [$second, $secondToken] = $this->link($this->proposal('Bob'));
+        $this->post(route('sales.proposal.confirm', $firstToken), ['document' => self::CPF]);
+        $this->get(route('proposals.show', $first))->assertOk();
+
+        $this->get(route('sales.proposal', $secondToken))->assertOk()->assertSee('CPF do titular');
+        $this->assertGuest();
+        $this->post(route('sales.proposal.confirm', $secondToken), ['document' => self::CPF])->assertRedirect(route('proposals.show', $second));
+        $this->get(route('proposals.show', $second))->assertOk();
     }
 
     public function test_customer_who_already_has_a_password_also_signs_without_it_and_normal_login_keeps_the_panel(): void

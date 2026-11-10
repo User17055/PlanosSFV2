@@ -190,10 +190,17 @@ class ProposalController extends Controller
     {
         abort_unless(strlen($token)>=32 && strlen($token)<=128,404);
         $proposal=Proposal::where('link_token_hash',hash('sha256',$token))->firstOrFail();
+        // Sessão aberta pelo link de outro contrato (outro pet): recomeça pelo CPF deste link, em vez de cair na senha.
+        if($request->user() && ($linked=$request->session()->get('signing_link_proposal')) && (int)$linked!==$proposal->id) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
         if(!$request->user()) {
-            if($proposal->accepted_at) return redirect()->route('login')->with('success','Este contrato já foi assinado. Para ver seu painel, entre com sua senha.');
-            abort_unless($this->linkOpen($proposal),404);
-            return view('proposals.link-identity',compact('token'));
+            $payment=$this->awaitingPayment($proposal);
+            if($proposal->accepted_at && !$payment) return redirect()->route('login')->with('success','Este contrato já foi assinado. Para ver seu painel, entre com sua senha.');
+            abort_unless($payment || $this->linkOpen($proposal),404);
+            return view('proposals.link-identity',['token'=>$token,'signed'=>$payment]);
         }
         $completedOwn=$proposal->accepted_at && $request->user()->role==='customer' && (int)$request->user()->customer_id===(int)$proposal->customer_id;
         abort_unless($completedOwn || (!$proposal->link_revoked_at && $proposal->link_expires_at?->isFuture() && $proposal->status!=='cancelled'),404);
@@ -207,7 +214,7 @@ class ProposalController extends Controller
     {
         abort_unless(strlen($token)>=32 && strlen($token)<=128,404);
         $proposal=Proposal::with('customer')->where('link_token_hash',hash('sha256',$token))->firstOrFail();
-        abort_unless($this->linkOpen($proposal),404);
+        abort_unless($this->linkOpen($proposal) || $this->awaitingPayment($proposal),404);
         if($request->user()) return redirect()->route('sales.proposal',$token);
         $data=$request->validate(['document'=>'required|string|max:20'],['document.required'=>'Informe o CPF do titular.']);
         $key='signing-link:'.hash('sha256',$token);
@@ -227,6 +234,14 @@ class ProposalController extends Controller
         if(!$proposal->customer->contact_verified_at) $proposal->customer->update(['contact_verified_at'=>now()]);
         \App\Services\Domain\Audit::record('proposal.signing_link_opened',$proposal,$user);
         return redirect()->route('proposals.show',$proposal);
+    }
+
+    /** Assinado pelo link e com a entrada ainda por pagar: o mesmo link abre o contrato para pagar, sem senha. */
+    private function awaitingPayment(Proposal $proposal): bool
+    {
+        $subscription=$proposal->accepted_at && $proposal->signature_method==='digital' && $proposal->status!=='cancelled' ? $proposal->subscription : null;
+        return $subscription && !$subscription->isTerminal()
+            && $subscription->invoices()->where('is_initial',true)->whereNotIn('status',['paid','cancelled','refunded'])->exists();
     }
 
     private function linkOpen(Proposal $proposal): bool
