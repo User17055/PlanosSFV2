@@ -14,7 +14,17 @@ class DashboardController extends Controller
         $user=$request->user();
         $filters=$dashboard->filters($user,$request->query());
         $recentLeads=in_array($user->role,['central_admin','manager','sales','operator'],true) && $user->canOpen('leads') ? $access->scope(Lead::visibleTo($user)->where('status','new')->where('source','!=','teste'),$user)->latest('id')->limit(3)->get() : collect();
-        return response()->view('dashboard',$dashboard->report($user,$filters)+['recentLeads'=>$recentLeads])->header('Cache-Control','private, no-store');
+        return response()->view('dashboard',$dashboard->report($user,$filters)+['recentLeads'=>$recentLeads,'simplesvetPending'=>$this->simplesvetPending($user,$access)])->header('Cache-Control','private, no-store');
+    }
+
+    /** Onde o robô do SimplesVet parou (conferência de gente), só dos contratos das unidades de quem vê. */
+    private function simplesvetPending($user, AccessService $access)
+    {
+        $events=\App\Models\IntegrationEvent::where('provider','simplesvet')->where('entity_type','subscription')->whereIn('status',['manual','error'])
+            ->latest('id')->get(['entity_id','error'])->unique('entity_id');
+        $subscriptions=$access->scope(\App\Models\Subscription::with(['customer:id,name','pet:id,name'])->whereIn('id',$events->pluck('entity_id')),$user)->get()->keyBy('id');
+        return $events->filter(fn($event)=>$subscriptions->has($event->entity_id))
+            ->map(fn($event)=>['subscription'=>$subscriptions[$event->entity_id],'reason'=>preg_replace('/^SimplesVet:\s*/','',(string)$event->error)])->values();
     }
 
     public function export(Request $request,DashboardService $dashboard)

@@ -99,6 +99,7 @@ Route::middleware(['auth','active'])->group(function () {
     Route::middleware('role:central_admin,manager,sales,operator,finance')->group(function () {
         Route::get('/painel',DashboardController::class)->name('dashboard');
         Route::get('/painel/exportar',[DashboardController::class,'export'])->name('dashboard.export');
+        Route::post('/simplesvet/{subscription}/tentar-de-novo',[IntegrationController::class,'retrySimplesVet'])->middleware('throttle:20,1')->name('simplesvet.retry');
         Route::get('/painel/malha/{state}',\App\Http\Controllers\DashboardMapController::class)->name('dashboard.map');
         Route::get('/painel/bairros/{city}',[\App\Http\Controllers\DashboardMapController::class,'neighborhoods'])->name('dashboard.neighborhoods');
         Route::get('/funcionarios',[\App\Http\Controllers\EmployeeController::class,'index'])->middleware('role:central_admin,manager,finance')->name('employees.index');

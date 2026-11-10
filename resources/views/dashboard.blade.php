@@ -28,6 +28,9 @@ $funnelBase=max(1,$summary['proposals_count']);
 @if(config('plans.demo'))<label class="field">Base de dados<select name="data_mode"><option value="real" @selected($filters['data_mode']==='real')>Dados reais</option><option value="demo" @selected($filters['data_mode']==='demo')>Demonstração</option></select></label>@else<input type="hidden" name="data_mode" value="real">@endif
 </div></details>
 </form>
+@if($simplesvetPending->isNotEmpty())<section class="card dash-simplesvet" aria-labelledby="dash-simplesvet-title"><h2 id="dash-simplesvet-title">Pendências do SimplesVet</h2><p class="dash-simple-note">O robô parou nestes casos para não errar. Resolva o motivo e clique em “Tentar de novo”.</p>
+@foreach($simplesvetPending as $item)<div class="analytics-location-row"><div><strong><a href="{{ route('customers.show',$item['subscription']->customer_id) }}#pet-{{ $item['subscription']->pet_id }}">{{ $item['subscription']->customer->name }} · {{ $item['subscription']->pet->name }}</a></strong><small>{{ $item['reason'] }}</small></div><form method="POST" action="{{ route('simplesvet.retry',$item['subscription']) }}">@csrf<button class="button button-secondary button-small">Tentar de novo</button></form></div>@endforeach
+</section>@endif
 @if($filters['data_mode']==='demo')<div class="alert alert-warning"><div>Só dados de demonstração. Eles não entram nos números reais.</div></div>@endif
 <div class="analytics-kpis" id="resumo">
 @foreach([

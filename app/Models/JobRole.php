@@ -14,7 +14,7 @@ class JobRole extends DomainModel
      * Telas só da administração central ficam de fora: cargo nunca tem esse nível.
      */
     public const OPTIONS = [
-        'dashboard.view' => ['Ver painel, com valores de vendas e recebimentos', ['dashboard', 'dashboard.map', 'dashboard.neighborhoods']],
+        'dashboard.view' => ['Ver painel, com valores de vendas e recebimentos', ['dashboard', 'dashboard.map', 'dashboard.neighborhoods', 'simplesvet.retry']],
         'dashboard.export' => ['Exportar resumo', ['dashboard.export']],
         'leads.view' => ['Ver lista, painel e chat dos seus leads', ['leads.index', 'leads.dashboard', 'leads.chat.index', 'leads.chat.show', 'leads.chat.messages', 'leads.chat.photo', 'leads.chat.connection', 'leads.chat.connection.save', 'leads.chat.connection.destroy']],
         'leads.update' => ['Mudar a situação do lead e atender pelo chat', ['leads.update', 'leads.chat.claim', 'leads.chat.send']],

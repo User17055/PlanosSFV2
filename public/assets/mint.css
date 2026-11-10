@@ -2193,3 +2193,8 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-simple-bar:hover,.dash-simple-bar[aria-current]{background:var(--primary-soft)}
 .dash-simple-note{margin:8px 0 0;font-size:13px;color:var(--text-3)}
 @media(max-width:900px){.dash-simple-grid{grid-template-columns:minmax(0,1fr)}}
+/* Pendências do robô do SimplesVet no topo da Visão geral */
+.dash-simplesvet{padding:16px 20px;margin:0 0 16px;border-left:4px solid var(--warning)}
+.dash-simplesvet h2{font-size:16px;margin:0 0 4px}
+.dash-simplesvet .dash-simple-note{margin:0 0 12px}
+.dash-simplesvet .analytics-location-row small{display:block;margin-top:2px;white-space:normal}

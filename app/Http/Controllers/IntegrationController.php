@@ -23,6 +23,16 @@ class IntegrationController extends Controller
         return view('integrations.index',compact('events','providers','auditLogs'));
     }
 
+    /** "Tentar de novo" do quadro de pendências do SimplesVet, depois que a equipe resolveu o motivo. */
+    public function retrySimplesVet(Request $request,\App\Models\Subscription $subscription,\App\Services\AccessService $access)
+    {
+        $access->franchise($request->user(),(int)$subscription->originating_franchise_id);
+        IntegrationEvent::where('provider','simplesvet')->where('entity_type','subscription')->where('entity_id',$subscription->id)
+            ->whereIn('status',['manual','error'])->update(['status'=>'pending','error'=>null]);
+        \App\Jobs\SyncSimplesVetJob::dispatch($subscription->id);
+        return back()->with('success','O robô vai tentar de novo em instantes. Se der certo, o aviso some; se não, volta com o motivo.');
+    }
+
     public function retry(Request $request,IntegrationEvent $event)
     {
         abort_if($event->status==='synced' || $event->status==='processed',409,'Evento já concluído.');

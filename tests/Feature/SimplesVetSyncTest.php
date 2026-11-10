@@ -90,6 +90,27 @@ class SimplesVetSyncTest extends TestCase
         $this->assertSame(['deactivate', true], [$task['action'], $task['keep_tutor_tag']]);
     }
 
+    public function test_pending_shows_on_the_dashboard_and_try_again_sends_the_robot_back(): void
+    {
+        $this->robot(['ok' => false, 'manual' => true, 'error' => 'Para cadastrar "Maria Lua" no SimplesVet faltam o sexo ou a castração na saúde']);
+        SyncSimplesVetJob::dispatchSync($this->subscription->id);
+        $admin = User::factory()->create(['role' => 'central_admin', 'active' => true]);
+        $this->actingAs($admin)->get(route('dashboard'))->assertOk()->assertSee('Pendências do SimplesVet')
+            ->assertSee('faltam o sexo ou a castração na saúde')->assertDontSee('SimplesVet: Para cadastrar')->assertSee(route('simplesvet.retry', $this->subscription), false);
+        // Quem é de outra unidade não vê nem consegue mandar de novo.
+        $other = Franchise::create(['name' => 'Outra', 'code' => 'OUTRA', 'active' => true]);
+        $manager = User::factory()->create(['role' => 'manager', 'active' => true]);
+        \Illuminate\Support\Facades\DB::table('user_franchises')->insert(['user_id' => $manager->id, 'franchise_id' => $other->id, 'active' => true]);
+        $this->actingAs($manager)->get(route('dashboard'))->assertOk()->assertDontSee('Pendências do SimplesVet');
+        $this->actingAs($manager)->post(route('simplesvet.retry', $this->subscription))->assertForbidden();
+
+        \Illuminate\Support\Facades\Queue::fake();
+        $this->actingAs($admin)->post(route('simplesvet.retry', $this->subscription))->assertRedirect()->assertSessionHas('success');
+        \Illuminate\Support\Facades\Queue::assertPushed(SyncSimplesVetJob::class, fn ($job) => $job->subscriptionId === $this->subscription->id);
+        $this->assertSame('pending', IntegrationEvent::where('provider', 'simplesvet')->sole()->status);
+        $this->actingAs($admin)->get(route('dashboard'))->assertDontSee('Pendências do SimplesVet');
+    }
+
     public function test_robot_off_or_contract_not_active_does_not_run_anything(): void
     {
         Process::fake();
