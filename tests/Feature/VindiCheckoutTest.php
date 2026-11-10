@@ -27,6 +27,10 @@ class VindiCheckoutTest extends TestCase
     private int $remoteCustomerId=111;
     private array $cpfMatches=[];
     private array $outside=[];
+    private array $items=[];
+    private int $itemPosts=0;
+    private ?string $nextBilling=null;
+    private array $subscriptionBills=[];
 
     protected function setUp(): void
     {
@@ -54,8 +58,17 @@ class VindiCheckoutTest extends TestCase
         Http::preventStrayRequests();
         Http::fake(function($request) use($customer) {
             $remoteCustomer=['id'=>111,'code'=>'sao-francisco-tutor-'.$customer->id,'registry_code'=>$customer->document];
-            $remote=['id'=>444,'code'=>'sao-francisco-SF-TEST','customer'=>['id'=>$this->remoteCustomerId],'plan'=>['id'=>222]];
+            $remote=['id'=>444,'code'=>'sao-francisco-SF-TEST','customer'=>['id'=>$this->remoteCustomerId],'plan'=>['id'=>222],'status'=>'future',
+                'next_billing_at'=>$this->nextBilling,'product_items'=>$this->items];
             $path=parse_url($request->url(),PHP_URL_PATH);
+            if (preg_match('~/subscriptions/444$~',$path)) return Http::response(['subscription'=>$remote]);
+            if (str_ends_with($path,'/product_items')) {
+                $this->itemPosts++;
+                $item=['id'=>9001+count($this->items),'status'=>'active','product'=>['id'=>$request['product_id']],'pricing_schema'=>['price'=>$request['pricing_schema']['price']]];
+                $this->items[]=$item;
+                return Http::response(['product_item'=>$item]);
+            }
+            if (preg_match('~/bills/(6\d\d)$~',$path,$id)) return Http::response(['bill'=>collect($this->subscriptionBills)->firstWhere('id',(int)$id[1])]);
             if (preg_match('~/customers/(\d+)$~',$path,$id)) return Http::response(['customer'=>collect([$remoteCustomer,...$this->cpfMatches])->firstWhere('id',(int)$id[1])]);
             if (str_ends_with($path,'/customers')) {
                 if ($request->method()==='POST') { $this->customerPosts++; return Http::response(['customer'=>$remoteCustomer]); }
@@ -65,6 +78,8 @@ class VindiCheckoutTest extends TestCase
                 if ($request->method()==='POST') {
                     $this->subscriptionPosts++;
                     $this->created=true;
+                    $this->items=[['id'=>9001,'status'=>'active','product'=>['id'=>777],'pricing_schema'=>['price'=>'99.0']]];
+                    $remote['product_items']=$this->items;
                     if ($this->failAfterCreation) throw new \Illuminate\Http\Client\ConnectionException('test timeout');
                     return Http::response(['subscription'=>$remote]);
                 }
@@ -84,7 +99,7 @@ class VindiCheckoutTest extends TestCase
                     return Http::response(['bill'=>$bill]);
                 }
                 if (str_contains(urldecode($request->url()),'code=')) return Http::response(['bills'=>$this->entryCreated?[$bill]:[]]);
-                return Http::response(['bills'=>[]]);
+                return Http::response(['bills'=>str_contains(urldecode($request->url()),'subscription_id=444')?$this->subscriptionBills:[]]);
             }
             throw new \RuntimeException('Unexpected request');
         });
@@ -219,6 +234,55 @@ class VindiCheckoutTest extends TestCase
         $this->assertSame(2,$this->customerPosts);
         $this->assertSame('558',$this->subscription->customer->fresh()->vindi_customer_id);
         $this->assertSame(0,$this->subscriptionPosts);
+    }
+
+    public function test_second_pet_of_the_same_plan_enters_the_same_vindi_subscription_as_one_more_item(): void
+    {
+        // Primeiro pet: entrada paga, assinatura 444 aberta com o item 9001.
+        $first=app(\App\Services\Domain\BillingSchedule::class)->firstRecurringBilling(now());
+        $this->nextBilling=$first->addDay()->toIso8601String();
+        $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+        $this->billStatus='paid';
+        app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
+        $this->assertSame(['444','9001'],[$this->subscription->fresh()->vindi_subscription_id,$this->subscription->fresh()->vindi_product_item_id]);
+        // Segundo pet do mesmo cliente e do mesmo plano, com a entrada já paga.
+        $owner=$this->subscription->fresh();
+        $pet=Pet::create(['customer_id'=>$owner->customer_id,'name'=>'Mia','species'=>'dog']);
+        $proposal=Proposal::create(['number'=>'PR-TEST2','pet_id'=>$pet->id,'expires_at'=>now()->addDay(),'locked_at'=>now(),'accepted_at'=>now()]
+            +$owner->proposal->only(['customer_id','product_version_id','originating_franchise_id','created_by','category','channel','price_cents','snapshot']));
+        $second=Subscription::create(['number'=>'SF-TEST2','proposal_id'=>$proposal->id,'pet_id'=>$pet->id,'locked_at'=>now(),'document_status'=>'valid']
+            +$owner->only(['customer_id','product_version_id','originating_franchise_id','category','price_cents','contract_snapshot']));
+        $second->invoices()->create(['customer_id'=>$owner->customer_id,'originating_franchise_id'=>$owner->originating_franchise_id,'amount_cents'=>9900,
+            'due_at'=>now(),'is_initial'=>true,'status'=>'paid','paid_cents'=>9900,'external_id'=>'334','provider_account'=>'central']);
+        $checkout=app(VindiCheckoutService::class);
+        // A próxima fatura da assinatura ainda é de um mês antes da primeira mensalidade deste pet: espera, sem criar nada.
+        $this->nextBilling=$first->subMonthNoOverflow()->addDay()->toIso8601String();
+        $this->assertNull($checkout->startRecurring($second));
+        $this->assertSame(0,$this->itemPosts);
+        $this->nextBilling=$first->addDay()->toIso8601String();
+        $this->assertSame('444',$checkout->startRecurring($second));
+        $this->assertSame([1,1],[$this->subscriptionPosts,$this->itemPosts],'Nenhuma assinatura nova: um item a mais na mesma.');
+        Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/product_items') && $request['subscription_id']===444
+            && $request['product_id']===777 && $request['pricing_schema']===['price'=>'99.00','schema_type'=>'flat']);
+        $this->assertSame(['444','9002'],[$second->fresh()->vindi_subscription_id,$second->fresh()->vindi_product_item_id]);
+        // Tentativa que caiu depois de criar o item na Vindi: o item é reaproveitado, não duplicado.
+        Subscription::whereKey($second->id)->update(['vindi_subscription_id'=>null,'vindi_product_item_id'=>null]);
+        $checkout->startRecurring($second->fresh());
+        $this->assertSame(['444','9002',1],[$second->fresh()->vindi_subscription_id,$second->fresh()->vindi_product_item_id,$this->itemPosts]);
+        // A fatura mensal sai uma só, com um item por pet, e vira uma fatura local em cada contrato.
+        $this->subscriptionBills=[['id'=>600,'subscription'=>['id'=>444],'customer'=>['id'=>111],'amount'=>'198.0','status'=>'paid','url'=>null,
+            'updated_at'=>now()->toIso8601String(),'due_at'=>now()->toDateString(),'charges'=>[['status'=>'paid','paid_at'=>now()->toIso8601String()]],
+            'bill_items'=>[['amount'=>'99.0','product_item'=>['id'=>9001]],['amount'=>'99.0','product_item'=>['id'=>9002]]]]];
+        $reconciler=app(\App\Services\Integrations\VindiReconciler::class);
+        $reconciler->reconcileSubscription($owner->fresh());
+        $reconciler->reconcileSubscription($second->fresh());
+        $monthly=Invoice::where('external_id','600')->orderBy('subscription_id')->get();
+        $this->assertSame([[$owner->id,9900,'paid'],[$second->id,9900,'paid']],$monthly->map(fn($i)=>[$i->subscription_id,$i->amount_cents,$i->status])->all());
+        $this->assertSame(2,\App\Models\Payment::whereIn('invoice_id',$monthly->pluck('id'))->count(),'Um pagamento por contrato, sem duplicar ao conciliar de novo.');
+        // Item que não é de nenhum pet: nada é aplicado.
+        $this->subscriptionBills[0]['id']=601; $this->subscriptionBills[0]['bill_items'][1]['product_item']['id']=9999;
+        try { $reconciler->reconcileBill('601'); $this->fail('Item sem contrato deveria parar.'); } catch (IntegrationPendingException) {}
+        $this->assertSame(0,Invoice::where('external_id','601')->count());
     }
 
     public function test_other_customer_cannot_issue_or_access_checkout(): void

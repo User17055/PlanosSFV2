@@ -118,6 +118,13 @@ class VindiClient
         return $this->request()->post('subscriptions', $payload)->throw()->json('subscription') ?? [];
     }
 
+    /** Mais um item (pet) numa assinatura que já existe; entra na próxima fatura dela. */
+    public function createProductItem(array $payload): array
+    {
+        $this->assertCreationEnabled();
+        return $this->request()->post('product_items', $payload)->throw()->json('product_item') ?? [];
+    }
+
     public function cancelSubscription(string $id): array
     {
         $this->assertCreationEnabled();

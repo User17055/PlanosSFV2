@@ -46,32 +46,37 @@ class VindiReconciler
         if ((string) ($bill['id'] ?? '') !== $externalId || empty($bill['updated_at'])) {
             throw new IntegrationPendingException('A API não devolveu uma fatura verificável.');
         }
-        $invoice = Invoice::where('provider_account', $account)->where('external_id', $externalId)->first();
+        $invoices = Invoice::where('provider_account', $account)->where('external_id', $externalId)->get();
+        $amount = self::decimalToCents($bill['amount'] ?? null);
         if (empty(data_get($bill, 'subscription.id'))) {
             // A standalone bill is only the entry installment already linked at checkout to the tutor's Vindi customer.
-            $subscription = $invoice?->is_initial ? $invoice->subscription : null;
+            $subscription = $invoices->first()?->is_initial ? $invoices->first()->subscription : null;
             if (! $subscription || (string) data_get($bill, 'customer.id') !== (string) $subscription->customer->vindi_customer_id) {
                 throw new IntegrationPendingException('Fatura sem vínculo financeiro local inequívoco; conciliação manual necessária.');
             }
+            $parts = [[$subscription, $amount]];
         } else {
-            $subscription = Subscription::where('provider_account', $account)
-                ->where('vindi_subscription_id', (string) data_get($bill, 'subscription.id'))->first();
-            if (! $subscription) {
+            $subscriptions = Subscription::where('provider_account', $account)
+                ->where('vindi_subscription_id', (string) data_get($bill, 'subscription.id'))->orderBy('id')->get();
+            if ($subscriptions->isEmpty()) {
                 throw new IntegrationPendingException('Fatura sem vínculo financeiro local inequívoco; conciliação manual necessária.');
             }
+            $parts = $subscriptions->count() === 1 ? [[$subscriptions->first(), $amount]] : $this->partsByPet($bill, $subscriptions, $amount);
         }
-        $amount = self::decimalToCents($bill['amount'] ?? null);
-        if (! $invoice && Invoice::where('subscription_id', $subscription->id)->where('is_initial', true)->whereNull('external_id')->exists()) {
-            // The commercial setup must attach the first provider bill to the
-            // existing initial obligation. Creating another invoice here would
-            // leave the original pending and can duplicate the obligation.
-            throw new IntegrationPendingException('A cobrança inicial local ainda não possui vínculo Vindi confirmado. Vincule a fatura correta em conciliação antes de importar outras cobranças.');
-        }
-        if ($invoice && $invoice->subscription_id !== $subscription->id) {
+        if ($invoices->contains(fn ($invoice) => ! collect($parts)->contains(fn ($part) => $part[0]->id === $invoice->subscription_id))) {
             throw new IntegrationPendingException('O vínculo da fatura diverge da assinatura; nenhuma alteração aplicada.');
         }
-        if ($invoice && $invoice->amount_cents !== $amount) {
-            throw new IntegrationPendingException('O valor atual da Vindi diverge do valor local; revisão financeira necessária.');
+        foreach ($parts as [$subscription, $partAmount]) {
+            $invoice = $invoices->firstWhere('subscription_id', $subscription->id);
+            if (! $invoice && Invoice::where('subscription_id', $subscription->id)->where('is_initial', true)->whereNull('external_id')->exists()) {
+                // The commercial setup must attach the first provider bill to the
+                // existing initial obligation. Creating another invoice here would
+                // leave the original pending and can duplicate the obligation.
+                throw new IntegrationPendingException('A cobrança inicial local ainda não possui vínculo Vindi confirmado. Vincule a fatura correta em conciliação antes de importar outras cobranças.');
+            }
+            if ($invoice && $invoice->amount_cents !== $partAmount) {
+                throw new IntegrationPendingException('O valor atual da Vindi diverge do valor local; revisão financeira necessária.');
+            }
         }
         $status = (string) ($bill['status'] ?? '');
         if (collect($bill['charges'] ?? [])->contains(fn ($charge) => in_array(data_get($charge, 'last_transaction.transaction_type'), ['refund', 'chargeback'], true))) {
@@ -90,29 +95,51 @@ class VindiReconciler
             throw new IntegrationPendingException('Fatura paga sem data de recebimento verificável; revisão necessária.');
         }
         $dueAt = $this->instant((string) ($bill['due_at'] ?? ''));
-        if (! $invoice) {
-            $invoice = DB::transaction(function () use ($subscription, $account, $externalId, $amount, $bill, $dueAt) {
+        $result = null;
+        foreach ($parts as [$subscription, $partAmount]) {
+            $invoice = $invoices->firstWhere('subscription_id', $subscription->id) ?? DB::transaction(function () use ($subscription, $account, $externalId, $partAmount, $bill, $dueAt) {
                 // Match the domain lock order even when importing a recurring bill.
                 DB::table('customers')->where('id', $subscription->customer_id)->lockForUpdate()->first();
                 DB::table('pets')->where('id', $subscription->pet_id)->lockForUpdate()->first();
                 $locked = Subscription::whereKey($subscription->id)->lockForUpdate()->firstOrFail();
-                return Invoice::firstOrCreate(['provider_account' => $account, 'external_id' => $externalId], [
-                    'subscription_id' => $locked->id, 'customer_id' => $locked->customer_id,
+                return Invoice::firstOrCreate(['provider_account' => $account, 'external_id' => $externalId, 'subscription_id' => $locked->id], [
+                    'customer_id' => $locked->customer_id,
                     'originating_franchise_id' => $locked->originating_franchise_id,
-                    'amount_cents' => $amount, 'due_at' => $dueAt, 'status' => 'pending',
+                    'amount_cents' => $partAmount, 'due_at' => $dueAt, 'status' => 'pending',
                     'is_initial' => ! Invoice::where('subscription_id', $locked->id)->exists(),
                     'competence_start' => data_get($bill, 'period.start_at') ? $this->instant(data_get($bill, 'period.start_at')) : null,
                     'competence_end' => data_get($bill, 'period.end_at') ? $this->instant(data_get($bill, 'period.end_at')) : null,
                     'payment_url' => $this->safePaymentUrl($bill['url'] ?? null),
                 ]);
             }, 3);
+            $applied = $this->financial->applyVerifiedInvoice($invoice, [
+                'status' => $mappedStatus, 'paid_cents' => $status === 'paid' ? $partAmount : 0,
+                'paid_at' => $paidAt ? $this->instant($paidAt) : null, 'provider_status' => $status,
+                'provider_updated_at' => $this->instant($bill['updated_at']),
+                // Um pagamento da Vindi para vários pets vira um registro por contrato.
+                'reference' => 'vindi:'.$account.':bill:'.$externalId.(count($parts) > 1 ? ':sub:'.$subscription->id : ''), 'source' => 'vindi_api',
+            ]);
+            $result ??= $applied;
         }
-        return $this->financial->applyVerifiedInvoice($invoice, [
-            'status' => $mappedStatus, 'paid_cents' => $status === 'paid' ? $amount : 0,
-            'paid_at' => $paidAt ? $this->instant($paidAt) : null, 'provider_status' => $status,
-            'provider_updated_at' => $this->instant($bill['updated_at']),
-            'reference' => 'vindi:'.$account.':bill:'.$externalId, 'source' => 'vindi_api',
-        ]);
+        return $result;
+    }
+
+    /** Fatura de uma assinatura Vindi com vários pets: cada item vai para o contrato do pet dono dele. */
+    private function partsByPet(array $bill, \Illuminate\Support\Collection $subscriptions, int $amount): array
+    {
+        $parts = [];
+        foreach ($bill['bill_items'] ?? [] as $item) {
+            $itemId = (string) data_get($item, 'product_item.id');
+            $owner = $subscriptions->first(fn ($subscription) => $itemId !== '' && $subscription->vindi_product_item_id === $itemId);
+            if (! $owner || isset($parts[$owner->id])) {
+                throw new IntegrationPendingException('Item da fatura sem contrato de pet identificado; conciliação manual necessária.');
+            }
+            $parts[$owner->id] = [$owner, self::decimalToCents($item['amount'] ?? null)];
+        }
+        if (! $parts || array_sum(array_column($parts, 1)) !== $amount) {
+            throw new IntegrationPendingException('Os itens da fatura não somam o valor dela; conciliação manual necessária.');
+        }
+        return array_values($parts);
     }
 
     public function reconcileSubscription(Subscription $subscription): int
@@ -175,11 +202,8 @@ class VindiReconciler
 
     private function markUncertain(string $externalId, string $account): void
     {
-        $invoice = Invoice::where('provider_account', $account)->where('external_id', $externalId)->first();
-        if (! $invoice) {
-            return;
-        }
-        DB::transaction(function () use ($invoice) {
+        // Uma fatura Vindi com vários pets tem uma fatura local por contrato.
+        foreach (Invoice::where('provider_account', $account)->where('external_id', $externalId)->get() as $invoice) DB::transaction(function () use ($invoice) {
             DB::table('customers')->where('id', $invoice->customer_id)->lockForUpdate()->first();
             $subscription = Subscription::findOrFail($invoice->subscription_id);
             DB::table('pets')->where('id', $subscription->pet_id)->lockForUpdate()->first();

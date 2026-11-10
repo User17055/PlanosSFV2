@@ -153,12 +153,15 @@ class VindiCheckoutService
         if (!$map || !$subscription->customer->vindi_customer_id) throw new IntegrationPendingException('Plano ou cliente Vindi não vinculado para as próximas parcelas; conferência manual necessária.');
         $account=(string)config('integrations.vindi.provider_account');
         $code=(string)config('integrations.vindi.code_prefix').'-'.$subscription->number;
-        $lock=Cache::lock('vindi-recurring-'.$subscription->id,120);
+        // Por cliente: dois pets pagos ao mesmo tempo não abrem duas assinaturas; quem não pega a vez volta na conferência periódica.
+        $lock=Cache::lock('vindi-recurring-customer-'.$subscription->customer_id,120);
         if (!$lock->get()) return null;
         try {
             $matches=collect($this->client->subscriptionsByCode($code))->where('code',$code)->values();
             if ($matches->count()>1) throw new IntegrationPendingException('Mais de uma assinatura Vindi com a mesma referência; conferência manual necessária.');
             $first=app(BillingSchedule::class)->firstRecurringBilling($subscription->proposal->accepted_at ?? $entry->paid_at ?? now());
+            $shared=$matches->isEmpty() ? $this->customerSubscription($subscription,$map,$account) : null;
+            if ($shared) return $this->addPet($subscription,$shared,$map,$first,$account);
             $remote=$matches->first() ?? $this->client->createSubscription(['code'=>$code,'plan_id'=>(int)$map['plan_id'],
                 'customer_id'=>(int)$subscription->customer->vindi_customer_id,'payment_method_code'=>$subscription->payment_method_code ?? array_key_first($this->paymentMethods()),
                 'start_at'=>$first->toIso8601String(),'billing_trigger_type'=>'beginning_of_period','metadata'=>['contrato'=>$subscription->number]]);
@@ -174,14 +177,69 @@ class VindiCheckoutService
         $this->validateCustomer($this->client->customer((string)data_get($remote,'customer.id')),$subscription);
         $this->linkCustomer($subscription,(string)data_get($remote,'customer.id'));
         $externalId=(string)$remote['id'];
-        // Persist the subscription identity before fetching bills; a webhook can be retried.
-        DB::transaction(function() use($subscription,$externalId,$account) {
+        // O único item de uma assinatura recém-aberta é o deste pet; os próximos pets entram como outros itens.
+        $items=collect($remote['product_items']??[]);
+        $this->link($subscription,$externalId,$items->count()===1?(string)$items->first()['id']:null,$account);
+        return $externalId;
+    }
+
+    // Persist the subscription identity before fetching bills; a webhook can be retried.
+    private function link(Subscription $subscription,string $externalId,?string $itemId,string $account): void
+    {
+        DB::transaction(function() use($subscription,$externalId,$itemId,$account) {
             Customer::lockForUpdate()->findOrFail($subscription->customer_id);
             $current=Subscription::lockForUpdate()->findOrFail($subscription->id);
             if ($current->isTerminal() || ($current->vindi_subscription_id && $current->vindi_subscription_id!==$externalId)) throw new \RuntimeException('Contract changed during checkout.');
-            $current->update(['provider_account'=>$account,'vindi_subscription_id'=>$externalId]);
+            $current->update(['provider_account'=>$account,'vindi_subscription_id'=>$externalId]+($itemId?['vindi_product_item_id'=>$itemId]:[]));
         },3);
+    }
+
+    /** A assinatura mensal que outro pet do mesmo cliente e do mesmo plano já tem na Vindi; este pet entra nela, como nas feitas pelo painel. */
+    private function customerSubscription(Subscription $subscription,array $map,string $account): ?array
+    {
+        $other=Subscription::where('customer_id',$subscription->customer_id)->where('product_version_id',$subscription->product_version_id)
+            ->where('provider_account',$account)->whereKeyNot($subscription->id)->whereNotNull('vindi_subscription_id')
+            ->whereNotIn('status',Subscription::TERMINAL)->orderBy('id')->first();
+        if (!$other) return null;
+        $remote=$this->client->subscription($other->vindi_subscription_id);
+        // Cancelada na Vindi, ou de outro plano ou cliente: este pet abre a própria.
+        return in_array($remote['status']??null,['active','future'],true) && (string)data_get($remote,'plan.id')===(string)$map['plan_id']
+            && (string)data_get($remote,'customer.id')===(string)$subscription->customer->vindi_customer_id ? $remote : null;
+    }
+
+    /** Um item por pet na mesma assinatura: a fatura mensal sai uma só, com um item de cada contrato. */
+    private function addPet(Subscription $subscription,array $remote,array $map,\Carbon\CarbonInterface $first,string $account): ?string
+    {
+        $externalId=(string)$remote['id'];
+        // O item novo entra na próxima fatura da assinatura, que tem de ser a do mês da primeira mensalidade deste pet.
+        $next=\Carbon\CarbonImmutable::parse((string)($remote['next_billing_at']??''))->setTimezone('America/Sao_Paulo')->format('Y-m');
+        if ($next<$first->format('Y-m')) return null; // ainda falta a fatura deste mês sem ele: a conferência periódica tenta de novo depois
+        if ($next>$first->format('Y-m')) throw new IntegrationPendingException('A próxima fatura da assinatura Vindi deste cliente é depois da primeira mensalidade deste pet; conferência manual necessária.');
+        $linked=Subscription::where('provider_account',$account)->where('vindi_subscription_id',$externalId)->get();
+        $items=collect($remote['product_items']??[])->where('status','active');
+        // Contrato de antes do item por pet: o único item da assinatura é dele.
+        if ($linked->count()===1 && !$linked->first()->vindi_product_item_id && $items->count()===1) {
+            $linked->first()->update(['vindi_product_item_id'=>(string)$items->first()['id']]);
+        }
+        $claimed=$linked->map->fresh()->pluck('vindi_product_item_id');
+        if ($claimed->contains(null)) throw new IntegrationPendingException('Assinatura Vindi com pet sem item identificado; conferência manual necessária.');
+        $product=$this->planProduct($map);
+        // Item criado numa tentativa que caiu antes de gravar aqui: é reaproveitado, não duplicado.
+        $item=$items->first(fn($i)=>!$claimed->contains((string)$i['id']) && (string)data_get($i,'product.id')===(string)$product
+            && VindiReconciler::decimalToCents(data_get($i,'pricing_schema.price'))===$subscription->price_cents)
+            ?? $this->client->createProductItem(['subscription_id'=>(int)$externalId,'product_id'=>$product,'quantity'=>1,
+                'pricing_schema'=>['price'=>number_format($subscription->price_cents/100,2,'.',''),'schema_type'=>'flat']]);
+        if (!preg_match('/^[1-9][0-9]*$/D',(string)($item['id']??''))) throw new \RuntimeException('Invalid product item.');
+        $this->link($subscription,$externalId,(string)$item['id'],$account);
+        Audit::record('subscription.vindi_item_added',$subscription,null,['vindi_subscription_id'=>$externalId,'vindi_product_item_id'=>(string)$item['id']]);
         return $externalId;
+    }
+
+    private function planProduct(array $map): int
+    {
+        $items=collect(data_get($this->client->plan((string)$map['plan_id']),'plan_items',[]));
+        if ($items->count()!==1 || !preg_match('/^[1-9][0-9]*$/D',(string)data_get($items->first(),'product.id'))) throw new \RuntimeException('Plan product is not unambiguous.');
+        return (int)data_get($items->first(),'product.id');
     }
 
     private function entryBill(Subscription $subscription,Invoice $invoice,array $map,string $code,string $method): array
@@ -190,11 +248,9 @@ class VindiCheckoutService
         $matches=collect($this->client->billsByCode($code))->where('code',$code)->values();
         if ($matches->count()>1) throw new \RuntimeException('Ambiguous entry bill.');
         if ($matches->isNotEmpty()) return $matches->first();
-        $items=collect(data_get($this->client->plan((string)$map['plan_id']),'plan_items',[]));
-        if ($items->count()!==1 || !preg_match('/^[1-9][0-9]*$/D',(string)data_get($items->first(),'product.id'))) throw new \RuntimeException('Plan product is not unambiguous.');
         return $this->client->createBill(['customer_id'=>(int)$subscription->customer->fresh()->vindi_customer_id,'code'=>$code,
             'payment_method_code'=>$method,'due_at'=>$invoice->due_at->timezone('America/Sao_Paulo')->toDateString(),
-            'bill_items'=>[['product_id'=>(int)data_get($items->first(),'product.id'),'amount'=>number_format($invoice->amount_cents/100,2,'.','')]],
+            'bill_items'=>[['product_id'=>$this->planProduct($map),'amount'=>number_format($invoice->amount_cents/100,2,'.','')]],
             'metadata'=>['contrato'=>$subscription->number,'parcela'=>'entrada']]);
     }
 
