@@ -2218,7 +2218,7 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* Logo centralizada no menu lateral */
 .sidebar-brand{align-items:center}
 /* Campanhas */
-.campaign-row{display:grid;grid-template-columns:minmax(160px,2fr) 110px 150px 150px auto auto auto auto auto;gap:10px 14px;align-items:end;padding:14px 0;border-top:1px solid var(--line)}
+.campaign-row{display:grid;grid-template-columns:minmax(160px,2fr) 110px 150px 150px auto auto;gap:10px 14px;align-items:end;padding:14px 0;border-top:1px solid var(--line)}
 .campaign-row .field{margin:0}
 .campaign-row .check-label{margin:0 0 10px;white-space:nowrap}
 .campaign-row .button{margin-bottom:4px}
@@ -2229,3 +2229,11 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .campaign-card h2{margin:0 0 4px}
 .campaign-count{align-self:center;white-space:nowrap;font-size:14px}
 .link-campaign{display:inline-flex;margin:4px 0 6px;white-space:normal}
+.campaign-item{padding:14px 0;border-top:1px solid var(--line)}
+.campaign-item .campaign-row{border-top:0;padding:8px 0 4px}
+.campaign-badges{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.campaign-state.is-principal{background:#e6f0f8;color:#08649a;font-weight:600}
+.campaign-actions{display:flex;flex-wrap:wrap;gap:16px}
+.campaign-actions form{margin:0}
+.campaign-item.is-archived{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.campaign-item.is-archived small{display:block;color:var(--text-3)}

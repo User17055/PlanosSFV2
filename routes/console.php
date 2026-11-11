@@ -107,6 +107,14 @@ Artisan::command('leads:digisac-assign',function(\App\Services\Integrations\Lead
     $this->info($assign->run().' lead(s) marcados com quem puxou no Digisac.');
 })->purpose('Lead da fila fica com quem puxou a conversa no Digisac');
 Schedule::command('leads:digisac-assign')->everyTwoMinutes()->withoutOverlapping();
+Artisan::command('proposals:payment-reminders {--ensaio : Só lista quem receberia}',function(\App\Services\Domain\PaymentReminders $reminders) {
+    $due=$reminders->due();
+    foreach($due as $p) $this->line('· proposta '.$p->id.' (assinada em '.$p->accepted_at->timezone('America/Sao_Paulo')->format('d/m').')');
+    if($this->option('ensaio')) return $this->info('Ensaio: '.$due->count().' lembrete(s) seriam enviados.');
+    $this->info($due->filter(fn($p)=>$reminders->send($p))->count().' lembrete(s) de pagamento enviados.');
+})->purpose('Lembrar por e-mail quem assinou e não pagou a entrada');
+// 10h de Brasília: até 3 lembretes, com 2 dias entre eles.
+Schedule::command('proposals:payment-reminders')->dailyAt('13:00')->withoutOverlapping();
 Artisan::command('plans:finalize',function() {
     $this->info(app(\App\Services\Domain\CancellationService::class)->finalizeDue().' vínculos encerrados.');
 })->purpose('Efetivar encerramentos e liberar vagas na data contratada');

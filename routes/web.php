@@ -129,6 +129,10 @@ Route::middleware(['auth','active'])->group(function () {
         Route::get('/campanhas',[\App\Http\Controllers\CampaignController::class,'index'])->middleware('role:central_admin')->name('campaigns.index');
         Route::post('/campanhas',[\App\Http\Controllers\CampaignController::class,'store'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.store');
         Route::post('/campanhas/{campaign}',[\App\Http\Controllers\CampaignController::class,'update'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.update');
+        Route::post('/campanhas/{campaign}/principal',[\App\Http\Controllers\CampaignController::class,'principal'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.principal');
+        Route::post('/campanhas/{campaign}/tirar-principal',[\App\Http\Controllers\CampaignController::class,'notPrincipal'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.not-principal');
+        Route::post('/campanhas/{campaign}/arquivar',[\App\Http\Controllers\CampaignController::class,'archive'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.archive');
+        Route::post('/campanhas/{campaign}/reativar',[\App\Http\Controllers\CampaignController::class,'restore'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.restore');
         Route::post('/propostas/{proposal}/link',[ProposalController::class,'link'])->middleware('role:central_admin,manager,sales')->name('proposals.link');
         Route::post('/propostas/{proposal}/papel',[ProposalController::class,'paper'])->middleware('role:central_admin,manager,sales')->name('proposals.issue-paper');
         Route::post('/propostas/{proposal}/tablet',[ProposalController::class,'tablet'])->middleware('role:central_admin,manager,sales')->name('proposals.tablet-sign');

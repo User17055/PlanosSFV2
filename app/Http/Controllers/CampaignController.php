@@ -29,12 +29,20 @@ class CampaignController extends Controller
             'starts_on' => 'required|date_format:Y-m-d',
             'ends_on' => 'nullable|date_format:Y-m-d|after_or_equal:starts_on',
         ]);
-        return $data + ['whole_site' => $request->boolean('whole_site'), 'active' => $request->boolean('active', true)];
+        return $data;
+    }
+
+    /** Só uma campanha vale no site todo: a principal. Marcar uma tira a marca da anterior. */
+    private function makePrincipal(Campaign $campaign): void
+    {
+        Campaign::whereKeyNot($campaign->id)->where('whole_site', true)->update(['whole_site' => false]);
+        $campaign->update(['whole_site' => true, 'active' => true]);
     }
 
     public function store(Request $request)
     {
-        $campaign = Campaign::create($this->validated($request));
+        $campaign = Campaign::create($this->validated($request) + ['whole_site' => false, 'active' => true]);
+        if ($request->boolean('whole_site')) $this->makePrincipal($campaign);
         Audit::record('campaign.created', $campaign, $request->user(), $campaign->only(['name', 'free_months', 'starts_on', 'ends_on', 'whole_site']), null, null);
         return redirect()->route('campaigns.index')->with('success', 'Campanha criada.');
     }
@@ -44,5 +52,33 @@ class CampaignController extends Controller
         $campaign->update($this->validated($request));
         Audit::record('campaign.updated', $campaign, $request->user(), $campaign->only(['name', 'free_months', 'starts_on', 'ends_on', 'whole_site', 'active']), null, null);
         return redirect()->route('campaigns.index')->with('success', 'Campanha atualizada. Propostas já abertas mantêm o que foi oferecido.');
+    }
+
+    public function principal(Request $request, Campaign $campaign)
+    {
+        $this->makePrincipal($campaign);
+        Audit::record('campaign.principal', $campaign, $request->user(), ['whole_site' => true], null, null);
+        return redirect()->route('campaigns.index')->with('success', '“'.$campaign->name.'” agora é a campanha principal: vale no site todo.');
+    }
+
+    public function notPrincipal(Request $request, Campaign $campaign)
+    {
+        $campaign->update(['whole_site' => false]);
+        Audit::record('campaign.not_principal', $campaign, $request->user(), ['whole_site' => false], null, null);
+        return redirect()->route('campaigns.index')->with('success', '“'.$campaign->name.'” deixou de valer no site todo. Na venda da equipe, ainda pode ser escolhida.');
+    }
+
+    public function archive(Request $request, Campaign $campaign)
+    {
+        $campaign->update(['active' => false, 'whole_site' => false]);
+        Audit::record('campaign.archived', $campaign, $request->user(), ['active' => false], null, null);
+        return redirect()->route('campaigns.index')->with('success', '“'.$campaign->name.'” foi arquivada. Quem já entrou nela continua com os meses grátis.');
+    }
+
+    public function restore(Request $request, Campaign $campaign)
+    {
+        $campaign->update(['active' => true]);
+        Audit::record('campaign.restored', $campaign, $request->user(), ['active' => true], null, null);
+        return redirect()->route('campaigns.index')->with('success', '“'.$campaign->name.'” voltou para as campanhas ativas.');
     }
 }

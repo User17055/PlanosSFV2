@@ -94,8 +94,20 @@ class CampaignTest extends TestCase
         $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Tutor fictício')->assertSee('Site')->assertSee('1 mensalidade');
         $this->actingAs($this->admin)->get(route('dashboard'))->assertSee(route('campaigns.index'), false);
         $this->actingAs($this->seller)->get(route('campaigns.index'))->assertForbidden();
-        $this->actingAs($this->admin)->post(route('campaigns.update', $campaign), ['name' => 'Black Friday', 'free_months' => 2, 'starts_on' => '2026-11-01', 'ends_on' => '2026-11-30', 'active' => 0])->assertRedirect();
-        $this->assertFalse($campaign->fresh()->active);
+        $this->actingAs($this->admin)->post(route('campaigns.update', $campaign), ['name' => 'Black Friday', 'free_months' => 2, 'starts_on' => '2026-11-01', 'ends_on' => '2026-11-30'])->assertRedirect();
+        $this->assertTrue($campaign->fresh()->whole_site, 'Salvar os campos não tira a campanha principal.');
+        // Só uma principal: a nova tira a marca da anterior.
+        $other = $this->campaign(['name' => 'Natal', 'whole_site' => false]);
+        $this->actingAs($this->admin)->post(route('campaigns.principal', $other))->assertRedirect();
+        $this->assertFalse($campaign->fresh()->whole_site);
+        $this->assertTrue($other->fresh()->whole_site);
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertSee('Principal · site todo')->assertSee('data-confirm', false);
+        $this->actingAs($this->admin)->post(route('campaigns.archive', $other))->assertRedirect();
+        $this->assertFalse($other->fresh()->active);
+        $this->assertFalse($other->fresh()->whole_site);
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertSee('Campanhas arquivadas (1)');
+        $this->actingAs($this->admin)->post(route('campaigns.restore', $other))->assertRedirect();
+        $this->assertTrue($other->fresh()->active);
         $this->assertSame(2, $campaign->fresh()->free_months);
         $this->actingAs($this->seller)->post(route('campaigns.store'), ['name' => 'X', 'free_months' => 1, 'starts_on' => '2026-11-01'])->assertForbidden();
     }
