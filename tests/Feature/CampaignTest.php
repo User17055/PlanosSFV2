@@ -106,10 +106,14 @@ class CampaignTest extends TestCase
         $queue = Lead::create(['name' => 'Na fila', 'originating_franchise_id' => $this->unit->id, 'phone' => '18999990000']);
         $taken = Lead::create(['name' => 'Já de alguém', 'originating_franchise_id' => $this->unit->id, 'phone' => '18999990000', 'handled_by' => $this->admin->id]);
         Http::preventStrayRequests();
-        Http::fake(['saofranciscopet.digisac.chat/api/v1/contacts*' => Http::response(['data' => [[
-            'id' => 'contact-1', 'serviceId' => 'service-1', 'data' => ['number' => '5518999990000'],
-            'currentTicket' => ['id' => 't-1', 'isOpen' => true, 'userId' => 'dg-juliana'],
-        ]]])]);
+        Http::fake([
+            'saofranciscopet.digisac.chat/api/v1/contacts*' => Http::response(['data' => [['id' => 'contact-1', 'serviceId' => 'service-1', 'data' => ['number' => '5518999990000']]]]),
+            // Chamado antigo (antes do lead) de outra pessoa não conta; o primeiro depois dele, já encerrado, conta.
+            'saofranciscopet.digisac.chat/api/v1/tickets*' => Http::response(['data' => [
+                ['id' => 't-0', 'contactId' => 'contact-1', 'isOpen' => false, 'userId' => 'dg-admin', 'createdAt' => now()->subDays(40)->toIso8601String()],
+                ['id' => 't-1', 'contactId' => 'contact-1', 'isOpen' => false, 'userId' => 'dg-juliana', 'createdAt' => now()->toIso8601String()],
+            ]]),
+        ]);
 
         $this->assertSame(1, app(LeadDigisacAssign::class)->run());
         $this->assertSame($juliana->id, $queue->fresh()->handled_by);
