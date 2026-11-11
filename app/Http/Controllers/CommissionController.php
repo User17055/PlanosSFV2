@@ -23,6 +23,11 @@ class CommissionController extends Controller
         ]);
         $base = $commissions->query($user);
         $timezone = 'America/Sao_Paulo';
+        // Sem período escolhido, abre no mês atual: é o fechamento que a equipe confere.
+        if (empty($filters['date_from']) && empty($filters['date_to'])) {
+            $filters['date_from'] = now($timezone)->startOfMonth()->toDateString();
+            $filters['date_to'] = now($timezone)->endOfMonth()->toDateString();
+        }
         if (! empty($filters['date_from'])) $base->where('earned_at', '>=', Carbon::parse($filters['date_from'], $timezone)->startOfDay()->utc());
         if (! empty($filters['date_to'])) $base->where('earned_at', '<=', Carbon::parse($filters['date_to'], $timezone)->endOfDay()->utc());
         if (! empty($filters['franchise_id'])) $base->where('originating_franchise_id', (int) $filters['franchise_id']);
@@ -30,18 +35,25 @@ class CommissionController extends Controller
         elseif (ctype_digit((string) ($filters['beneficiary'] ?? ''))) $base->where('beneficiary_user_id', (int) $filters['beneficiary']);
 
         $totals = (clone $base)->selectRaw('status, COUNT(*) as total, COALESCE(SUM(amount_cents),0) as amount')->groupBy('status')->get()->keyBy('status');
+        // Total por funcionário no período (sem estornadas e sem as vendas sem responsável).
+        $people = (clone $base)->whereNotIn('status', ['reversed', 'not_applicable'])->whereNotNull('beneficiary_user_id')
+            ->selectRaw("beneficiary_user_id, MAX(beneficiary_name) as name, COUNT(*) as contracts, COALESCE(SUM(amount_cents),0) as total,
+                COALESCE(SUM(CASE WHEN status = 'payable' THEN amount_cents ELSE 0 END),0) as payable, COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_cents ELSE 0 END),0) as paid,
+                SUM(CASE WHEN status IN ('awaiting_rate','held') THEN 1 ELSE 0 END) as waiting")
+            ->groupBy('beneficiary_user_id')->orderByDesc('total')->get();
         $list = clone $base;
         if (! empty($filters['status'])) $list->where('status', $filters['status']);
         $rows = $list->with(['subscription.customer', 'subscription.pet', 'productVersion', 'originatingFranchise', 'soldBy', 'payer'])
             ->orderByDesc('earned_at')->orderByDesc('id')->paginate(20)->withQueryString();
 
         $beneficiaries = $user->role === 'sales' ? collect() : $commissions->query($user)->select('beneficiary_type', 'beneficiary_user_id', 'beneficiary_name')
-            ->distinct()->orderBy('beneficiary_name')->get();
+            ->distinct()->orderBy('beneficiary_name')->get()
+            ->unique(fn ($b) => $b->beneficiary_type === 'unassigned' ? 'unassigned' : $b->beneficiary_user_id); // a mesma pessoa como vendedora e como dona do link
         $franchises = $user->role === 'central_admin' ? Franchise::where('active', true)->orderBy('name')->get()
             : Franchise::whereIn('id', $access->franchiseIds($user))->orderBy('name')->get();
 
         return view('commissions.index', [
-            'rows' => $rows, 'totals' => $totals, 'filters' => $filters, 'beneficiaries' => $beneficiaries, 'franchises' => $franchises,
+            'rows' => $rows, 'totals' => $totals, 'filters' => $filters, 'people' => $people, 'beneficiaries' => $beneficiaries, 'franchises' => $franchises,
             'rates' => $user->role === 'central_admin' ? $commissions->currentRates() : collect(),
             'sourceLabels' => TrackingSanitizer::sourceLabels(),
             'canPay' => in_array($user->role, ['central_admin', 'finance'], true) && $user->canUse('commissions.pay'),

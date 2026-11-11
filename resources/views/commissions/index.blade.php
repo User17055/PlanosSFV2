@@ -27,6 +27,15 @@ $statusLabels=\App\Models\Commission::STATUSES;
 <div class="commission-filter-actions"><button class="button button-secondary" type="submit">@include('components.icon',['name'=>'search']) Filtrar</button>@if(array_filter($filters))<a class="text-link" href="{{ route('commissions.index') }}">Limpar</a>@endif</div>
 </form>
 
+@php $period='De '.\Illuminate\Support\Carbon::parse($filters['date_from'])->format('d/m').' a '.\Illuminate\Support\Carbon::parse($filters['date_to'])->format('d/m/Y'); @endphp
+<section class="card section-gap"><div class="card-heading"><div><h2>{{ $isSales ? 'Meu total no período' : 'Por funcionário' }}</h2><p>{{ $period }}. Soma das comissões liberadas, pagas e aguardando, sem as estornadas.</p></div></div>
+<div class="table-scroll"><table><thead><tr><th>Funcionário</th><th>Contratos</th><th>Comissão total</th><th>A pagar</th><th>Pagas</th></tr></thead><tbody>
+@forelse($people as $person)<tr><td>@unless($isSales)<a href="{{ route('commissions.index',array_merge(array_filter($filters),['beneficiary'=>$person->beneficiary_user_id])) }}"><strong>{{ $person->name }}</strong></a>@else<strong>{{ $person->name }}</strong>@endunless @if($person->waiting)<small>{{ $person->waiting }} aguardando percentual</small>@endif</td><td>{{ $person->contracts }}</td><td><strong>{{ $money($person->total) }}</strong></td><td>{{ $money($person->payable) }}</td><td>{{ $money($person->paid) }}</td></tr>
+@empty<tr><td colspan="5"><div class="empty-state"><strong>Nenhuma comissão no período.</strong></div></td></tr>@endforelse
+@if($people->count()>1)<tr class="commission-total"><td><strong>Total</strong></td><td>{{ $people->sum('contracts') }}</td><td><strong>{{ $money($people->sum('total')) }}</strong></td><td>{{ $money($people->sum('payable')) }}</td><td>{{ $money($people->sum('paid')) }}</td></tr>@endif
+</tbody></table></div>
+</section>
+
 <section class="card section-gap"><div class="card-heading"><div><h2>Contratações e comissões</h2><p>Quem fez, de onde veio e quem recebe. O percentual e o valor ficam registrados no momento do primeiro pagamento.</p></div></div>
 <div class="table-scroll"><table><thead><tr><th>Contratação</th><th>Quem fez e origem</th><th>Beneficiário</th><th>Comissão</th><th>Situação</th><th></th></tr></thead><tbody>
 @forelse($rows as $c)

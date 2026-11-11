@@ -248,6 +248,21 @@ class CommissionTest extends TestCase
         $this->assertSame(1, Commission::count());
     }
 
+    public function test_page_opens_on_the_current_month_with_the_total_per_employee(): void
+    {
+        $this->settle($this->initial($this->signed($this->proposalBy($this->seller, 'link'))));
+        $other = Pet::create(['customer_id' => $this->customer->id, 'name' => 'Bento', 'species' => 'cat', 'birth_date' => now()->subYears(2)->toDateString()]);
+        $this->settle($this->initial($this->signed($this->proposalBy($this->seller, 'link', null, $other))));
+        $old = Commission::orderBy('id')->first();
+        // Comissão de outro mês fica fora do total do mês atual.
+        Commission::whereKey($old->id)->update(['earned_at' => now()->subMonths(2)]);
+        $current = Commission::whereKeyNot($old->id)->sole();
+        $money = 'R$ '.number_format($current->amount_cents / 100, 2, ',', '.');
+        $this->actingAs($this->admin)->get(route('commissions.index'))->assertOk()
+            ->assertSee('Por funcionário')->assertSee('De '.now('America/Sao_Paulo')->startOfMonth()->format('d/m'))
+            ->assertSeeInOrder([$this->seller->name, '1', $money]);
+    }
+
     public function test_commission_page_respects_roles_and_scope(): void
     {
         $this->settle($this->initial($this->signed($this->proposalBy($this->seller, 'link'))));
