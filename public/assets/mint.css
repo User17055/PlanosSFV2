@@ -2237,3 +2237,4 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .campaign-actions form{margin:0}
 .campaign-item.is-archived{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .campaign-item.is-archived small{display:block;color:var(--text-3)}
+.small-dot.gray{background:#b5bdc8}

@@ -20,6 +20,7 @@ class DashboardController extends Controller
     /** Onde o robô do SimplesVet parou (conferência de gente), só dos contratos das unidades de quem vê. */
     private function simplesvetPending($user, AccessService $access)
     {
+        if (! app(\App\Services\Integrations\SimplesVetAdapter::class)->enabled()) return collect(); // robô desligado: sem quadro de pendências
         $events=\App\Models\IntegrationEvent::where('provider','simplesvet')->where('entity_type','subscription')->whereIn('status',['manual','error'])
             ->latest('id')->get(['entity_id','error'])->unique('entity_id');
         $subscriptions=$access->scope(\App\Models\Subscription::with(['customer:id,name','pet:id,name'])->whereIn('id',$events->pluck('entity_id')),$user)->get()->keyBy('id');
