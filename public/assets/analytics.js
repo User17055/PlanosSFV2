@@ -106,7 +106,9 @@
     const coords = features.flatMap(f => pointsOf(f.geometry)).map(mercator);
     if (!coords.length) throw new Error('A malha não contém geometrias.');
     const [minX, minY, maxX, maxY] = extent(coords);
-    const w = 640, h = 420, pad = 18;
+    const w = 640, pad = 18;
+    // A altura segue o formato do mapa: ele ocupa a largura no celular sem sobrar faixa vazia.
+    const h = Math.round(Math.min(520, Math.max(300, (w - pad * 2) * (maxY - minY) / Math.max(.00001, maxX - minX) + pad * 2)));
     const scale = Math.min((w - pad * 2) / Math.max(.00001, maxX - minX), (h - pad * 2) / Math.max(.00001, maxY - minY));
     const ox = (w - (maxX - minX) * scale) / 2, oy = (h - (maxY - minY) * scale) / 2;
     const project = point => { const [x, y] = mercator(point); return [(x - minX) * scale + ox, (y - minY) * scale + oy]; };
@@ -138,6 +140,10 @@
     });
     svg.append(...names);
     host.replaceChildren(svg, tooltip);
+    // Nomes com cerca de 12px na tela, do computador ao celular (o desenho encolhe junto com a tela).
+    const box = svg.getBoundingClientRect();
+    const zoom = Math.min(box.width / w, box.height / h) || 1;
+    names.forEach(name => { name.style.fontSize = `${Math.max(10, 12 / zoom).toFixed(1)}px`; name.style.strokeWidth = (3.5 / zoom).toFixed(1); });
   }
   async function json(url, cache = 'default') { const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache }); if (!response.ok) throw new Error('Mapa temporariamente indisponível. Consulte os números ao lado.'); return response.json(); }
   function fail(host, error) { const p = document.createElement('p'); p.className = 'analytics-loading'; p.textContent = error.message; host.replaceChildren(p); }
@@ -176,7 +182,10 @@
     if (regionalLoaded) return;
     regionalLoaded = true;
     try {
-      const cities = data.geo.map_cities;
+      // As 28 cidades da região imediata de Prudente (IBGE) entram sempre, em cinza quando sem plano: Prudente sozinha deixava o quadro vazio.
+      const nearby = await json(`${data.assets}/municipios-prudente.json`).catch(() => ({}));
+      const cities = [...data.geo.map_cities];
+      Object.entries(nearby).forEach(([code, city]) => { if (!cities.some(c => c.code === code)) cities.push({ code, name: city.name, state: data.states[city.state] }); });
       const allowed = new Set(cities.map(city => city.code));
       const states = [...new Set(cities.map(city => city.state))];
       const results = await Promise.allSettled(states.map(state => json(`${data.mapUrl}/${encodeURIComponent(state)}`)));
@@ -185,8 +194,8 @@
       renderMap(region, features, f => {
         const entry = cities.find(city => city.code === String(f.properties.codarea || f.id));
         const count = data.geo.cities.find(c => c.state === entry.state && norm(c.city) === norm(entry.name)) || { customers: 0, plans: 0 };
-        return { ...count, name: entry.name, state: entry.state, label: features.length < 14 ? entry.name : '' };
-      }, item => norm(item.name) === norm(data.city) && item.state === data.state, item => filter(item.state, item.name), features.length < 14);
+        return { ...count, name: entry.name, state: entry.state, label: entry.name };
+      }, item => norm(item.name) === norm(data.city) && item.state === data.state, item => filter(item.state, item.name), features.length < 14 ? true : 'plans');
       if (results.some(result => result.status === 'rejected')) {
         const note = document.createElement('p'); note.className = 'analytics-note'; note.textContent = 'Algumas cidades estão com a cartografia indisponível no momento. Seus totais permanecem nos rankings.'; region.after(note);
       }

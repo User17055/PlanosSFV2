@@ -2202,3 +2202,18 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* Mapa de volta na Visão geral: ocupa a largura toda da grade */
 .dash-simple-grid>.dash-simple-map{grid-column:1/-1}
 .dash-simple-map .analytics-map-toolbar{margin-bottom:12px}
+/* Visão geral: cantos mais arredondados e iguais, sem faixa vazia no mapa e ajustes do celular */
+.theme-dash .dash-simple .card,.theme-dash .dash-simple .analytics-kpi,.theme-dash .dash-simple .dash-lead{border-radius:20px}
+.theme-dash .dash-simple .analytics-map{border-radius:14px}
+.theme-dash .dash-simple .analytics-location-row{border-radius:12px}
+.analytics-map:has(svg){min-height:0}
+.analytics-location-row b small{white-space:nowrap}
+@media(max-width:640px){
+.theme-dash .dashboard-workspace .analytics-kpi{min-height:0}
+.theme-dash .dashboard-workspace .analytics-kpi .metric-icon{display:none}
+.dashboard-workspace .analytics-filters>.field:nth-child(3){grid-column:1/-1}
+.dash-simple-grid>.card{padding:16px}
+}
+.theme-dash .analytics-map-tooltip{background:#14264b;color:#fff}
+/* Logo centralizada no menu lateral */
+.sidebar-brand{align-items:center}
