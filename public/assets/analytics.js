@@ -139,7 +139,7 @@
     svg.append(...names);
     host.replaceChildren(svg, tooltip);
   }
-  async function json(url) { const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' }); if (!response.ok) throw new Error('Mapa temporariamente indisponível. Consulte os números ao lado.'); return response.json(); }
+  async function json(url, cache = 'default') { const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache }); if (!response.ok) throw new Error('Mapa temporariamente indisponível. Consulte os números ao lado.'); return response.json(); }
   function fail(host, error) { const p = document.createElement('p'); p.className = 'analytics-loading'; p.textContent = error.message; host.replaceChildren(p); }
   const region = document.getElementById('dashboard-region-map');
   let regionalLoaded = false;
@@ -157,7 +157,8 @@
       const catalog = await json(`${data.assets}/municipios.json`);
       const code = Object.keys(catalog).find(key => data.states[catalog[key].state] === state && norm(catalog[key].name) === norm(city));
       if (!code) throw new Error('Cidade não localizada na malha. Confira a grafia no cadastro; o ranking de bairros permanece disponível.');
-      const geo = await json(`${data.neighborhoodUrl}/${code}`);
+      // O servidor manda guardar por 1 dia; "no-cache" faz o navegador conferir antes, para um mapa novo de bairros aparecer na hora.
+      const geo = await json(`${data.neighborhoodUrl}/${code}`, 'no-cache');
       if (!geo.features.length) throw new Error(geo.message || 'Ainda sem base cartográfica de bairros para esta cidade. Consulte o ranking abaixo.');
       renderMap(host, geo.features, f => {
         const name = f.properties.name;

@@ -1098,6 +1098,7 @@ td form .text-button{margin-top:6px}
 .dashboard-financial-grid strong{font-size:18px;font-weight:500;color:var(--text);overflow-wrap:anywhere}
 .dashboard-workspace .analytics-territory{margin-top:18px}
 .dashboard-workspace .analytics-map svg{max-height:340px}
+.dashboard-workspace #dashboard-neighborhood-map svg{max-height:620px}
 .dashboard-workspace .analytics-neighborhoods{margin-top:18px;padding-top:16px}
 .dashboard-workspace .analytics-neighborhood{padding:11px;gap:4px}
 .dashboard-workspace .analytics-neighborhoods .analytics-empty{padding:12px}
