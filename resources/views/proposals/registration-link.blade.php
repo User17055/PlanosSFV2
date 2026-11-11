@@ -2,7 +2,7 @@
 @section('title','Link para preenchimento do tutor')
 @section('content')
 <a class="back-link" href="{{ route('proposals.index') }}">← Propostas</a>
-<div class="page-heading"><div><h1>Envie o link para o tutor</h1><p>{{ $link->productVersion->name }} · {{ $link->originatingFranchise->name }}</p></div></div>
+<div class="page-heading"><div><h1>Envie o link para o tutor</h1><p>{{ $link->productVersion->name }} · {{ $link->originatingFranchise->name }}@if($link->campaign_id && ($linkCampaign=\App\Models\Campaign::find($link->campaign_id))) · <strong>{{ $linkCampaign->label() }}</strong>@endif</p></div></div>
 <section class="card form-card">
 <p>O tutor preencherá seus dados e os do pet pelo link. O sistema criará o cadastro e a proposta automaticamente, para então apresentar o contrato para revisão e aceite.</p>
 <label class="field">Link para preenchimento<input id="registration-link" value="{{ $url }}" readonly></label>

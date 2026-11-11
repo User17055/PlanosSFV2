@@ -29,7 +29,10 @@ class MarketingLinkController extends Controller
         $owners=User::where('active',true)->whereIn('role',['central_admin','manager','sales'])->when($user->role==='sales',fn($q)=>$q->whereKey($user->id))->when($user->role!=='central_admin',fn($q)=>$q->whereHas('franchises',fn($f)=>$f->whereIn('franchises.id',$access->franchiseIds($user))->where('user_franchises.active',true)))->orderBy('name')->get();
         $versions=ProductVersion::preferredOffers()->with('product')->orderBy('name')->get();
         $referrers=$access->customerQuery($user)->select(['id','name'])->orderBy('name')->get();
-        return view('marketing.index',compact('marketingLinks','urls','activity','franchises','owners','versions','referrers'));
+        // Controle da campanha de cada link: o de autocadastro leva a do vendedor; os demais seguem a do site todo.
+        $campaigns=\App\Models\Campaign::whereIn('id',$marketingLinks->pluck('campaign_id')->filter())->get()->keyBy('id');
+        $siteCampaign=\App\Models\Campaign::current()->where('whole_site',true)->orderByDesc('free_months')->first();
+        return view('marketing.index',compact('marketingLinks','urls','activity','franchises','owners','versions','referrers','campaigns','siteCampaign'));
     }
 
     public function store(Request $request,MarketingLinkService $links,AccessService $access)

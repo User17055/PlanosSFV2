@@ -54,6 +54,36 @@ class SelfRegistrationLinkTest extends TestCase
         $this->assertNull($proposal->accepted_at);
     }
 
+    public function test_the_campaign_marked_by_the_seller_goes_with_the_link_even_against_the_whole_site_one(): void
+    {
+        $staff = User::where('role','sales')->firstOrFail();
+        $version = ProductVersion::where('status','published')->where('billing_cycle','monthly')->firstOrFail();
+        $today = now('America/Sao_Paulo');
+        $site = \App\Models\Campaign::create(['name'=>'Site todo','free_months'=>1,'starts_on'=>$today->copy()->subDay()->toDateString(),'ends_on'=>$today->copy()->addDays(5)->toDateString(),'whole_site'=>true,'active'=>true]);
+        $special = \App\Models\Campaign::create(['name'=>'Só pelo vendedor','free_months'=>2,'starts_on'=>$today->copy()->subDay()->toDateString(),'whole_site'=>false,'active'=>true]);
+        config(['site_portal.enabled'=>false]);
+        $register = function (?int $campaignId, string $email, string $document) use ($staff, $version) {
+            $this->actingAs($staff)->get(route('proposals.create',['channel'=>'link','prefill_by'=>'customer']))->assertOk()->assertSee('Campanha do cliente');
+            $this->post(route('proposals.store'),['channel'=>'link','prefill_by'=>'customer','signature_method'=>'digital',
+                'product_version_id'=>$version->id,'originating_franchise_id'=>$staff->franchise_id,'campaign_id'=>$campaignId])->assertRedirect();
+            $link = MarketingLink::where('self_registration',true)->latest('id')->first();
+            $this->assertSame($campaignId, $link->campaign_id);
+            $this->post(route('logout'));
+            $this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertRedirect();
+            $this->post(route('register.store'),['product_version_id'=>$version->id,'name'=>'Tutor Pelo Link','document'=>$document,
+                'email'=>$email,'phone'=>'18999990000','address'=>'Rua do Tutor, 10','password'=>'PeloLinkTeste@2026','password_confirmation'=>'PeloLinkTeste@2026',
+                'privacy_accepted'=>1,'pet_name'=>'Pet Pelo Link','pet_species'=>'dog','pet_birth_date'=>'2020-01-01'])->assertRedirect();
+            $this->post(route('logout'));
+            return Proposal::where('customer_id',Customer::where('email',$email)->sole()->id)->sole();
+        };
+        $chosen = $register($special->id, 'campanha.link@example.test', '52998224725');
+        $this->assertSame([$special->id, 2], [$chosen->campaign_id, $chosen->free_months]);
+        // "Sem campanha" no link vale mesmo com a campanha do site todo em vigor.
+        $none = $register(null, 'sem.campanha@example.test', '11144477735');
+        $this->assertSame([null, 0], [$none->campaign_id, $none->free_months]);
+        $this->assertNotNull($site->id);
+    }
+
     public function test_registration_link_opens_the_site_signup_and_keeps_the_seller(): void
     {
         $key=str_repeat('test-site-key-',3);

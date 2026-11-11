@@ -81,10 +81,13 @@ class ProposalService
         if ($version->product->category === 'package' && ($version->billing_cycle !== 'one_time' || ! $version->duration_months)) {
             throw new DomainException('PACKAGE_POLICY_PENDING', 'Pacotes exigem validade definida e cobrança única enquanto a política de dívida estiver pendente.', 422);
         }
-        // Campanha: no site entra sozinha a que vale para o site todo; na venda pela equipe, só a que o vendedor escolheu. Só plano mensal tem mensalidade para isentar.
+        // Campanha: no site entra sozinha a que vale para o site todo; na venda pela equipe, a que o vendedor escolheu.
+        // Pelo link de autocadastro, vale o que o vendedor marcou ao gerar o link (inclusive "sem campanha"). Só plano mensal tem mensalidade para isentar.
         $campaign = null;
         if ($actor->role === 'customer') {
-            $campaign = Campaign::current()->where('whole_site', true)->orderByDesc('free_months')->first();
+            $campaign = $attributedLink?->self_registration
+                ? ($attributedLink->campaign_id ? Campaign::where('active', true)->find($attributedLink->campaign_id) : null)
+                : Campaign::current()->where('whole_site', true)->orderByDesc('free_months')->first();
         } elseif (! empty($data['campaign_id'])) {
             $campaign = Campaign::current()->find($data['campaign_id'])
                 ?? throw new DomainException('CAMPAIGN_INVALID', 'Essa campanha não está em vigor. Escolha outra ou deixe sem campanha.', 422);

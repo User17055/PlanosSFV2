@@ -28,6 +28,7 @@ class User extends Authenticatable
         'leads' => ['Leads', ['leads.*'], ['central_admin', 'manager', 'sales', 'operator', 'attendant']],
         'customers' => ['Tutores e pets', ['customers.*', 'pets.*'], self::STAFF],
         'catalog' => ['Planos e pacotes', ['catalog.*'], self::STAFF],
+        'campaigns' => ['Campanhas', ['campaigns.*'], ['central_admin']],
         'proposals' => ['Propostas', ['proposals.*', 'contracts.*', 'subscriptions.*'], self::STAFF],
         'finance' => ['Financeiro', ['finance.*'], ['central_admin', 'manager', 'finance']],
         'commissions' => ['Comissões', ['commissions.*'], ['central_admin', 'manager', 'finance', 'sales']],

@@ -45,7 +45,11 @@ class MarketingLinkService
             'utm_campaign' => 'nullable|string|max:120', 'utm_content' => 'nullable|string|max:120', 'utm_term' => 'nullable|string|max:120',
             'expires_at' => 'nullable|date|after:now',
             'self_registration' => 'nullable|boolean',
+            'campaign_id' => 'nullable|integer',
         ])->validate();
+        // A campanha oferecida no link precisa estar em vigor quando o vendedor gera o link.
+        $campaign = empty($data['campaign_id']) ? null : (\App\Models\Campaign::current()->find($data['campaign_id'])
+            ?? throw new DomainException('CAMPAIGN_INVALID', 'Essa campanha não está em vigor. Escolha outra ou deixe sem campanha.', 422));
         $franchise = Franchise::findOrFail($data['originating_franchise_id']);
         if (! $actor->hasFranchise($franchise->id)) {
             throw new DomainException('FORBIDDEN', 'Unidade não autorizada para este link.', 403);
@@ -72,6 +76,7 @@ class MarketingLinkService
             'referrer_customer_id' => $referrer?->id, 'referrer_name' => $referrer?->name ?? TrackingSanitizer::text($data['referrer_name'] ?? null, 180),
             'campaign_name' => TrackingSanitizer::text($data['campaign_name'] ?? null), 'status' => 'active', 'expires_at' => $data['expires_at'] ?? null];
         $attributes['self_registration'] = (bool) ($data['self_registration'] ?? false);
+        $attributes['campaign_id'] = $campaign?->id;
         foreach (TrackingSanitizer::UTM_FIELDS as $field) {
             $attributes[$field] = TrackingSanitizer::utm($data[$field] ?? null);
         }

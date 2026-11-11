@@ -10,6 +10,11 @@ class Campaign extends DomainModel
         return ['starts_on' => 'date', 'ends_on' => 'date', 'whole_site' => 'boolean', 'active' => 'boolean'];
     }
 
+    public function proposals()
+    {
+        return $this->hasMany(Proposal::class);
+    }
+
     /** Ligada e dentro do período hoje, no horário de São Paulo. */
     public function scopeCurrent($query)
     {

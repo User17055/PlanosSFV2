@@ -82,14 +82,18 @@ class CampaignTest extends TestCase
         $this->propose($this->seller, ['campaign_id' => $expired->id]);
     }
 
-    public function test_only_central_admin_registers_campaigns_on_the_plans_page(): void
+    public function test_only_central_admin_registers_campaigns_and_sees_who_is_exempt(): void
     {
         $this->actingAs($this->admin)->post(route('campaigns.store'), ['name' => 'Black Friday', 'free_months' => 1, 'starts_on' => '2026-11-01', 'ends_on' => '2026-11-30', 'whole_site' => 1])
             ->assertRedirect();
         $campaign = Campaign::sole();
         $this->assertTrue($campaign->whole_site);
         $this->assertTrue($campaign->active);
-        $this->actingAs($this->admin)->get(route('catalog.index'))->assertOk()->assertSee('Campanhas')->assertSee('Black Friday');
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Quem está isento')->assertSee('Black Friday');
+        $this->propose($this->client);
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Tutor fictício')->assertSee('Site')->assertSee('1 mensalidade');
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertSee(route('campaigns.index'), false);
+        $this->actingAs($this->seller)->get(route('campaigns.index'))->assertForbidden();
         $this->actingAs($this->admin)->post(route('campaigns.update', $campaign), ['name' => 'Black Friday', 'free_months' => 2, 'starts_on' => '2026-11-01', 'ends_on' => '2026-11-30', 'active' => 0])->assertRedirect();
         $this->assertFalse($campaign->fresh()->active);
         $this->assertSame(2, $campaign->fresh()->free_months);

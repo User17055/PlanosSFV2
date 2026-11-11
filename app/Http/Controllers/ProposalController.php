@@ -67,7 +67,7 @@ class ProposalController extends Controller
             'product_version_id'=>'required|integer|exists:product_versions,id','originating_franchise_id'=>'required|integer|exists:franchises,id',
             'channel'=>'required|in:site,link,presential','prefill_by'=>'required|in:seller,customer','signature_method'=>'required|in:digital,tablet,paper',
             'requested_start_at'=>'nullable|date|after_or_equal:today',
-            'campaign_id'=>$selfRegistration||$request->user()->role==='customer'?'exclude':'nullable|integer',
+            'campaign_id'=>$request->user()->role==='customer'?'exclude':'nullable|integer',
         ]);
         $manual=$request->validate(['acquisition_source'=>'nullable|in:direct,referral,shared_link,instagram,facebook,google,other','referrer_customer_id'=>'nullable|integer|exists:customers,id','referrer_name'=>'nullable|string|max:180','campaign_name'=>'nullable|string|max:120']);
         if(!empty($manual['referrer_customer_id'])) $this->access->customer($request->user(),\App\Models\Customer::findOrFail($manual['referrer_customer_id']));
@@ -80,6 +80,7 @@ class ProposalController extends Controller
                 'acquisition_source'=>in_array($manual['acquisition_source']??'', ['referral','shared_link','instagram','facebook','google','other']) ? $manual['acquisition_source'] : 'shared_link',
                 'referrer_customer_id'=>$manual['referrer_customer_id']??null, 'referrer_name'=>$manual['referrer_name']??null,
                 'campaign_name'=>$manual['campaign_name']??null, 'expires_at'=>now()->addHours((int)config('plans.proposal_validity_hours',48))->toIso8601String(),
+                'campaign_id'=>$data['campaign_id']??null,
             ], $request->user());
             return redirect()->route('proposals.registration-link',$created['link']);
         }
