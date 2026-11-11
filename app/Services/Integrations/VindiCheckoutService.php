@@ -159,7 +159,7 @@ class VindiCheckoutService
         try {
             $matches=collect($this->client->subscriptionsByCode($code))->where('code',$code)->values();
             if ($matches->count()>1) throw new IntegrationPendingException('Mais de uma assinatura Vindi com a mesma referência; conferência manual necessária.');
-            $first=app(BillingSchedule::class)->firstRecurringBilling($subscription->proposal->accepted_at ?? $entry->paid_at ?? now());
+            $first=app(BillingSchedule::class)->firstRecurringBilling($subscription->proposal->accepted_at ?? $entry->paid_at ?? now(),null,(int)$subscription->proposal->free_months);
             $shared=$matches->isEmpty() ? $this->customerSubscription($subscription,$map,$account) : null;
             if ($shared) return $this->addPet($subscription,$shared,$map,$first,$account);
             $remote=$matches->first() ?? $this->client->createSubscription(['code'=>$code,'plan_id'=>(int)$map['plan_id'],

@@ -103,6 +103,10 @@ Artisan::command('leads:digisac-photos',function(\App\Services\Integrations\Lead
     $this->info($photos->syncPending().' leads conferidos.');
 })->purpose('Guardar a foto do contato no Digisac dos leads com telefone, sem precisar abrir a conversa');
 Schedule::command('leads:digisac-photos')->everyThirtyMinutes()->withoutOverlapping();
+Artisan::command('leads:digisac-assign',function(\App\Services\Integrations\LeadDigisacAssign $assign) {
+    $this->info($assign->run().' lead(s) marcados com quem puxou no Digisac.');
+})->purpose('Lead da fila fica com quem puxou a conversa no Digisac');
+Schedule::command('leads:digisac-assign')->everyTwoMinutes()->withoutOverlapping();
 Artisan::command('plans:finalize',function() {
     $this->info(app(\App\Services\Domain\CancellationService::class)->finalizeDue().' vínculos encerrados.');
 })->purpose('Efetivar encerramentos e liberar vagas na data contratada');

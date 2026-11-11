@@ -14,7 +14,8 @@ class CatalogController extends Controller
         $realPlans=ProductVersion::where('is_demo',false)->whereNotNull('contract_layout')->exists();
         $products=Product::query()->when($realPlans && !$request->boolean('demonstracao'),fn($q)=>$q->whereHas('versions',fn($v)=>$v->where('is_demo',false)))
             ->with(['versions'=>fn($v)=>$v->when($realPlans && !$request->boolean('demonstracao'),fn($v)=>$v->where('is_demo',false))->with('benefitRules')])->orderBy('name')->get();
-        return view('catalog.index',compact('products'));
+        $campaigns=$request->user()->role==='central_admin' ? \App\Models\Campaign::orderByDesc('starts_on')->orderByDesc('id')->get() : collect();
+        return view('catalog.index',compact('products','campaigns'));
     }
 
     public function subscribe(Request $request, string $code)

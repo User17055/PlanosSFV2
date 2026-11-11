@@ -2217,3 +2217,12 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .theme-dash .analytics-map-tooltip{background:#14264b;color:#fff}
 /* Logo centralizada no menu lateral */
 .sidebar-brand{align-items:center}
+/* Campanhas na tela de planos */
+.campaign-row{display:grid;grid-template-columns:minmax(160px,2fr) 110px 150px 150px auto auto auto auto;gap:10px 14px;align-items:end;padding:14px 0;border-top:1px solid var(--line)}
+.campaign-row .field{margin:0}
+.campaign-row .check-label{margin:0 0 10px;white-space:nowrap}
+.campaign-row .button{margin-bottom:4px}
+.campaign-state{align-self:center;padding:3px 10px;border-radius:99px;background:var(--panel-3);color:var(--text-3);font-size:13px;white-space:nowrap}
+.campaign-state.is-on{background:#e8f5df;color:#3f6b1d}
+.campaign-new>summary{cursor:pointer;padding:12px 0;color:var(--primary-text);font-weight:500;border-top:1px solid var(--line)}
+@media(max-width:1100px){.campaign-row{grid-template-columns:repeat(2,minmax(0,1fr))}.campaign-row .field:first-child{grid-column:1/-1}}

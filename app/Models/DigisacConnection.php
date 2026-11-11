@@ -15,4 +15,10 @@ class DigisacConnection extends DomainModel
     {
         return $this->belongsTo(User::class);
     }
+
+    /** Conexão de um administrador central ativo: ele pode ler todas as conversas. */
+    public static function admin(): ?self
+    {
+        return self::whereNotNull('verified_at')->whereHas('user', fn ($q) => $q->where('role', 'central_admin')->where('active', true))->orderBy('id')->first();
+    }
 }

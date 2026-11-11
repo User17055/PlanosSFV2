@@ -11,12 +11,13 @@ use Carbon\CarbonInterface;
  */
 class BillingSchedule
 {
-    public function firstRecurringBilling(CarbonInterface $closedAt, ?CarbonInterface $today = null): CarbonImmutable
+    /** $freeMonths: mensalidades grátis da campanha, que empurram a primeira cobrança mensal. */
+    public function firstRecurringBilling(CarbonInterface $closedAt, ?CarbonInterface $today = null, int $freeMonths = 0): CarbonImmutable
     {
         $today = CarbonImmutable::instance($today ?? now())->setTimezone('America/Sao_Paulo')->startOfDay();
         $first = $this->billingAfter(CarbonImmutable::instance($closedAt)->setTimezone('America/Sao_Paulo'));
         // A payment made after that date was already reached starts the schedule from the payment day instead.
-        return $first->greaterThan($today) ? $first : $this->billingAfter($today);
+        return ($first->greaterThan($today) ? $first : $this->billingAfter($today))->addMonthsNoOverflow(max(0, $freeMonths));
     }
 
     public function dueDate(CarbonInterface $billing): CarbonImmutable

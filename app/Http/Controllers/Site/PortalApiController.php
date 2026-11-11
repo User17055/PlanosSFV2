@@ -318,7 +318,7 @@ class PortalApiController extends Controller
         $initial=$proposal->subscription?->invoices()->where('is_initial',true)->first();
         if ($proposal->productVersion->billing_cycle!=='monthly' || $initial?->status==='paid') return [];
         $schedule=app(\App\Services\Domain\BillingSchedule::class);
-        $next=$schedule->firstRecurringBilling($proposal->accepted_at ?? now());
+        $next=$schedule->firstRecurringBilling($proposal->accepted_at ?? now(),null,(int)$proposal->free_months);
         return ['next_billing_at'=>$next->toDateString(),'next_due_at'=>$schedule->dueDate($next)->toDateString()];
     }
 

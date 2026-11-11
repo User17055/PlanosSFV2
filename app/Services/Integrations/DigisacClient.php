@@ -59,6 +59,14 @@ class DigisacClient
         return [];
     }
 
+    /** @return array<string, string> id => nome dos usuários do Digisac que não foram arquivados nem apagados. */
+    public function users(DigisacConnection $connection): array
+    {
+        return collect(self::rows($this->request($connection, 'GET', 'users', ['perPage' => 100])))
+            ->filter(fn ($user) => is_array($user) && ! empty($user['id']) && empty($user['archivedAt']) && empty($user['deletedAt']))
+            ->mapWithKeys(fn ($user) => [(string) $user['id'] => mb_substr((string) ($user['name'] ?? $user['id']), 0, 120)])->sort()->all();
+    }
+
     public static function rows(array $body): array
     {
         if (array_is_list($body)) return $body;
@@ -80,7 +88,7 @@ class DigisacClient
         $body = $this->request($connection, 'GET', 'contacts', [
             'where[serviceId]' => $connection->service_id,
             'where[data.number][$iLike]' => '%'.(str_starts_with($phone, '55') && in_array(strlen($phone), [12, 13], true) ? substr($phone, 2) : $phone).'%',
-            'perPage' => 40, 'include[0]' => 'thumbAvatar',
+            'perPage' => 40, 'include[0]' => 'thumbAvatar', 'include[1]' => 'currentTicket',
         ]);
         $matches = array_values(array_filter(self::rows($body), fn ($contact) => is_array($contact)
             && (string) ($contact['serviceId'] ?? '') === $connection->service_id

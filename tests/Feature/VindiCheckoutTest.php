@@ -137,6 +137,18 @@ class VindiCheckoutTest extends TestCase
         $this->assertSame('444',$this->subscription->fresh()->vindi_subscription_id);
     }
 
+    public function test_campaign_free_month_starts_the_vindi_subscription_one_month_later(): void
+    {
+        // Proposta assinada é travada no modelo; a campanha já vem gravada desde a abertura.
+        \Illuminate\Support\Facades\DB::table('proposals')->where('id',$this->subscription->proposal_id)->update(['free_months'=>1]);
+        $start=app(\App\Services\Domain\BillingSchedule::class)->firstRecurringBilling($this->subscription->proposal->accepted_at)->addMonthNoOverflow()->format('Y-m-d');
+        $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+        $this->billStatus='paid';
+        app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
+        Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/subscriptions')
+            && str_starts_with((string)$request['start_at'],$start.'T00:00:00'));
+    }
+
     public function test_scheduled_reconciliation_confirms_paid_entry_without_webhook(): void
     {
         $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);

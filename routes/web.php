@@ -126,6 +126,8 @@ Route::middleware(['auth','active'])->group(function () {
         Route::post('/catalogo/{version}/nova-versao',[CatalogController::class,'cloneVersion'])->middleware('role:central_admin')->name('catalog.clone');
         Route::get('/catalogo/{version}/editar',[CatalogController::class,'edit'])->middleware('role:central_admin')->name('catalog.edit');
         Route::post('/catalogo/{version}/editar',[CatalogController::class,'updateVersion'])->middleware('role:central_admin')->name('catalog.update');
+        Route::post('/catalogo/campanhas',[\App\Http\Controllers\CampaignController::class,'store'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.store');
+        Route::post('/catalogo/campanhas/{campaign}',[\App\Http\Controllers\CampaignController::class,'update'])->middleware(['role:central_admin','throttle:20,1'])->name('campaigns.update');
         Route::post('/propostas/{proposal}/link',[ProposalController::class,'link'])->middleware('role:central_admin,manager,sales')->name('proposals.link');
         Route::post('/propostas/{proposal}/papel',[ProposalController::class,'paper'])->middleware('role:central_admin,manager,sales')->name('proposals.issue-paper');
         Route::post('/propostas/{proposal}/tablet',[ProposalController::class,'tablet'])->middleware('role:central_admin,manager,sales')->name('proposals.tablet-sign');

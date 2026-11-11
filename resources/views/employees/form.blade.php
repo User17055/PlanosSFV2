@@ -8,6 +8,8 @@
 <label class="field span-2">Nome completo <span>*</span><input name="name" required maxlength="180" value="{{ old('name',$employee->name) }}"></label>
 <label class="field">Matrícula<input name="employee_code" maxlength="40" value="{{ old('employee_code',$employee->employee_code) }}"></label>
 <label class="field">Função<input name="job_title" maxlength="100" value="{{ old('job_title',$employee->job_title) }}"></label>
+@php $digisacOptions=$digisacUsers+($employee->digisac_user_id && !isset($digisacUsers[$employee->digisac_user_id]) ? [$employee->digisac_user_id=>'Usuário ligado (Digisac fora do ar agora)'] : []); @endphp
+@if($digisacOptions)<label class="field span-2">Usuário no Digisac<select name="digisac_user_id"><option value="">Não ligado</option>@foreach($digisacOptions as $digisacId=>$digisacName)<option value="{{ $digisacId }}" @selected((string)old('digisac_user_id',$employee->digisac_user_id)===(string)$digisacId)>{{ $digisacName }}</option>@endforeach</select><small>O lead da fila fica com esta pessoa quando ela puxa a conversa no Digisac.</small></label>@endif
 <label class="field">Telefone<input name="phone" maxlength="30" value="{{ old('phone',$employee->phone) }}"></label>
 <label class="field">Data de admissão<input type="date" name="hired_at" max="{{ now('America/Sao_Paulo')->toDateString() }}" value="{{ old('hired_at',$employee->hired_at?->toDateString()) }}"></label>
 <label class="field span-2">E-mail de acesso <span>*</span><input type="email" name="email" required maxlength="180" value="{{ old('email',$employee->email) }}"></label>

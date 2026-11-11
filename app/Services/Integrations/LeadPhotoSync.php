@@ -45,7 +45,7 @@ class LeadPhotoSync
      */
     public function syncPending(int $limit = 30): int
     {
-        $admin = DigisacConnection::whereNotNull('verified_at')->whereHas('user', fn ($q) => $q->where('role', 'central_admin')->where('active', true))->orderBy('id')->first();
+        $admin = DigisacConnection::admin();
         $leads = Lead::whereNotNull('phone')->where(fn ($q) => $q->whereNull('photo_synced_at')->orWhere('photo_synced_at', '<', now()->subDays(7)))
             ->orderByDesc('id')->limit($limit)->get();
         $checked = 0;

@@ -199,7 +199,7 @@ class LeadController extends Controller
         $leads = $query->when($status, fn ($w) => $w->where('status', $status))->orderByRaw("case when status = 'new' then 0 else 1 end")->orderByDesc('id')->paginate(20)->withQueryString();
         $canAssign = $seesAll && $user->canUse('leads.assign');
         return view('leads.index', compact('leads', 'counts', 'status', 'q', 'filterOptions', 'start', 'end', 'seesAll', 'canAssign') + [
-            'assignees' => $canAssign ? $leads->pluck('originating_franchise_id')->unique()->mapWithKeys(fn ($id) => [$id => $this->assignees((int) $id)]) : collect(),
+            'assignees' => $canAssign ? $leads->pluck('originating_franchise_id')->unique()->mapWithKeys(fn ($id) => [$id => Lead::assignees((int) $id)]) : collect(),
             'applied' => array_filter(['q' => $q] + Arr::only($input, array_keys(self::FILTERS))),
             'filtersOn' => count($chosen) + ($start ? 1 : 0),
             'intake' => $this->intakeStatus($request->user(), $access),
@@ -295,16 +295,8 @@ class LeadController extends Controller
     public function assign(Request $request, Lead $lead, AccessService $access)
     {
         $access->franchise($request->user(), (int) $lead->originating_franchise_id);
-        $data = $request->validate(['handled_by' => ['nullable', 'integer', Rule::in($this->assignees((int) $lead->originating_franchise_id)->pluck('id'))]]);
+        $data = $request->validate(['handled_by' => ['nullable', 'integer', Rule::in(Lead::assignees((int) $lead->originating_franchise_id)->pluck('id'))]]);
         $lead->update(['handled_by' => $data['handled_by'] ?? null]);
         return back()->with('success', 'Responsável atualizado.');
-    }
-
-    /** Quem pode ficar com um lead: conta ativa, com acesso à tela de leads e à unidade dele. */
-    private function assignees(int $franchiseId)
-    {
-        return User::where('active', true)->whereIn('role', User::AREAS['leads'][2])
-            ->where(fn ($q) => $q->where('role', 'central_admin')->orWhereHas('franchises', fn ($f) => $f->whereKey($franchiseId)->where('user_franchises.active', true)))
-            ->with('jobRole')->orderBy('name')->get()->filter->canOpen('leads')->values();
     }
 }

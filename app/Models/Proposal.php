@@ -6,11 +6,11 @@ use App\Services\Attribution\AttributionData;
 
 class Proposal extends DomainModel
 {
-    protected array $immutable = ['customer_id', 'pet_id', 'product_version_id', 'category', 'locked_at', 'snapshot', 'price_cents', 'originating_franchise_id', 'signature_method', 'requested_start_at', 'accepted_at', 'acceptance_evidence', ...AttributionData::FIELDS];
+    protected array $immutable = ['customer_id', 'pet_id', 'product_version_id', 'category', 'locked_at', 'snapshot', 'price_cents', 'originating_franchise_id', 'signature_method', 'requested_start_at', 'accepted_at', 'acceptance_evidence', 'campaign_id', 'free_months', ...AttributionData::FIELDS];
 
     protected function casts(): array
     {
-        return ['snapshot' => 'array', 'acceptance_evidence' => 'array', 'expires_at' => 'datetime', 'accepted_at' => 'datetime', 'locked_at' => 'datetime', 'requested_start_at' => 'datetime', 'link_expires_at' => 'datetime', 'link_revoked_at' => 'datetime', 'attribution_snapshot' => 'array', 'first_touch_at' => 'datetime', 'last_touch_at' => 'datetime', 'marketing_link_id' => 'integer', 'link_owner_id' => 'integer', 'referrer_customer_id' => 'integer', 'first_touch_id' => 'integer', 'last_touch_id' => 'integer'];
+        return ['snapshot' => 'array', 'acceptance_evidence' => 'array', 'expires_at' => 'datetime', 'accepted_at' => 'datetime', 'locked_at' => 'datetime', 'requested_start_at' => 'datetime', 'link_expires_at' => 'datetime', 'link_revoked_at' => 'datetime', 'attribution_snapshot' => 'array', 'first_touch_at' => 'datetime', 'last_touch_at' => 'datetime', 'marketing_link_id' => 'integer', 'link_owner_id' => 'integer', 'referrer_customer_id' => 'integer', 'first_touch_id' => 'integer', 'last_touch_id' => 'integer', 'campaign_id' => 'integer', 'free_months' => 'integer'];
     }
 
     public const STAGES = ['assinar' => 'Falta assinar', 'pagar' => 'Assinado, falta pagar', 'ativar' => 'Pago, falta ativar', 'ativo' => 'Plano ativo', 'encerrada' => 'Encerrada'];
@@ -67,6 +67,11 @@ class Proposal extends DomainModel
     public function productVersion()
     {
         return $this->belongsTo(ProductVersion::class);
+    }
+
+    public function campaign()
+    {
+        return $this->belongsTo(Campaign::class);
     }
 
     public function originatingFranchise()

@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{AuditLog, Franchise, JobRole, User};
+use App\Models\{AuditLog, DigisacConnection, Franchise, JobRole, User};
+use App\Services\Domain\DomainException;
+use App\Services\Integrations\DigisacClient;
+use Illuminate\Support\Facades\Cache;
 use App\Services\Reports\DashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,13 +40,22 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        return view('employees.form',['employee'=>new User(['role'=>'sales','active'=>true]),'roles'=>self::ROLES,'jobRoles'=>JobRole::orderBy('name')->get(),'franchises'=>Franchise::where('active',true)->orderBy('name')->get()]);
+        return view('employees.form',['employee'=>new User(['role'=>'sales','active'=>true]),'roles'=>self::ROLES,'jobRoles'=>JobRole::orderBy('name')->get(),'franchises'=>Franchise::where('active',true)->orderBy('name')->get(),'digisacUsers'=>$this->digisacUsers()]);
     }
 
     public function edit(User $employee)
     {
         abort_if($employee->role==='customer',404);
-        return view('employees.form',['employee'=>$employee->load('franchises'),'roles'=>self::ROLES,'jobRoles'=>JobRole::orderBy('name')->get(),'franchises'=>Franchise::where('active',true)->orderBy('name')->get()]);
+        return view('employees.form',['employee'=>$employee->load('franchises'),'roles'=>self::ROLES,'jobRoles'=>JobRole::orderBy('name')->get(),'franchises'=>Franchise::where('active',true)->orderBy('name')->get(),'digisacUsers'=>$this->digisacUsers()]);
+    }
+
+    /** Usuários do Digisac, lidos com a conexão do administrador; sem ela ou com o Digisac fora do ar, a lista fica vazia. */
+    private function digisacUsers(): array
+    {
+        $admin=DigisacConnection::admin();
+        if(!$admin) return [];
+        try { return Cache::remember('digisac-users-'.$admin->id,600,fn()=>app(DigisacClient::class)->users($admin)); }
+        catch(DomainException) { return []; }
     }
 
     public function store(Request $request) { return $this->save($request,new User); }
@@ -65,6 +77,7 @@ class EmployeeController extends Controller
             'franchise_ids'=>'required|array|min:1','franchise_ids.*'=>['required','integer','distinct',Rule::exists('franchises','id')->where('active',true)],
             'areas'=>'nullable|array','areas.*'=>['string',Rule::in(array_keys(User::AREAS))],
             'job_role_id'=>['nullable','integer',Rule::exists('job_roles','id')],
+            'digisac_user_id'=>['nullable','string','max:100',Rule::unique('users')->ignore($employee->id)],
         ]);
         // Com cargo, o perfil é o nível do cargo e as telas são as dele.
         $jobRole=empty($data['job_role_id'])?null:JobRole::find($data['job_role_id']);

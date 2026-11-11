@@ -2,6 +2,7 @@
 
 namespace App\Services\Domain;
 
+use App\Models\Campaign;
 use App\Models\Customer;
 use App\Models\Franchise;
 use App\Models\Invoice;
@@ -80,6 +81,18 @@ class ProposalService
         if ($version->product->category === 'package' && ($version->billing_cycle !== 'one_time' || ! $version->duration_months)) {
             throw new DomainException('PACKAGE_POLICY_PENDING', 'Pacotes exigem validade definida e cobrança única enquanto a política de dívida estiver pendente.', 422);
         }
+        // Campanha: no site entra sozinha a que vale para o site todo; na venda pela equipe, só a que o vendedor escolheu. Só plano mensal tem mensalidade para isentar.
+        $campaign = null;
+        if ($actor->role === 'customer') {
+            $campaign = Campaign::current()->where('whole_site', true)->orderByDesc('free_months')->first();
+        } elseif (! empty($data['campaign_id'])) {
+            $campaign = Campaign::current()->find($data['campaign_id'])
+                ?? throw new DomainException('CAMPAIGN_INVALID', 'Essa campanha não está em vigor. Escolha outra ou deixe sem campanha.', 422);
+        }
+        if ($campaign && $version->billing_cycle !== 'monthly') {
+            if ($actor->role !== 'customer') throw new DomainException('CAMPAIGN_INVALID', 'A campanha vale só para planos com mensalidade.', 422);
+            $campaign = null;
+        }
         $method = $data['signature_method'] ?? ($channel === 'presential' ? 'tablet' : 'digital');
         if (! in_array($method, ['digital', 'tablet', 'paper'], true) || ($channel !== 'presential' && $method !== 'digital')) {
             throw new DomainException('SIGNATURE_METHOD_INVALID', 'Método de assinatura incompatível com o canal.', 422);
@@ -92,7 +105,7 @@ class ProposalService
                 'originating_franchise_name' => $franchise->name, 'marketing_franchise_id' => $attribution->originatingFranchiseId]);
         }
 
-        return DB::transaction(function () use ($data, $actor, $pet, $version, $franchise, $channel, $method, $attributionValues) {
+        return DB::transaction(function () use ($data, $actor, $pet, $version, $franchise, $channel, $method, $attributionValues, $campaign) {
             Customer::lockForUpdate()->findOrFail($pet->customer_id);
             Pet::lockForUpdate()->findOrFail($pet->id);
             $proposal = Proposal::create(['number' => 'PR-'.now()->format('ymd').'-'.Str::upper(Str::random(6)),
@@ -100,8 +113,9 @@ class ProposalService
                 'originating_franchise_id' => $franchise->id, 'created_by' => $actor->id, 'category' => $version->product->category,
                 'channel' => $channel, 'prefill_by' => $data['prefill_by'] ?? 'seller', 'signature_method' => $method,
                 'status' => 'awaiting_acceptance', 'price_cents' => $version->price_cents, 'snapshot' => $this->snapshot($pet, $version),
-                'requested_start_at' => $data['requested_start_at'] ?? null, 'expires_at' => now()->addHours((int) config('plans.proposal_validity_hours', 48))] + $attributionValues);
-            Audit::record('proposal_created', $proposal, $actor, ['channel' => $channel]);
+                'requested_start_at' => $data['requested_start_at'] ?? null, 'expires_at' => now()->addHours((int) config('plans.proposal_validity_hours', 48)),
+                'campaign_id' => $campaign?->id, 'free_months' => $campaign?->free_months ?? 0] + $attributionValues);
+            Audit::record('proposal_created', $proposal, $actor, ['channel' => $channel] + ($campaign ? ['campaign_id' => $campaign->id, 'free_months' => $campaign->free_months] : []));
 
             return $proposal;
         }, 3);

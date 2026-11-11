@@ -33,6 +33,14 @@ class Lead extends DomainModel
         return $this->photo_path ? route('leads.chat.photo', $this).'?v='.$this->photo_synced_at?->timestamp : null;
     }
 
+    /** Quem pode ficar com um lead: conta ativa, com acesso à tela de leads e à unidade dele. */
+    public static function assignees(int $franchiseId)
+    {
+        return User::where('active', true)->whereIn('role', User::AREAS['leads'][2])
+            ->where(fn ($q) => $q->where('role', 'central_admin')->orWhereHas('franchises', fn ($f) => $f->whereKey($franchiseId)->where('user_franchises.active', true)))
+            ->with('jobRole')->orderBy('name')->get()->filter->canOpen('leads')->values();
+    }
+
     public function handler()
     {
         return $this->belongsTo(User::class, 'handled_by');
