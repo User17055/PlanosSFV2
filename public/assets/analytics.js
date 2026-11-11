@@ -115,6 +115,7 @@
     const max = Math.max(0, ...features.map(f => info(f).plans));
     const ranges = mapScale(max);
     mapLegend(host, ranges);
+    const names = []; // nomes por último, para nenhum bairro desenhado depois cobrir o texto
     features.forEach(feature => {
       const item = info(feature);
       const d = rings(feature.geometry).map(ring => ring.map((p, i) => `${i ? 'L' : 'M'}${project(p).map(n => n.toFixed(2)).join(',')}`).join(' ') + ' Z').join(' ');
@@ -130,11 +131,12 @@
       path.addEventListener('click', () => onSelect(item));
       path.addEventListener('keydown', e => { if (['Enter', ' '].includes(e.key)) { e.preventDefault(); onSelect(item); } });
       svg.append(path);
-      if (labels && item.label && (!isPoint || item.customers)) {
+      if (labels === 'plans' ? item.label && item.plans > 0 : labels && item.label && (!isPoint || item.customers)) {
         const box = bounds([feature]); const pos = project([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2]);
-        svg.append(make('text', { x: pos[0], y: pos[1], 'text-anchor': 'middle', 'font-size': 10 }, item.plans ? `${item.label} (${item.plans})` : item.label));
+        names.push(make('text', { x: pos[0], y: pos[1], 'text-anchor': 'middle', 'font-size': 10 }, item.plans ? `${item.label} (${item.plans})` : item.label));
       }
     });
+    svg.append(...names);
     host.replaceChildren(svg, tooltip);
   }
   async function json(url) { const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' }); if (!response.ok) throw new Error('Mapa temporariamente indisponível. Consulte os números ao lado.'); return response.json(); }
@@ -161,11 +163,11 @@
         const name = f.properties.name;
         const count = data.geo.neighborhoods.find(n => n.state === state && norm(n.city) === norm(city) && norm(n.name) === norm(name)) || { customers: 0, plans: 0 };
         return { ...count, name, label: name };
-      }, item => norm(item.name) === norm(data.neighborhood), item => filter(state, city, item.name), geo.features.length < 30);
+      }, item => norm(item.name) === norm(data.neighborhood), item => filter(state, city, item.name), geo.features.length < 30 ? true : 'plans');
       const matched = new Set(geo.features.map(f => norm(f.properties.name)));
       const uncovered = data.geo.neighborhoods.filter(n => norm(n.city) === norm(city) && n.state === state && !matched.has(norm(n.name))).reduce((sum, n) => sum + n.plans, 0);
       const note = document.createElement('p'); note.className = 'analytics-note';
-      note.textContent = `${geo.features[0].geometry.type === 'Point' ? 'Pontos de referência dos bairros.' : ''} ${uncovered ? `${uncovered} plano(s) fora da cobertura do mapa.` : ''}`.trim();
+      note.textContent = `${geo.approximate ? 'Divisão aproximada dos bairros (área urbana do IBGE e bairros do OpenStreetMap).' : geo.features[0].geometry.type === 'Point' ? 'Pontos de referência dos bairros.' : ''} ${uncovered ? `${uncovered} plano(s) fora da cobertura do mapa.` : ''}`.trim();
       if (note.textContent) host.after(note);
     } catch (error) { fail(host, error); neighborhoodsLoaded = false; }
   }
