@@ -47,6 +47,10 @@ class ActivationService
                 PetProductSlot::where('subscription_id', $s->id)->update(['state' => 'occupied']);
                 Audit::record($first ? 'subscription_activated' : 'subscription_regularized', $s, null, ['from' => $old, 'to' => $s->status]);
                 $this->outbox($s, $first ? 'activated' : 'regularized');
+                if ($first) {
+                    // Lead que virou cliente sai como "Finalizado"; se falhar, a ativação segue.
+                    try { app(LeadConversion::class)->fromSubscription($s); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('Lead não marcado como finalizado', ['subscription_id' => $s->id, 'error' => $e::class]); }
+                }
             }
 
             return ['eligible' => true, 'code' => 'ELIGIBLE', 'message' => 'Assinatura ativa.', 'impediments' => []];
