@@ -6,6 +6,7 @@ $money=fn($value)=>'R$ '.number_format($value/100,2,',','.');
 $number=fn($value)=>number_format($value,0,',','.');
 $regionCities=$geo['map_cities'];
 $go=fn($changes)=>route('dashboard',array_merge($filters,$changes));
+$dashboardData=['series'=>[],'geo'=>$geo,'state'=>$filters['state'] ?: 'SP','city'=>$filters['city'],'neighborhood'=>$filters['neighborhood'],'states'=>\App\Services\Reports\DashboardService::STATES,'mapUrl'=>url('/painel/malha'),'neighborhoodUrl'=>url('/painel/bairros'),'assets'=>asset('assets/maps')];
 $neighborhoods=collect($geo['neighborhoods'])->sortByDesc('plans')->take(8);
 $maxNeighborhood=max(1,$neighborhoods->max('plans'));
 $funnelBase=max(1,$summary['proposals_count']);
@@ -22,7 +23,7 @@ $funnelBase=max(1,$summary['proposals_count']);
 <label class="field">Categoria<select name="category"><option value="health_plan" @selected($filters['category']==='health_plan')>Planos de saúde</option><option value="package" @selected($filters['category']==='package')>Pacotes</option><option value="all" @selected($filters['category']==='all')>Planos e pacotes</option></select></label>
 <label class="field">Origem do cliente<select name="acquisition_source"><option value="">Todas as origens</option>@foreach(\App\Services\Attribution\TrackingSanitizer::sourceLabels() as $value=>$label)<option value="{{ $value }}" @selected($filters['acquisition_source']===$value)>{{ $label }}</option>@endforeach</select></label>
 <input type="hidden" name="state" value="{{ $filters['state'] }}">
-<label class="field">Cidade<select name="city"><option value="">Todas as cidades</option>@foreach($regionCities as $city)<option value="{{ $city['name'] }}" @selected(\App\Services\Reports\DashboardService::normalize($filters['city'])===\App\Services\Reports\DashboardService::normalize($city['name']))>{{ $city['name'] }}</option>@endforeach</select></label>
+<label class="field">Cidade<select name="city"><option value="">Todas as cidades</option>@foreach($regionCities as $city)<option data-state="{{ $city['state'] }}" value="{{ $city['name'] }}" @selected(\App\Services\Reports\DashboardService::normalize($filters['city'])===\App\Services\Reports\DashboardService::normalize($city['name']))>{{ $city['name'] }}</option>@endforeach</select></label>
 <label class="field">Bairro<input name="neighborhood" list="dashboard-neighborhood-options" maxlength="150" value="{{ $filters['neighborhood'] }}" placeholder="Todos"></label>
 <datalist id="dashboard-neighborhood-options">@foreach(collect($geo['neighborhoods'])->where('missing',false) as $neighborhood)<option value="{{ $neighborhood['name'] }}">{{ $neighborhood['city'] }}</option>@endforeach</datalist>
 @if(config('plans.demo'))<label class="field">Base de dados<select name="data_mode"><option value="real" @selected($filters['data_mode']==='real')>Dados reais</option><option value="demo" @selected($filters['data_mode']==='demo')>Demonstração</option></select></label>@else<input type="hidden" name="data_mode" value="real">@endif
@@ -51,6 +52,11 @@ $funnelBase=max(1,$summary['proposals_count']);
 <section class="card" id="produtos"><h2>Planos</h2>
 @forelse($plans as $plan)<div class="analytics-location-row"><div><strong>{{ $plan['name'] }}</strong><small>{{ $number($plan['sales']) }} fechado(s) no período</small></div><b>{{ $number($plan['active']) }}<small>ativo(s)</small></b></div>@empty<div class="analytics-empty">Nenhum plano no período.</div>@endforelse
 </section>
+<section class="card dash-simple-map" id="mapa"><h2>Mapa dos planos ativos</h2>
+<div class="analytics-map-toolbar"><div class="analytics-map-tabs" role="tablist" aria-label="Abrangência do mapa"><button type="button" role="tab" id="map-regional-tab" aria-controls="map-regional-panel" aria-selected="true" data-map-tab="regional">Prudente e região</button><button type="button" role="tab" id="map-bairros-tab" aria-controls="map-bairros-panel" aria-selected="false" data-map-tab="bairros">Bairros</button></div>@if($filters['city'])<div class="analytics-map-breadcrumb"><a href="{{ $go(['state'=>null,'city'=>null,'neighborhood'=>null]) }}">Prudente e região</a><span>›</span><span>{{ $filters['city'] }}</span></div>@endif</div>
+<div id="map-regional-panel" role="tabpanel" aria-labelledby="map-regional-tab"><div id="dashboard-region-map" class="analytics-map" aria-label="Mapa regional por município"><p class="analytics-loading">Carregando mapa regional…</p></div><div class="analytics-map-legend" data-map-legend aria-label="Legenda de planos ativos"></div></div>
+<div id="map-bairros-panel" role="tabpanel" aria-labelledby="map-bairros-tab" hidden><div id="dashboard-neighborhood-map" class="analytics-map" aria-label="Mapa de concentração por bairro"><p class="analytics-loading">Carregando bairros…</p></div><div class="analytics-map-legend" data-map-legend aria-label="Legenda de planos ativos"></div><p class="analytics-note map-credits"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></p></div>
+</section>
 <section class="card" id="territorio"><h2>Prudente e região</h2>
 @forelse(collect($geo['cities'])->take(6) as $city)<a class="analytics-location-row" href="{{ $go(['state'=>$city['state'],'city'=>$city['city'],'neighborhood'=>null]) }}"><div><strong>{{ $city['city'] }}</strong><small>{{ $number($city['customers']) }} tutor(es)</small></div><b>{{ $number($city['plans']) }}<small>plano(s) ativo(s)</small></b></a>@empty<div class="analytics-empty">Sem planos ativos na região.</div>@endforelse
 @if($geo['missing_address'])<p class="dash-simple-note">{{ $number($geo['missing_address']) }} plano(s) sem cidade no cadastro.</p>@endif
@@ -67,4 +73,6 @@ $funnelBase=max(1,$summary['proposals_count']);
 </section>
 </div>
 </div>
+<script type="application/json" id="dashboard-data">@json($dashboardData)</script>
+@push('scripts')<script defer src="{{ asset('assets/analytics.js') }}?v={{ filemtime(public_path('assets/analytics.js')) }}"></script>@endpush
 @endsection

@@ -67,7 +67,7 @@
     });
     host.replaceChildren(svg);
   }
-  chart();
+  if (document.getElementById('dashboard-revenue-chart')) chart();
   const mapPalette = ['#b9daee', '#76b4da', '#358ac0', '#08649a', '#14264b'];
   function mapScale(max) {
     const steps = Math.min(5, Math.max(0, max));
@@ -144,22 +144,26 @@
   let neighborhoodsLoaded = false;
   async function loadNeighborhoods() {
     const host = document.getElementById('dashboard-neighborhood-map');
-    if (!data.city) { fail(host, new Error('Selecione uma cidade para ver os bairros.')); return; }
+    // Sem cidade no filtro, abre nos bairros da cidade com mais planos (Presidente Prudente).
+    const top = [...data.geo.cities].sort((a, b) => b.plans - a.plans)[0];
+    const city = data.city || top?.city || '';
+    const state = data.city ? data.state : (top?.state || data.state);
+    if (!city) { fail(host, new Error('Ainda não há planos ativos com cidade para mostrar os bairros.')); return; }
     if (neighborhoodsLoaded) return;
     neighborhoodsLoaded = true;
     try {
       const catalog = await json(`${data.assets}/municipios.json`);
-      const code = Object.keys(catalog).find(key => data.states[catalog[key].state] === data.state && norm(catalog[key].name) === norm(data.city));
+      const code = Object.keys(catalog).find(key => data.states[catalog[key].state] === state && norm(catalog[key].name) === norm(city));
       if (!code) throw new Error('Cidade não localizada na malha. Confira a grafia no cadastro; o ranking de bairros permanece disponível.');
       const geo = await json(`${data.neighborhoodUrl}/${code}`);
       if (!geo.features.length) throw new Error(geo.message || 'Ainda sem base cartográfica de bairros para esta cidade. Consulte o ranking abaixo.');
       renderMap(host, geo.features, f => {
         const name = f.properties.name;
-        const count = data.geo.neighborhoods.find(n => n.state === data.state && norm(n.city) === norm(data.city) && norm(n.name) === norm(name)) || { customers: 0, plans: 0 };
+        const count = data.geo.neighborhoods.find(n => n.state === state && norm(n.city) === norm(city) && norm(n.name) === norm(name)) || { customers: 0, plans: 0 };
         return { ...count, name, label: name };
-      }, item => norm(item.name) === norm(data.neighborhood), item => filter(data.state, data.city, item.name), geo.features.length < 30);
+      }, item => norm(item.name) === norm(data.neighborhood), item => filter(state, city, item.name), geo.features.length < 30);
       const matched = new Set(geo.features.map(f => norm(f.properties.name)));
-      const uncovered = data.geo.neighborhoods.filter(n => norm(n.city) === norm(data.city) && n.state === data.state && !matched.has(norm(n.name))).reduce((sum, n) => sum + n.plans, 0);
+      const uncovered = data.geo.neighborhoods.filter(n => norm(n.city) === norm(city) && n.state === state && !matched.has(norm(n.name))).reduce((sum, n) => sum + n.plans, 0);
       const note = document.createElement('p'); note.className = 'analytics-note';
       note.textContent = `${geo.features[0].geometry.type === 'Point' ? 'Pontos de referência dos bairros.' : ''} ${uncovered ? `${uncovered} plano(s) fora da cobertura do mapa.` : ''}`.trim();
       if (note.textContent) host.after(note);

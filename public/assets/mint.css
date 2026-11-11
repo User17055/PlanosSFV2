@@ -2198,3 +2198,6 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-simplesvet h2{font-size:16px;margin:0 0 4px}
 .dash-simplesvet .dash-simple-note{margin:0 0 12px}
 .dash-simplesvet .analytics-location-row small{display:block;margin-top:2px;white-space:normal}
+/* Mapa de volta na Visão geral: ocupa a largura toda da grade */
+.dash-simple-grid>.dash-simple-map{grid-column:1/-1}
+.dash-simple-map .analytics-map-toolbar{margin-bottom:12px}
