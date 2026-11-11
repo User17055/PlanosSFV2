@@ -16,12 +16,13 @@ class PaymentReminder extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $p = $this->proposal;
-        $mail = (new MailMessage)->subject('Falta só o pagamento para ativar o seu plano · São Francisco')->greeting('Olá, '.$p->customer->name.'!')
-            ->line('Você assinou o '.$p->productVersion->name.' para '.$p->pet->name.', mas o pagamento da entrada ainda está em aberto. O plano só começa a valer depois dele.');
-        if ($p->free_months) {
-            $mail->line('Sua contratação está na campanha '.($p->campaign?->name ?? 'da São Francisco').': '.$p->free_months.' '.($p->free_months === 1 ? 'mensalidade grátis' : 'mensalidades grátis').' depois da entrada. Pague para garantir a promoção.');
-        }
-        return $mail->action('Pagar a entrada', $this->url)
-            ->line('Para sua segurança, vamos pedir o CPF do titular. Se você já pagou, desconsidere este e-mail.');
+        $entry = $p->subscription?->invoices()->where('is_initial', true)->first();
+        return (new MailMessage)->subject('Falta só o pagamento para ativar o plano de '.$p->pet->name.' · São Francisco')
+            ->view(['emails.payment-reminder', 'emails.payment-reminder-text'], [
+                'name' => explode(' ', trim($p->customer->name))[0], 'plan' => $p->productVersion->name, 'pet' => $p->pet->name,
+                'amount' => $entry ? 'R$ '.number_format($entry->amount_cents / 100, 2, ',', '.') : null,
+                'campaign' => $p->campaign?->name ?? 'Campanha São Francisco', 'freeMonths' => (int) $p->free_months,
+                'url' => $this->url, 'site' => config('site_portal.public_url'),
+            ]);
     }
 }

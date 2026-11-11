@@ -48,6 +48,9 @@ class PaymentReminderTest extends TestCase
             return true;
         });
         $this->get($url)->assertOk()->assertSee('pagar a entrada');
+        $html = (string) (new PaymentReminder($this->proposal->fresh(), $url))->toMail(new \Illuminate\Notifications\AnonymousNotifiable)->render();
+        $this->assertStringContainsString('Pagar a entrada', $html);
+        $this->assertStringContainsString('R$ 24,00', $html);
         $this->travel(2)->days();
         $this->assertCount(1, $reminders->due());
         $reminders->send($this->proposal->fresh());
