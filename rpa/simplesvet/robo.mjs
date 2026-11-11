@@ -52,8 +52,8 @@ async function login(page) {
     const field = document.querySelector('[name="cf-turnstile-response"]');
     return !field || field.value.length > 0;
   }, null, { timeout: 60000 }).catch(() => {
-    // O robô não tenta passar por captcha: uma pessoa entra uma vez com a conta do robô e a sessão volta a valer.
-    throw new Manual('O SimplesVet pediu a verificação de captcha no login do robô. Alguém precisa entrar uma vez com a conta do robô no SimplesVet.');
+    // O robô não tenta passar por captcha. Entrar com a conta do robô em outro computador não renova a sessão dele no servidor.
+    throw new Manual('O SimplesVet pediu captcha no login do robô, e ele não passa por captcha. Cadastre este tutor e pet à mão no SimplesVet, com as marcas do plano, e avise o suporte para renovar o acesso do robô.');
   });
   await page.locator('#btn_login').click();
   await page.waitForTimeout(4000);

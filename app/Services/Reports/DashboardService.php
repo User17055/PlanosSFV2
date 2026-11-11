@@ -108,8 +108,18 @@ class DashboardService
 
     public function matches(array $address,array $filters): bool
     {
-        foreach(['state','city','neighborhood'] as $key) if(!empty($filters[$key]) && self::normalize($address[$key]??'')!==self::normalize($filters[$key])) return false;
-        return true;
+        foreach(['state','city'] as $key) if(!empty($filters[$key]) && self::normalize($address[$key]??'')!==self::normalize($filters[$key])) return false;
+        return empty($filters['neighborhood']) || self::sameNeighborhood($address['neighborhood']??'',$filters['neighborhood']);
+    }
+
+    /** Bairro digitado sem o tipo ("Humberto Salvador") é o mesmo do mapa com o tipo ("Jardim Humberto Salvador"); tipos diferentes ("Vila" x "Parque Furquim") não. */
+    public static function sameNeighborhood(?string $a,?string $b): bool
+    {
+        $strip=fn(string $v)=>preg_replace('/^(jardim|vila|parque|residencial|conjunto habitacional|conjunto|nucleo habitacional|nucleo|chacaras?|loteamento|condominio|bairro)\s+/','',$v);
+        // "Jd." é "Jardim", "Vl." é "Vila" e assim por diante.
+        $full=fn(?string $v)=>preg_replace(['/^jd\.?\s+/','/^vl\.?\s+/','/^pq\.?\s+/','/^res\.?\s+/','/^(cj|conj)\.?\s+/'],['jardim ','vila ','parque ','residencial ','conjunto '],self::normalize($v));
+        [$a,$b]=[$full($a),$full($b)];
+        return $a===$b || ($strip($a)===$strip($b) && ($strip($a)===$a || $strip($b)===$b));
     }
 
     public function report(User $user,array $filters): array

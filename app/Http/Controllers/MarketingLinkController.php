@@ -32,7 +32,8 @@ class MarketingLinkController extends Controller
         // Controle da campanha de cada link: o de autocadastro leva a do vendedor; os demais seguem a do site todo.
         $campaigns=\App\Models\Campaign::whereIn('id',$marketingLinks->pluck('campaign_id')->filter())->get()->keyBy('id');
         $siteCampaign=\App\Models\Campaign::current()->where('whole_site',true)->orderByDesc('free_months')->first();
-        return view('marketing.index',compact('marketingLinks','urls','activity','franchises','owners','versions','referrers','campaigns','siteCampaign'));
+        $used=\App\Models\Proposal::whereIn('marketing_link_id',$marketingLinks->where('self_registration',true)->pluck('id'))->whereNotNull('accepted_at')->pluck('marketing_link_id')->flip();
+        return view('marketing.index',compact('marketingLinks','urls','activity','franchises','owners','versions','referrers','campaigns','siteCampaign','used'));
     }
 
     public function store(Request $request,MarketingLinkService $links,AccessService $access)
@@ -64,6 +65,13 @@ class MarketingLinkController extends Controller
 
     public function visit(Request $request,string $token,MarketingLinkService $links,AttributionService $attribution)
     {
+        // Link já usado: quem se cadastrou por ele volta para a própria conta; os demais veem o aviso.
+        $known=preg_match('/^[A-Za-z0-9]{64}$/D',$token) ? \App\Models\MarketingLink::where('token_hash',hash('sha256',$token))->first() : null;
+        if ($known && $links->used($known)) {
+            $owner=\App\Models\Proposal::where('marketing_link_id',$known->id)->whereNotNull('accepted_at')->value('customer_id');
+            if ($request->user()?->role==='customer' && (int)$request->user()->customer_id===(int)$owner) return redirect()->route('portal');
+            return response()->view('marketing.link-used',[],410);
+        }
         $link=$links->resolve($token);
         if ($link->self_registration && $link->product_version_id && $request->user() && $request->user()->role!=='customer') {
             $links->authorize($link,$request->user());

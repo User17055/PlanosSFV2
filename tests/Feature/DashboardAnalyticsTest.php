@@ -249,4 +249,13 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertCount(0,$report['insights']['referrals']);
         $this->assertFalse($report['insights']['origins']->contains('source','google'));
     }
+
+    public function test_neighborhood_typed_without_its_type_matches_the_map_but_different_types_do_not(): void
+    {
+        $same=[\App\Services\Reports\DashboardService::class,'sameNeighborhood'];
+        $this->assertTrue($same('Humberto Salvador','Jardim Humberto Salvador'));
+        $this->assertTrue($same('Jd. Itaipu','Jardim Itaipú'));
+        $this->assertFalse($same('Vila Furquim','Parque Furquim'));
+        $this->assertFalse($same('Centro','Vila Furquim'));
+    }
 }

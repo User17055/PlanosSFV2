@@ -84,6 +84,30 @@ class SelfRegistrationLinkTest extends TestCase
         $this->assertNotNull($site->id);
     }
 
+    public function test_link_becomes_used_after_someone_signs_and_only_that_person_gets_back_in(): void
+    {
+        $staff = User::where('role','sales')->firstOrFail();
+        $version = ProductVersion::where('status','published')->firstOrFail();
+        config(['site_portal.enabled'=>false]);
+        $this->actingAs($staff)->post(route('proposals.store'),['channel'=>'link','prefill_by'=>'customer','signature_method'=>'digital',
+            'product_version_id'=>$version->id,'originating_franchise_id'=>$staff->franchise_id]);
+        $link = MarketingLink::where('self_registration',true)->sole();
+        $this->post(route('logout'));
+        $this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertRedirect();
+        $this->post(route('register.store'),['product_version_id'=>$version->id,'name'=>'Primeira Pessoa','document'=>'52998224725',
+            'email'=>'primeira@example.test','phone'=>'18999990000','address'=>'Rua do Tutor, 10','password'=>'PeloLinkTeste@2026','password_confirmation'=>'PeloLinkTeste@2026',
+            'privacy_accepted'=>1,'pet_name'=>'Pet Um','pet_species'=>'dog','pet_birth_date'=>'2020-01-01'])->assertRedirect();
+        $this->post(route('logout'));
+        // Antes de assinar, o link continua aberto.
+        $this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertRedirect();
+        \Illuminate\Support\Facades\DB::table('proposals')->where('marketing_link_id',$link->id)->update(['accepted_at'=>now()]);
+        $this->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertStatus(410)->assertSee('Este link já foi usado');
+        $owner = User::where('email','primeira@example.test')->sole();
+        $this->actingAs($owner)->get(route('attribution_links.visit',['token'=>$link->token_encrypted]))->assertRedirect(route('portal'));
+        $this->post(route('logout'));
+        $this->actingAs($staff)->get(route('attribution_links.index'))->assertOk()->assertSee('Usado');
+    }
+
     public function test_registration_link_opens_the_site_signup_and_keeps_the_seller(): void
     {
         $key=str_repeat('test-site-key-',3);

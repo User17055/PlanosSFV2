@@ -166,13 +166,27 @@
       // O servidor manda guardar por 1 dia; "no-cache" faz o navegador conferir antes, para um mapa novo de bairros aparecer na hora.
       const geo = await json(`${data.neighborhoodUrl}/${code}`, 'no-cache');
       if (!geo.features.length) throw new Error(geo.message || 'Ainda sem base cartográfica de bairros para esta cidade. Consulte o ranking abaixo.');
-      renderMap(host, geo.features, f => {
-        const name = f.properties.name;
-        const count = data.geo.neighborhoods.find(n => n.state === state && norm(n.city) === norm(city) && norm(n.name) === norm(name)) || { customers: 0, plans: 0 };
-        return { ...count, name, label: name };
-      }, item => norm(item.name) === norm(data.neighborhood), item => filter(state, city, item.name), geo.features.length < 30 ? true : 'plans');
-      const matched = new Set(geo.features.map(f => norm(f.properties.name)));
-      const uncovered = data.geo.neighborhoods.filter(n => norm(n.city) === norm(city) && n.state === state && !matched.has(norm(n.name))).reduce((sum, n) => sum + n.plans, 0);
+      // Bairro digitado sem o tipo ("Humberto Salvador") cai no do mapa com o tipo ("Jardim Humberto Salvador"), se só um servir;
+      // tipos diferentes ("Vila" x "Parque Furquim") não se misturam. A mesma regra está em DashboardService::sameNeighborhood.
+      const full = v => norm(v).replace(/^jd\.?\s+/, 'jardim ').replace(/^vl\.?\s+/, 'vila ').replace(/^pq\.?\s+/, 'parque ').replace(/^res\.?\s+/, 'residencial ').replace(/^(cj|conj)\.?\s+/, 'conjunto ');
+      const bare = v => full(v).replace(/^(jardim|vila|parque|residencial|conjunto habitacional|conjunto|nucleo habitacional|nucleo|chacaras?|loteamento|condominio|bairro)\s+/, '');
+      const featureOf = name => {
+        const exact = geo.features.find(f => full(f.properties.name) === full(name));
+        if (exact) return exact.properties.name;
+        const found = geo.features.filter(f => bare(f.properties.name) === bare(name) && (bare(name) === full(name) || bare(f.properties.name) === full(f.properties.name)));
+        return found.length === 1 ? found[0].properties.name : null;
+      };
+      const counts = new Map();
+      const local = data.geo.neighborhoods.filter(n => n.state === state && norm(n.city) === norm(city));
+      local.forEach(n => {
+        const feature = featureOf(n.name);
+        if (!feature) return;
+        const sum = counts.get(feature) || { customers: 0, plans: 0 };
+        counts.set(feature, { customers: sum.customers + n.customers, plans: sum.plans + n.plans });
+      });
+      renderMap(host, geo.features, f => ({ ...(counts.get(f.properties.name) || { customers: 0, plans: 0 }), name: f.properties.name, label: f.properties.name }),
+        item => Boolean(data.neighborhood) && featureOf(data.neighborhood) === item.name, item => filter(state, city, item.name), geo.features.length < 30 ? true : 'plans');
+      const uncovered = local.filter(n => !featureOf(n.name)).reduce((sum, n) => sum + n.plans, 0);
       const note = document.createElement('p'); note.className = 'analytics-note';
       note.textContent = `${geo.approximate ? 'Divisão aproximada dos bairros (área urbana do IBGE e bairros do OpenStreetMap).' : geo.features[0].geometry.type === 'Point' ? 'Pontos de referência dos bairros.' : ''} ${uncovered ? `${uncovered} plano(s) fora da cobertura do mapa.` : ''}`.trim();
       if (note.textContent) host.after(note);

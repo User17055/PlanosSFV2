@@ -102,9 +102,15 @@ class MarketingLinkService
         return $link;
     }
 
+    /** Link de autocadastro é de uma pessoa só: depois que alguém assina por ele, ninguém mais se cadastra por ele. */
+    public function used(MarketingLink $link): bool
+    {
+        return $link->self_registration && \App\Models\Proposal::where('marketing_link_id', $link->id)->whereNotNull('accepted_at')->exists();
+    }
+
     public function isUsable(MarketingLink $link): bool
     {
-        return $link->status === 'active' && (! $link->expires_at || $link->expires_at->isFuture())
+        return $link->status === 'active' && (! $link->expires_at || $link->expires_at->isFuture()) && ! $this->used($link)
             && $link->originatingFranchise?->active && $link->owner?->active
             && in_array($link->owner->role, ['central_admin', 'manager', 'sales'], true)
             && $link->owner->hasFranchise($link->originating_franchise_id);
