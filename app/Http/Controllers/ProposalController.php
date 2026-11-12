@@ -143,7 +143,7 @@ class ProposalController extends Controller
         $email=$proposal->customer->email;
         if(!filter_var($email,FILTER_VALIDATE_EMAIL)) return false;
         try { \Illuminate\Support\Facades\Notification::route('mail',$email)->notify(new \App\Notifications\ProposalLink($proposal->loadMissing(['customer','pet','productVersion']),$url)); return true; }
-        catch(\Throwable $exception) { \Illuminate\Support\Facades\Log::warning('proposal_link_email_failed',['proposal_id'=>$proposal->id,'error_type'=>$exception::class]); return false; }
+        catch(\Throwable $exception) { \Illuminate\Support\Facades\Log::warning('proposal_link_email_failed',['proposal_id'=>$proposal->id,'error_type'=>$exception::class,'reason'=>mb_substr($exception->getMessage(),0,300)]); return false; }
     }
 
     public function selfie(Request $request,Proposal $proposal)

@@ -242,7 +242,7 @@ class PortalApiController extends Controller
                     $url=config('site_portal.public_url').'/area-do-cliente/redefinir-senha?'.http_build_query(['token'=>$token,'email'=>$user->email]);
                     $user->notify(new \App\Notifications\PortalPasswordReset($url));
                 });
-            } catch(\Throwable $e) { Log::warning('portal.password_mail_pending',['error_type'=>$e::class]); }
+            } catch(\Throwable $e) { Log::warning('portal.password_mail_pending',['error_type'=>$e::class,'reason'=>mb_substr($e->getMessage(),0,300)]); }
         }
         return response()->json(['message'=>'Se houver uma conta de cliente com esse e-mail, você receberá as instruções para redefinir a senha.']);
     }

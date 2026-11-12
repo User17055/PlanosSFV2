@@ -29,7 +29,7 @@ class PasswordResetController extends Controller
             try {
                 Password::sendResetLink(['email' => $user->email], fn (User $user, string $token) => $user->notify(new PortalPasswordReset(route('password.reset', ['token' => $token, 'email' => $user->email]))));
             } catch (\Throwable $e) {
-                Log::warning('password_reset_mail_failed', ['error_type' => $e::class]);
+                Log::warning('password_reset_mail_failed', ['error_type' => $e::class, 'reason' => mb_substr($e->getMessage(), 0, 300)]);
             }
         }
         return back()->with('status', 'Se houver um cadastro com esse e-mail, você vai receber o link em alguns minutos. Confira também a caixa de spam.');

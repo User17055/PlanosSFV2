@@ -175,7 +175,7 @@ class ContractService
             return true;
         } catch (\Throwable $exception) {
             ContractDocument::whereKey($document->id)->update(['customer_notified_at' => null]);
-            Log::warning('contract_copy_email_failed', ['document_id' => $document->id, 'error_type' => $exception::class]);
+            Log::warning('contract_copy_email_failed', ['document_id' => $document->id, 'error_type' => $exception::class, 'reason' => mb_substr($exception->getMessage(), 0, 300)]);
             return false;
         }
     }
