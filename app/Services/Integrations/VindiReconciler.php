@@ -13,12 +13,12 @@ class VindiReconciler
 {
     public function __construct(private VindiClient $client, private FinancialService $financial) {}
 
-    /** The webhook's paid flag and amounts are never used as financial evidence. */
-    public function reconcileBill(string $externalId, ?string $account = null): Invoice
+    /** The webhook's paid flag and amounts are never used as financial evidence. $listed is the same bill already read from the API listing. */
+    public function reconcileBill(string $externalId, ?string $account = null, ?array $listed = null): Invoice
     {
         $account ??= (string) config('integrations.vindi.provider_account', 'central');
         try {
-            $invoice = $this->applyCurrentBill($externalId, $account);
+            $invoice = $this->applyCurrentBill($externalId, $account, $listed);
         } catch (\Throwable $exception) {
             $this->markUncertain($externalId, $account);
             throw $exception;
@@ -37,12 +37,12 @@ class VindiReconciler
         }
     }
 
-    private function applyCurrentBill(string $externalId, string $account): Invoice
+    private function applyCurrentBill(string $externalId, string $account, ?array $listed = null): Invoice
     {
         if ($account !== config('integrations.vindi.provider_account', 'central')) {
             throw new IntegrationPendingException('A conta da fatura difere da credencial configurada.');
         }
-        $bill = $this->client->bill($externalId); // External IO occurs outside database transactions.
+        $bill = $listed ?? $this->client->bill($externalId); // External IO occurs outside database transactions.
         if ((string) ($bill['id'] ?? '') !== $externalId || empty($bill['updated_at'])) {
             throw new IntegrationPendingException('A API não devolveu uma fatura verificável.');
         }
@@ -164,17 +164,40 @@ class VindiReconciler
         if (! $subscription->vindi_subscription_id) {
             return $count;
         }
-        for ($page = 1; $page <= 100; $page++) {
-            $bills = $this->client->billsForSubscription((string) $subscription->vindi_subscription_id, $page);
-            foreach ($bills as $bill) {
-                $this->reconcileBill((string) $bill['id'], $subscription->provider_account);
+        // Uma consulta por rodada: as 50 faturas mais recentes já vêm completas na listagem. As mais antigas foram conferidas em rodadas anteriores.
+        foreach ($this->client->billsForSubscription((string) $subscription->vindi_subscription_id) as $bill) {
+            if (! $this->unchanged($bill, $subscription->provider_account)) {
+                $this->reconcileBill((string) $bill['id'], $subscription->provider_account, $bill);
                 $count++;
             }
-            if (count($bills) < 50) {
-                return $count;
-            }
         }
-        throw new IntegrationPendingException('Limite de paginação de conciliação atingido. Revisar histórico antes de continuar.');
+        $this->refreshChecked($subscription);
+        return $count;
+    }
+
+    /** Fatura que já está conferida aqui na mesma versão da Vindi: aplicar de novo só repetiria a auditoria. */
+    private function unchanged(array $bill, string $account): bool
+    {
+        $invoices = Invoice::where('provider_account', $account)->where('external_id', (string) ($bill['id'] ?? ''))->get();
+        try {
+            $updated = empty($bill['updated_at']) ? null : CarbonImmutable::parse($bill['updated_at'])->utc();
+        } catch (\Throwable) {
+            return false;
+        }
+        return $updated && $invoices->isNotEmpty() && $invoices->every(fn ($invoice) => $invoice->reconciliation_status === 'verified'
+            && $invoice->provider_updated_at && $invoice->provider_updated_at->gte($updated));
+    }
+
+    /** A rodada terminou sem divergência: o que já estava conferido continua valendo agora. Não promove nada que esteja pendente. */
+    private function refreshChecked(Subscription $subscription): void
+    {
+        $ids = Subscription::where('provider_account', $subscription->provider_account)
+            ->where('vindi_subscription_id', $subscription->vindi_subscription_id)->pluck('id');
+        DB::transaction(function () use ($subscription, $ids) {
+            // Mesma ordem de travas do domínio: cliente antes do contrato.
+            DB::table('customers')->where('id', $subscription->customer_id)->where('financial_verification_status', 'verified')->update(['financial_checked_at' => now()]);
+            DB::table('subscriptions')->whereIn('id', $ids)->where('financial_verification_status', 'verified')->update(['financial_checked_at' => now()]);
+        }, 3);
     }
 
     public static function decimalToCents(mixed $value): int

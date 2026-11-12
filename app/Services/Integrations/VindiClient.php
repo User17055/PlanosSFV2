@@ -47,8 +47,9 @@ class VindiClient
     public function billsForSubscription(string $id, int $page = 1): array
     {
         $this->assertIdentifier($id);
+        // Mais recentes primeiro: a conciliação agendada só precisa da primeira página.
         return $this->request()->get('bills', [
-            'query' => 'subscription_id='.$id, 'page' => max(1, $page), 'per_page' => 50,
+            'query' => 'subscription_id='.$id, 'page' => max(1, $page), 'per_page' => 50, 'sort_by' => 'created_at', 'sort_order' => 'desc',
         ])->throw()->json('bills') ?? [];
     }
 

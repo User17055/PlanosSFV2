@@ -10,19 +10,31 @@ use App\Services\Integrations\VindiReconciler;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Log;
 
 class ReconcileVindiSubscriptionJob implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
 
-    public int $tries = 3;
+    // Esperar a vez no limite por minuto não conta como falha; só erro de verdade conta.
+    public int $maxExceptions = 3;
     public int $timeout = 120;
-    public int $uniqueFor = 300;
+    public int $uniqueFor = 1500;
 
     public function __construct(public int $subscriptionId)
     {
         $this->onQueue('vindi');
+    }
+
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addMinutes(25);
+    }
+
+    public function middleware(): array
+    {
+        return [new RateLimited('vindi')];
     }
 
     public function uniqueId(): string

@@ -71,11 +71,11 @@ Artisan::command('plans:recover-events', function () {
 })->purpose('Recuperar inbox e outbox persistidas sem duplicar efeitos');
 
 Artisan::command('plans:reconcile',function() {
-    // Includes contracts whose entry was charged but whose monthly subscription is not open yet.
-    Subscription::where(fn($q)=>$q->whereNotNull('vindi_subscription_id')->orWhereHas('invoices',fn($i)=>$i->where('is_initial',true)->whereNotNull('external_id')))
-        ->chunkById(100,function($subscriptions) {
-        foreach($subscriptions as $subscription) ReconcileVindiSubscriptionJob::dispatch($subscription->id);
-    });
+    // Uma rodada por assinatura da Vindi, mesmo com vários pets nela; e cada contrato cuja entrada ainda está em aberto ou cuja mensalidade não abriu.
+    Subscription::whereNotNull('vindi_subscription_id')->groupBy('provider_account','vindi_subscription_id')->selectRaw('min(id) as id')->pluck('id')
+        ->merge(Subscription::whereHas('invoices',fn($i)=>$i->where('is_initial',true)->whereNotNull('external_id'))
+            ->where(fn($q)=>$q->whereNull('vindi_subscription_id')->orWhereHas('invoices',fn($i)=>$i->where('is_initial',true)->where('status','pending')))->pluck('id'))
+        ->unique()->each(fn($id)=>ReconcileVindiSubscriptionJob::dispatch((int)$id));
     $this->info('Conciliação encaminhada à fila financeira.');
 })->purpose('Conferir informações financeiras no provedor autorizado');
 
@@ -94,7 +94,8 @@ Artisan::command('plans:import-vindi-customers {--apply : Grava os cadastros; se
 })->purpose('Trazer da Vindi o cadastro de quem tem plano ativo, sem pet, contrato ou assinatura');
 
 Schedule::command('plans:recover-events')->everyFiveMinutes()->withoutOverlapping();
-Schedule::command('plans:reconcile')->everyFifteenMinutes()->withoutOverlapping();
+// A cada 30 minutos: a conferência vale 60, e as rodadas dividem o limite de consultas por minuto da Vindi com os avisos.
+Schedule::command('plans:reconcile')->everyThirtyMinutes()->withoutOverlapping();
 // 03:10 de Brasília: pega quem passou do último dia do mês sem pagar e quem teve o plano encerrado.
 Schedule::command('plans:sync-tudoprapet')->dailyAt('06:10')->withoutOverlapping();
 // 03:40 de Brasília: o que não chegou ao SimplesVet de dia (robô fora, aviso resolvido pela recepção) entra de novo.

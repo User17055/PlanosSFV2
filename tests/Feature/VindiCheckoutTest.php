@@ -317,6 +317,19 @@ class VindiCheckoutTest extends TestCase
         $monthly=Invoice::where('external_id','600')->orderBy('subscription_id')->get();
         $this->assertSame([[$owner->id,9900,'paid'],[$second->id,9900,'paid']],$monthly->map(fn($i)=>[$i->subscription_id,$i->amount_cents,$i->status])->all());
         $this->assertSame(2,\App\Models\Payment::whereIn('invoice_id',$monthly->pluck('id'))->count(),'Um pagamento por contrato, sem duplicar ao conciliar de novo.');
+        // Uma consulta por rodada: a fatura vem completa na listagem, sem buscar uma a uma.
+        $this->assertFalse(collect(Http::recorded())->contains(fn($pair)=>$pair[0]->method()==='GET' && str_ends_with((string)parse_url($pair[0]->url(),PHP_URL_PATH),'/bills/600')));
+        // Rodada sem mudança na Vindi: nada é reaplicado, e a conferência dos dois pets continua recente.
+        $audits=\App\Models\AuditLog::where('action','invoice_reconciled')->count();
+        $this->travel(40)->minutes();
+        $this->assertSame(0,$reconciler->reconcileSubscription($owner->fresh()));
+        $this->assertSame($audits,\App\Models\AuditLog::where('action','invoice_reconciled')->count());
+        $this->assertTrue($second->fresh()->financial_checked_at->gt(now()->subMinute()));
+        $this->assertTrue($owner->customer->fresh()->financial_checked_at->gt(now()->subMinute()));
+        // A rodada agendada passa uma vez pela assinatura da Vindi, não uma por pet.
+        \Illuminate\Support\Facades\Queue::fake();
+        $this->artisan('plans:reconcile')->assertSuccessful();
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\ReconcileVindiSubscriptionJob::class,1);
         // Item que não é de nenhum pet: nada é aplicado.
         $this->subscriptionBills[0]['id']=601; $this->subscriptionBills[0]['bill_items'][1]['product_item']['id']=9999;
         try { $reconciler->reconcileBill('601'); $this->fail('Item sem contrato deveria parar.'); } catch (IntegrationPendingException) {}
