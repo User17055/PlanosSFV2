@@ -96,7 +96,8 @@ class VindiReconciler
         if ($status === 'paid' && ! $paidAt) {
             throw new IntegrationPendingException('Fatura paga sem data de recebimento verificável; revisão necessária.');
         }
-        $dueAt = $this->instant((string) ($bill['due_at'] ?? ''));
+        // Faturas antigas pagas no cartão vêm sem vencimento na fatura; ele fica na cobrança.
+        $dueAt = $this->instant((string) (($bill['due_at'] ?? null) ?: data_get($bill, 'charges.0.due_at', '')));
         $result = null;
         foreach ($parts as [$subscription, $partAmount]) {
             $invoice = $invoices->firstWhere('subscription_id', $subscription->id) ?? DB::transaction(function () use ($subscription, $account, $externalId, $partAmount, $bill, $dueAt) {

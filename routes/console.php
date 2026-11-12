@@ -105,6 +105,21 @@ Artisan::command('plans:import-legacy {arquivo : JSON da conciliação (Vindi + 
 Schedule::command('plans:recover-events')->everyFiveMinutes()->withoutOverlapping();
 // A cada 30 minutos: a conferência vale 60, e as rodadas dividem o limite de consultas por minuto da Vindi com os avisos.
 Schedule::command('plans:reconcile')->everyThirtyMinutes()->withoutOverlapping();
+Artisan::command('plans:refresh-status',function(\App\Services\Domain\FinancialService $financial,\App\Services\Domain\ActivationService $activation) {
+    // A conciliação só reavalia o contrato quando a fatura muda na Vindi; o boleto que passa da carência parado, ou a dívida quitada noutro contrato, entra aqui.
+    $changed=0;
+    Subscription::whereNotNull('activated_at')->whereIn('status',['active','suspended'])->with('customer')->get()->groupBy('customer_id')
+        ->each(function($subs)use($financial,$activation,&$changed){
+            $blocked=$financial->customerStatus($subs->first()->customer)['blocked'];
+            foreach($subs->filter(fn($s)=>$blocked ? $s->status==='active' : $s->status==='suspended') as $s){
+                $activation->activate($s);
+                $changed+=(int)($s->fresh()->status!==$s->status);
+            }
+        });
+    $this->info($changed.' contrato(s) com a situação atualizada.');
+})->purpose('Suspender quem passou da carência sem pagar e devolver o plano de quem ficou em dia');
+// 06:20 de Brasília.
+Schedule::command('plans:refresh-status')->dailyAt('09:20')->withoutOverlapping();
 // 03:10 de Brasília: pega quem passou do último dia do mês sem pagar e quem teve o plano encerrado.
 Schedule::command('plans:sync-tudoprapet')->dailyAt('06:10')->withoutOverlapping();
 // 03:40 de Brasília: o que não chegou ao SimplesVet de dia (robô fora, aviso resolvido pela recepção) entra de novo.

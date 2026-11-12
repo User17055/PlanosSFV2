@@ -109,7 +109,7 @@ class DatabaseSeeder extends Seeder
         }
         $debt = $subscriptions[2];
         Invoice::create(['subscription_id' => $debt->id, 'customer_id' => $debt->customer_id, 'originating_franchise_id' => $anaJacinta->id,
-            'competence_start' => now()->subDays(15), 'competence_end' => now()->addDays(15), 'due_at' => now()->subDays(3), 'amount_cents' => $debt->price_cents,
+            'competence_start' => now()->subDays(15), 'competence_end' => now()->addDays(15), 'due_at' => now()->subDays(8), 'amount_cents' => $debt->price_cents,
             'status' => 'pending', 'reconciliation_status' => 'verified', 'provider_status' => 'demo_pending']);
         app(ActivationService::class)->activate($debt->fresh());
         $consult = $essential->benefitRules()->where('code', 'CONSULTA')->firstOrFail();

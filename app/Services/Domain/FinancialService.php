@@ -20,7 +20,7 @@ class FinancialService
         $staleBefore = now()->subMinutes((int) config('plans.financial_max_age_minutes', 60));
         $overdue = Invoice::query()->where('customer_id', $customer->id)
             ->whereHas('subscription', fn ($q) => $q->where('category', 'health_plan'))
-            ->whereNotIn('status', ['cancelled', 'refunded'])->where('due_at', '<', now())
+            ->whereNotIn('status', ['cancelled', 'refunded'])->where('due_at', '<', now()->subDays((int) config('plans.overdue_grace_days', 5)))
             ->whereColumn('paid_cents', '<', 'amount_cents')->get()->sum(fn ($i) => $i->outstanding_cents);
         $pending = $customer->financial_verification_status !== 'verified' || ! $customer->financial_checked_at
             || $customer->financial_checked_at->lt($staleBefore)

@@ -86,11 +86,17 @@ class LegacyImportTest extends TestCase
         app(ActivationService::class)->activate($plan);
         $this->assertSame('active', $plan->fresh()->status);
         $this->assertFalse(app(\App\Services\Integrations\TudoPraPetMembership::class)->desired($plan->customer));
-        // Atraso de verdade suspende, como em qualquer plano.
-        Invoice::create(['subscription_id' => $plan->id, 'customer_id' => $plan->customer_id, 'originating_franchise_id' => $plan->originating_franchise_id,
-            'amount_cents' => 5200, 'due_at' => now()->subDays(10), 'status' => 'pending', 'reconciliation_status' => 'verified']);
+        // Até 5 dias de atraso é carência; depois suspende, como em qualquer plano (o passe diário pega o boleto parado), e volta quando quita.
+        $bill = Invoice::create(['subscription_id' => $plan->id, 'customer_id' => $plan->customer_id, 'originating_franchise_id' => $plan->originating_franchise_id,
+            'amount_cents' => 5200, 'due_at' => now()->subDays(3), 'status' => 'pending', 'reconciliation_status' => 'verified']);
         app(ActivationService::class)->activate($plan);
-        $this->assertSame('suspended', $plan->fresh()->status);
+        $this->assertSame('active', $plan->fresh()->status);
+        $bill->update(['due_at' => now()->subDays(10)]);
+        $this->artisan('plans:refresh-status')->expectsOutput('2 contrato(s) com a situação atualizada.')->assertSuccessful();
+        $this->assertSame(['suspended', 'suspended'], Subscription::where('customer_id', $plan->customer_id)->whereNotNull('activated_at')->orderBy('id')->pluck('status')->all(), 'Atraso no plano bloqueia também o pacote do cliente.');
+        $bill->update(['paid_cents' => 5200, 'status' => 'paid']);
+        $this->artisan('plans:refresh-status')->expectsOutput('2 contrato(s) com a situação atualizada.')->assertSuccessful();
+        $this->assertSame('active', $plan->fresh()->status, 'Quitou: o plano antigo volta mesmo com a conferência da Vindi ainda por rodar.');
     }
 
     public function test_team_chooses_the_pet_from_the_dashboard_and_the_contract_is_born_linked(): void

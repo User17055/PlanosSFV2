@@ -3,6 +3,8 @@
 return [
     'demo' => (bool) env('APP_DEMO', false),
     'financial_max_age_minutes' => (int) env('FINANCIAL_MAX_AGE_MINUTES', 1440),
+    // Dias depois do vencimento antes de bloquear: boleto compensando, cartão em nova tentativa.
+    'overdue_grace_days' => (int) env('OVERDUE_GRACE_DAYS', 5),
     'proposal_validity_hours' => (int) env('PROPOSAL_VALIDITY_HOURS', 48),
     'reservation_minutes' => (int) env('BENEFIT_RESERVATION_MINUTES', 30),
     'commercial_approved' => (bool) env('COMMERCIAL_RULES_APPROVED', false),

@@ -214,7 +214,7 @@ class DomainRulesTest extends TestCase
         $s = $this->active();
         $second = Pet::create(['customer_id' => $this->customer->id, 'name' => 'Outro pet', 'species' => 'cat', 'birth_date' => now()->subYears(3)->toDateString()]);
         $other = $this->signed($this->version, $second);
-        $debt = $this->invoice($other, -1);
+        $debt = $this->invoice($other, -6);
         $debt->update(['originating_franchise_id' => $this->b->id]);
         $decision = app(EligibilityService::class)->benefit($s, $this->rule, $this->a->id);
         $this->assertFalse($decision['eligible']);
@@ -226,9 +226,10 @@ class DomainRulesTest extends TestCase
     {
         $s = $this->active();
         $this->invoice($s, 3);
-        $this->assertTrue(app(EligibilityService::class)->benefit($s, $this->rule, $this->a->id)['eligible']);
-        $debt1 = $this->invoice($s, -1);
-        $debt2 = $this->invoice($s, -2);
+        $this->invoice($s, -4);
+        $this->assertTrue(app(EligibilityService::class)->benefit($s, $this->rule, $this->a->id)['eligible'], 'Até 5 dias de atraso ainda é carência.');
+        $debt1 = $this->invoice($s, -6);
+        $debt2 = $this->invoice($s, -7);
         $this->pay($debt1);
         $this->assertTrue(app(FinancialService::class)->customerStatus($this->customer->fresh())['blocked']);
         $this->pay($debt2);
@@ -269,7 +270,7 @@ class DomainRulesTest extends TestCase
     {
         $s = $this->active();
         $u = app(BenefitService::class)->reserve($s, $this->rule, $this->admin, $this->a->id, 1, 'reserve');
-        $this->invoice($s, -1);
+        $this->invoice($s, -6);
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('mensalidade vencida');
         app(BenefitService::class)->consume($u, $this->admin);
