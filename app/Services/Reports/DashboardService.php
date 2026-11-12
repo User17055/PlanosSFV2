@@ -35,10 +35,17 @@ class DashboardService
         return preg_replace('/^plano /','',self::normalize(self::planLabel($name)));
     }
 
-    /** Nome "Plano …" ou "Pacote …" quando algum dos nomes do grupo o tem. */
-    private static function planDisplay($names): string
+    private ?array $planNames=null;
+
+    /** Nome "Plano …" ou "Pacote …", com acento: o nome da Vindi em maiúsculas ("PLANO ECONOMICO") dá lugar ao do cadastro de planos daqui. */
+    private function planDisplay($names): string
     {
-        return collect($names)->map(fn($name)=>self::planLabel($name))->sortByDesc(fn($name)=>(int)preg_match('/^(plano|pacote)\b/iu',$name)*2+(int)($name!==mb_strtoupper($name)))->first();
+        $best=fn($names)=>collect($names)->map(fn($name)=>self::planLabel($name))->sortByDesc(fn($name)=>(int)($name!==mb_strtoupper($name))*2+(int)preg_match('/^(plano|pacote)\b/iu',$name))->first();
+        $this->planNames??=Product::pluck('name')->groupBy(fn($name)=>self::planKey($name))->map(fn($group)=>$best($group))->all();
+        $names=collect($names);
+        $name=$best($names->concat([$this->planNames[self::planKey((string)$names->first())]??$names->first()]));
+        // "Econômico" da venda nova ao lado de "PLANO ECONOMICO" da Vindi: fica "Plano Econômico", como os demais.
+        return !preg_match('/^(plano|pacote)\b/iu',$name) && $names->contains(fn($n)=>preg_match('/^plano\b/iu',(string)$n)) ? 'Plano '.$name : $name;
     }
 
     /** Cancelamentos lidos da Vindi: só na carteira inteira e sem os filtros que eles não têm (vendedor, produto, região, origem). */
@@ -244,7 +251,7 @@ class DashboardService
             // Mesmo plano da base antiga ("Plano Econômico") e da venda nova ("Econômico"), e suas variações, numa linha só, com o nome "Plano …".
             'plans'=>collect($planRows)->groupBy(fn($row)=>self::planKey($row['name']))
                 ->map(fn($rows,$key)=>collect(['sales','sold_cents','active','mrr_cents','received_cents','cancelled','month_expected_cents'])->mapWithKeys(fn($k)=>[$k=>$rows->sum($k)])
-                    ->put('name',self::planDisplay($rows->pluck('name')))->put('slot',$slots[$key]??null)->all())
+                    ->put('name',$this->planDisplay($rows->pluck('name')))->put('slot',$slots[$key]??null)->all())
                 ->sortByDesc($filters['base']==='gerais'?'active':'sales')->values(),
             'ranking'=>collect($sellerRows)->sortByDesc('sales')->values()->take(10),
             'recentProposals'=>$newOnly(clone $geoBase)->with(['customer:id,name','pet:id,name','productVersion:id,name','originatingFranchise:id,name'])->latest()->take(6)->get(),
@@ -300,7 +307,7 @@ class DashboardService
             'received_cents'=>array_sum(array_column($months,'received_cents')),'with_vindi'=>(bool)$vindi,
             'cancellations'=>['period_count'=>$period->count(),'period_lost_cents'=>(int)$period->sum('cents'),'count'=>$gone->count(),'lost_cents'=>(int)$gone->sum('cents'),
                 'replaced'=>array_sum(array_column($months,'replaced')),'churn'=>$churns?round(array_sum($churns)/count($churns),1):null,'tenure'=>$tenure,
-                'plans'=>$gone->groupBy(fn($r)=>self::planKey($r['plan']))->map(fn($g)=>['name'=>self::planDisplay($g->pluck('plan')),'count'=>$g->count(),'lost_cents'=>(int)$g->sum('cents')])->sortByDesc('count')->values()->take(6)->all()]];
+                'plans'=>$gone->groupBy(fn($r)=>self::planKey($r['plan']))->map(fn($g)=>['name'=>$this->planDisplay($g->pluck('plan')),'count'=>$g->count(),'lost_cents'=>(int)$g->sum('cents')])->sortByDesc('count')->values()->take(6)->all()]];
     }
 
     private function portfolioInsights(array $filters,$active,Builder $subscriptions,Builder $invoices,Builder $payments,array $bounds,$sales): array

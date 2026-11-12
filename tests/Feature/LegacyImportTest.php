@@ -142,7 +142,7 @@ class LegacyImportTest extends TestCase
                 'product_items' => [$item(7001, 'Plano Super Econômico', '48.0')]],
             // Cliente que saiu antes da importação; "GASTOS EXTRAS" não é pet.
             ['id' => 701, 'customer' => ['id' => 'v9'], 'plan' => ['name' => 'PLANO ECONOMICO FELINO'], 'start_at' => '2025-06-01T00:00:00-03:00', 'cancel_at' => '2026-06-15T09:00:00-03:00',
-                'product_items' => [$item(7101, 'Plano Econômico Felino', '24.0'), $item(7102, 'GASTOS EXTRAS', '30.0')]],
+                'product_items' => [$item(7101, 'PLANO ECONOMICO FELINO', '24.0'), $item(7102, 'GASTOS EXTRAS', '30.0')]],
             ['id' => 702, 'customer' => ['id' => 'v9'], 'plan' => ['name' => 'teste'], 'start_at' => '2025-06-01T00:00:00-03:00', 'cancel_at' => '2026-06-15T09:00:00-03:00', 'product_items' => [$item(7201, 'Plano A', '1.0')]],
         ];
         \Illuminate\Support\Facades\Http::fake(fn ($request) => $request->method() === 'GET' && str_contains($request->url(), '/subscriptions') ? \Illuminate\Support\Facades\Http::response(['subscriptions' => $canceled]) : \Illuminate\Support\Facades\Http::response([], 500));
@@ -158,6 +158,8 @@ class LegacyImportTest extends TestCase
         $this->assertSame('active', Subscription::where('vindi_product_item_id', '9003')->value('status'), 'O pacote de outra assinatura continua.');
 
         // No painel, quem saiu conta uma vez só (o 9001 pelo contrato daqui), e a assinatura refeita não conta.
+        // O nome em maiúsculas da Vindi dá lugar ao do cadastro de planos daqui.
+        Product::create(['name' => 'Econômico Felino', 'code' => 'SF-FEL', 'category' => 'health_plan', 'active' => true]);
         $dashboard = app(\App\Services\Reports\DashboardService::class);
         $c = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['date_from' => '2026-01-01', 'date_to' => now()->toDateString()]))['growth']['cancellations'];
         $this->assertSame([3, 1], [$c['count'], $c['replaced']]);
