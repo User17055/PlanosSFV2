@@ -181,7 +181,7 @@ class DashboardAnalyticsTest extends TestCase
     {
         $this->sale();$cat=$this->sale();$cat->pet->update(['species'=>'cat']);
         $pending=$this->sale();$pending->update(['status'=>'awaiting_regularization']);
-        $cancelled=$this->sale();$cancelled->update(['status'=>'cancelled','cancelled_at'=>now()]);
+        $cancelled=$this->sale();$cancelled->update(['status'=>'cancelled','cancelled_at'=>now(),'activated_at'=>now()->subMonth()]);
         $report=$this->report($this->admin);
         $this->assertSame(['dog'=>1,'cat'=>1],$report['insights']['species']);
         $this->assertSame(2,$report['summary']['active_count']);
@@ -212,7 +212,7 @@ class DashboardAnalyticsTest extends TestCase
         $one=$this->sale();$this->payment($this->invoice($one),6000);
         $product=Product::create(['name'=>'Segundo plano','code'=>'SECOND','category'=>'health_plan']);
         $this->version=ProductVersion::create(['product_id'=>$product->id,'version'=>1,'name'=>'Segundo','price_cents'=>20000,'billing_cycle'=>'monthly','species'=>['dog'],'contract_template'=>'Condições','is_demo'=>false]);
-        $two=$this->sale();$this->payment($this->invoice($two),4000);$two->update(['status'=>'cancelled','cancelled_at'=>now(),'cancellation_reason'=>'Solicitação do titular']);
+        $two=$this->sale();$this->payment($this->invoice($two),4000);$two->update(['status'=>'cancelled','cancelled_at'=>now(),'activated_at'=>now()->subMonth(),'cancellation_reason'=>'Solicitação do titular']);
         $ended=$this->sale(null,null,null,['accepted_at'=>'2026-09-01 12:00:00']);$ended->update(['status'=>'ended','cancelled_at'=>now()]);
         $report=$this->report($this->admin);
         $this->assertSame(1,$report['insights']['best_sales']);$this->assertCount(2,$report['insights']['best_sellers']);
@@ -283,7 +283,7 @@ class DashboardAnalyticsTest extends TestCase
         $growth=$general['growth'];
         $this->assertCount(12,$growth['months']);
         $this->assertSame([1,10000],[$growth['start']['active'],$growth['start']['mrr_cents']]);
-        $this->assertSame(['active'=>2,'mrr_cents'=>20000,'entered'=>1,'left'=>0],array_diff_key(end($growth['months']),['month'=>1]));
+        $this->assertSame(['active'=>2,'mrr_cents'=>20000,'entered'=>1,'left'=>0],array_intersect_key(end($growth['months']),array_flip(['active','mrr_cents','entered','left'])));
         $this->assertSame([1,10000,100.0],[$growth['active_delta'],$growth['mrr_delta_cents'],$growth['active_growth']]);
         $this->assertSame([0,1],[$new['growth']['start']['active'],end($new['growth']['months'])['active']]);
         // O crescimento segue o período escolhido no filtro.

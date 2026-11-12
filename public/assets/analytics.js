@@ -68,6 +68,122 @@
     host.replaceChildren(svg);
   }
   if (document.getElementById('dashboard-revenue-chart')) chart();
+
+  // Gráficos do painel (crescimento, entradas e saídas, recebido, cancelamentos): SVG na largura real da tela, com dica ao
+  // passar o mouse ou tocar. A tabela "Ver mês a mês" traz os mesmos números.
+  const whole = (value, cents) => cents ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value / 100) : new Intl.NumberFormat('pt-BR').format(value);
+  const short = (value, cents) => new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1, ...(cents ? { style: 'currency', currency: 'BRL' } : {}) }).format(cents ? value / 100 : value);
+  const niceMax = value => { if (value <= 0) return 1; const p = 10 ** Math.floor(Math.log10(value)); return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(n => n * p >= value) * p; };
+  // Cantos de 4px só na ponta do dado; a base fica reta, encostada na linha do zero.
+  const bar = (x, y, w, h, up) => {
+    if (h <= 0.5) return '';
+    const r = Math.min(4, w / 2, h);
+    return up ? `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
+      : `M${x},${y}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w - r}Q${x + w},${y + h} ${x + w},${y + h - r}V${y}Z`;
+  };
+  const percent = value => value === null || value === undefined ? '—' : `${String(value).replace('.', ',')}%`;
+  const monthCharts = {
+    growth: { height: 260, area: true, series: [{ key: 'active', color: '--blue' }],
+      tip: m => [['Na carteira', whole(m.active), '--blue'], ['Receita da carteira', whole(m.mrr_cents, true), '--green'], ['Entraram', whole(m.entered), '--aqua'], ['Saíram', whole(m.left), '--red']] },
+    flow: { height: 170, series: [{ key: 'entered', color: '--aqua' }, { key: 'left', color: '--red', down: true }],
+      tip: m => [['Entraram', whole(m.entered), '--aqua'], ['Saíram', whole(m.left), '--red']] },
+    received: { height: 230, label: true, series: [{ key: 'received_cents', color: '--violet', cents: true }],
+      tip: m => [['Recebido', whole(m.received_cents, true), '--violet']] },
+    cancel: { height: 200, label: true, series: [{ key: 'left', color: '--red' }],
+      tip: m => [['Saíram', whole(m.left), '--red'], ['Taxa de cancelamento', percent(m.churn), '--orange'], ['Receita perdida', `${whole(m.lost_cents, true)}/mês`, '--red'], ...(m.replaced ? [['Continuaram com outra assinatura', whole(m.replaced), '--muted']] : [])] },
+  };
+  function monthChart(host, config) {
+    const months = data.months || [];
+    if (!months.length) return;
+    if (months.every(m => config.series.every(s => !m[s.key]))) {
+      const empty = document.createElement('p'); empty.className = 'analytics-empty'; empty.textContent = `Nada para mostrar de ${months[0].month} a ${months.at(-1).month}.`;
+      host.classList.add('is-empty'); host.replaceChildren(empty); return;
+    }
+    const color = name => getComputedStyle(host).getPropertyValue(name).trim();
+    let drawnWidth = 0, hideTip = () => {};
+    const draw = () => {
+      const W = Math.round(host.clientWidth);
+      if (!W || W === drawnWidth) return;
+      drawnWidth = W;
+      const H = config.height, left = 48, right = 16, top = 22, bottom = 28, plotH = H - top - bottom;
+      const up = config.series.filter(s => !s.down), down = config.series.filter(s => s.down);
+      const cents = Boolean(up[0].cents);
+      const maxUp = niceMax(Math.max(0, ...months.flatMap(m => up.map(s => m[s.key]))));
+      const maxDown = down.length ? niceMax(Math.max(0, ...months.flatMap(m => down.map(s => m[s.key])))) : 0;
+      const zero = top + plotH * maxUp / (maxUp + maxDown);
+      const yUp = v => zero - v * (zero - top) / maxUp;
+      const yDown = v => zero + v * (top + plotH - zero) / (maxDown || 1);
+      const band = (W - left - right) / months.length;
+      const cx = i => left + band * (i + 0.5);
+      const svg = make('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, 'aria-hidden': 'true', focusable: 'false' });
+      // Três linhas finas de grade, com o valor à esquerda; a do zero é a base.
+      [[maxUp, yUp(maxUp)], [maxUp / 2, yUp(maxUp / 2)], [0, zero], ...(down.length ? [[-maxDown, yDown(maxDown)]] : [])].forEach(([value, y]) => {
+        svg.append(make('line', { x1: left, x2: W - right, y1: y, y2: y, class: value === 0 ? 'dash-axis' : 'dash-grid' }));
+        svg.append(make('text', { x: left - 8, y: y + 4, 'text-anchor': 'end', class: 'dash-tick' }, value === 0 ? '0' : `${value < 0 ? '−' : ''}${short(Math.abs(value), cents)}`));
+      });
+      // Meses: no celular, só alguns, sempre com o último.
+      const every = W < 560 ? Math.ceil(months.length / 5) : 1;
+      months.forEach((m, i) => { if ((months.length - 1 - i) % every === 0) svg.append(make('text', { x: cx(i), y: H - 8, 'text-anchor': 'middle', class: 'dash-tick' }, m.month)); });
+      const marks = [];
+      if (config.area) {
+        const s = up[0], points = months.map((m, i) => [cx(i), yUp(m[s.key])]);
+        const id = `area-${Math.random().toString(36).slice(2)}`;
+        const gradient = make('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
+        gradient.append(make('stop', { offset: '0', 'stop-color': color(s.color), 'stop-opacity': '0.30' }), make('stop', { offset: '1', 'stop-color': color(s.color), 'stop-opacity': '0.02' }));
+        const defs = make('defs'); defs.append(gradient); svg.append(defs);
+        const line = points.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('');
+        svg.append(make('path', { d: `${line}L${points.at(-1)[0].toFixed(1)},${zero}L${points[0][0].toFixed(1)},${zero}Z`, fill: `url(#${id})` }));
+        svg.append(make('path', { d: line, fill: 'none', stroke: color(s.color), 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+        const last = points.at(-1);
+        svg.append(make('circle', { cx: last[0], cy: last[1], r: 5, fill: color(s.color), stroke: '#fff', 'stroke-width': 2 }));
+        svg.append(make('text', { x: last[0] - 10, y: last[1] - 12, 'text-anchor': 'end', class: 'dash-value' }, whole(months.at(-1)[s.key], s.cents)));
+      } else {
+        const w = Math.max(4, Math.min(30, band * 0.62));
+        months.forEach((m, i) => {
+          const x = cx(i) - w / 2;
+          up.forEach(s => { const y = yUp(m[s.key]); marks.push(make('path', { d: bar(x, y, w, zero - y, true), fill: color(s.color), class: 'dash-bar', 'data-i': i })); });
+          down.forEach(s => { marks.push(make('path', { d: bar(x, zero, w, yDown(m[s.key]) - zero, false), fill: color(s.color), class: 'dash-bar', 'data-i': i })); });
+        });
+        svg.append(...marks);
+        // Rótulo direto só no maior mês; o resto fica na dica e na tabela.
+        if (config.label) {
+          const s = up[0], values = months.map(m => m[s.key]), top3 = values.indexOf(Math.max(...values));
+          if (values[top3] > 0) svg.append(make('text', { x: top3 === months.length - 1 ? cx(top3) + w / 2 : cx(top3), y: yUp(values[top3]) - 7, 'text-anchor': top3 === months.length - 1 ? 'end' : 'middle', class: 'dash-value' }, short(values[top3], s.cents)));
+        }
+      }
+      const cross = make('line', { y1: top, y2: top + plotH, class: 'dash-cross', visibility: 'hidden' });
+      const dot = make('circle', { r: 5, fill: color(up[0].color), stroke: '#fff', 'stroke-width': 2, visibility: 'hidden' });
+      svg.append(cross, dot);
+      const tip = document.createElement('div'); tip.className = 'dash-tip'; tip.hidden = true;
+      const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); marks.forEach(mark => mark.classList.remove('is-dim')); };
+      months.forEach((m, i) => {
+        const hit = make('rect', { x: left + band * i, y: 0, width: band, height: H, fill: 'transparent' });
+        const show = () => {
+          cross.setAttribute('x1', cx(i)); cross.setAttribute('x2', cx(i)); cross.setAttribute('visibility', 'visible');
+          if (config.area) { dot.setAttribute('cx', cx(i)); dot.setAttribute('cy', yUp(m[up[0].key])); dot.setAttribute('visibility', 'visible'); }
+          marks.forEach(mark => mark.classList.toggle('is-dim', mark.dataset.i !== String(i)));
+          const title = document.createElement('strong'); title.textContent = m.month;
+          tip.replaceChildren(title, ...config.tip(m).map(([label, value, swatch]) => {
+            const row = document.createElement('div'), mark = document.createElement('i'), name = document.createElement('span'), number = document.createElement('b');
+            mark.style.background = color(swatch); name.textContent = label; number.textContent = value; row.append(mark, name, number); return row;
+          }));
+          tip.hidden = false;
+          const x = cx(i) + 14 + tip.offsetWidth > W ? cx(i) - 14 - tip.offsetWidth : cx(i) + 14;
+          tip.style.left = `${Math.max(0, x)}px`; tip.style.top = `${top}px`;
+        };
+        hit.addEventListener('pointerenter', show); hit.addEventListener('pointerdown', show);
+        svg.append(hit);
+      });
+      // No toque, a dica fica até tocar fora do gráfico.
+      svg.addEventListener('pointerleave', event => { if (event.pointerType !== 'touch') hide(); });
+      hideTip = hide;
+      host.replaceChildren(svg, tip);
+    };
+    draw();
+    document.addEventListener('pointerdown', event => { if (!host.contains(event.target)) hideTip(); });
+    if (window.ResizeObserver) new ResizeObserver(draw).observe(host); else window.addEventListener('resize', draw);
+  }
+  document.querySelectorAll('[data-chart]').forEach(host => { if (monthCharts[host.dataset.chart]) monthChart(host, monthCharts[host.dataset.chart]); });
   const mapPalette = ['#b9daee', '#76b4da', '#358ac0', '#08649a', '#14264b'];
   function mapScale(max) {
     const steps = Math.min(5, Math.max(0, max));

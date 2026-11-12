@@ -2,7 +2,7 @@
 
 namespace App\Services\Reports;
 
-use App\Models\{Customer, Franchise, Invoice, Payment, Product, Proposal, Subscription, User};
+use App\Models\{Customer, Franchise, Invoice, Payment, Product, Proposal, Subscription, User, VindiCancellation};
 use App\Services\AccessService;
 use App\Services\Domain\CommissionService;
 use Carbon\CarbonImmutable;
@@ -27,6 +27,29 @@ class DashboardService
     public static function planLabel(string $name): string
     {
         return trim(preg_replace('/\s*\+.*$|\s*\(base antiga\)$/u','',$name));
+    }
+
+    /** Mesmo plano da base antiga ("Plano Econômico"), da venda nova ("Econômico") e da Vindi ("PLANO ECONOMICO"). */
+    private static function planKey(string $name): string
+    {
+        return preg_replace('/^plano /','',self::normalize(self::planLabel($name)));
+    }
+
+    /** Nome "Plano …" ou "Pacote …" quando algum dos nomes do grupo o tem. */
+    private static function planDisplay($names): string
+    {
+        return collect($names)->map(fn($name)=>self::planLabel($name))->sortByDesc(fn($name)=>(int)preg_match('/^(plano|pacote)\b/iu',$name)*2+(int)($name!==mb_strtoupper($name)))->first();
+    }
+
+    /** Cancelamentos lidos da Vindi: só na carteira inteira e sem os filtros que eles não têm (vendedor, produto, região, origem). */
+    private function vindiHistory(User $user,array $filters): ?Builder
+    {
+        if($filters['base']!=='gerais' || $filters['data_mode']!=='real' || $filters['employee_id'] || $filters['product_id'] || $filters['acquisition_source'] || $filters['state'] || $filters['city'] || $filters['neighborhood']) return null;
+        $central=(int)Franchise::where('code','CENTRAL')->value('id');
+        if(($filters['franchise_id'] && (int)$filters['franchise_id']!==$central) || ($user->role!=='central_admin' && !in_array($central,array_map('intval',$this->access->franchiseIds($user)),true))) return null;
+        // Item que virou contrato aqui conta pelo contrato.
+        return VindiCancellation::whereNotIn('vindi_product_item_id',Subscription::whereNotNull('vindi_product_item_id')->select('vindi_product_item_id'))
+            ->when($filters['category']!=='all',fn($q)=>$q->where('category',$filters['category']));
     }
 
     public static function cityCatalog(): array
@@ -207,12 +230,21 @@ class DashboardService
         foreach((clone $earned)->whereIn('status',['payable','paid'])->get(['beneficiary_user_id','beneficiary_name','amount_cents']) as $c) {
             $id=$c->beneficiary_user_id??0; $sellerRows[$id]??=['id'=>$id,'name'=>$c->beneficiary_name,'sales'=>0,'sold_cents'=>0,'commission_cents'=>0]; $sellerRows[$id]['commission_cents']+=$c->amount_cents;
         }
-        $growth=$this->growth($scoped,$filters);
+        $growth=$this->growth($scoped,$filters,$this->vindiHistory($user,$filters),$payments,$bounds);
+        $summary['cancelled_count']=$growth['cancellations']['period_count'];
+        $summary['cancelled_lost_cents']=$growth['cancellations']['period_lost_cents'];
+        $status=(clone $scoped)->whereIn('status',['suspended','awaiting_regularization'])->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total','status');
+        $summary['suspended_count']=(int)($status['suspended']??0); $summary['awaiting_count']=(int)($status['awaiting_regularization']??0);
+        // Cor fixa por plano: os 7 maiores da carteira inteira (sem filtro) ganham uma cor cada, na ordem da paleta; os demais ficam cinza.
+        // Assim o filtro não repinta o mesmo plano com outra cor.
+        $slots=Subscription::whereIn('subscriptions.status',['active','scheduled_cancellation'])->join('product_versions','product_versions.id','=','subscriptions.product_version_id')
+            ->join('products','products.id','=','product_versions.product_id')->selectRaw('products.name as name, count(*) as total')->groupBy('products.name')->get()
+            ->groupBy(fn($row)=>self::planKey($row->name))->map->sum('total')->sortDesc()->keys()->take(7)->flip();
         return compact('filters','summary','geo','series','channels','insights','growth')+[
             // Mesmo plano da base antiga ("Plano Econômico") e da venda nova ("Econômico"), e suas variações, numa linha só, com o nome "Plano …".
-            'plans'=>collect($planRows)->groupBy(fn($row)=>preg_replace('/^plano /','',self::normalize(self::planLabel($row['name']))))
-                ->map(fn($rows)=>collect(['sales','sold_cents','active','mrr_cents','received_cents','cancelled','month_expected_cents'])->mapWithKeys(fn($k)=>[$k=>$rows->sum($k)])
-                    ->put('name',$rows->map(fn($row)=>self::planLabel($row['name']))->sortByDesc(fn($name)=>(bool)preg_match('/^(plano|pacote)\b/iu',$name))->first())->all())
+            'plans'=>collect($planRows)->groupBy(fn($row)=>self::planKey($row['name']))
+                ->map(fn($rows,$key)=>collect(['sales','sold_cents','active','mrr_cents','received_cents','cancelled','month_expected_cents'])->mapWithKeys(fn($k)=>[$k=>$rows->sum($k)])
+                    ->put('name',self::planDisplay($rows->pluck('name')))->put('slot',$slots[$key]??null)->all())
                 ->sortByDesc($filters['base']==='gerais'?'active':'sales')->values(),
             'ranking'=>collect($sellerRows)->sortByDesc('sales')->values()->take(10),
             'recentProposals'=>$newOnly(clone $geoBase)->with(['customer:id,name','pet:id,name','productVersion:id,name','originatingFranchise:id,name'])->latest()->take(6)->get(),
@@ -227,31 +259,48 @@ class DashboardService
     }
 
     /** Carteira mês a mês no período do filtro: ativos e mensalidade no fim de cada mês, quem entrou e quem saiu. */
-    private function growth(Builder $scoped,array $filters): array
+    private function growth(Builder $scoped,array $filters,?Builder $vindi,Builder $payments,array $bounds): array
     {
         $rows=(clone $scoped)->where(fn($q)=>$q->whereNotNull('activated_at')->orWhereNotNull('imported_at')->orWhereIn('status',['active','scheduled_cancellation']))
-            ->with('productVersion:id,billing_cycle')->get(['id','product_version_id','price_cents','status','locked_at','activated_at','effective_start_at','cancelled_at','ends_at','updated_at','imported_at'])
+            ->with('productVersion:id,product_id,billing_cycle','productVersion.product:id,name')->get(['id','product_version_id','price_cents','status','locked_at','activated_at','effective_start_at','cancelled_at','ends_at','updated_at','imported_at'])
             ->map(fn($s)=>['start'=>$s->effective_start_at??$s->activated_at??$s->locked_at,'stop'=>$s->cancelled_at??($s->isTerminal()?($s->ends_at??$s->updated_at):null),
-                'cents'=>$s->productVersion?->billing_cycle==='monthly'?$s->price_cents:0])->filter(fn($r)=>$r['start']);
+                'cents'=>$s->productVersion?->billing_cycle==='monthly'?$s->price_cents:0,'plan'=>$s->productVersion?->product?->name??'','replaced'=>false])->filter(fn($r)=>$r['start']);
+        // Base antiga: quem cancelou na Vindi, antes ou depois da importação, também conta. Cancelada e refeita na hora não é saída nem entrada.
+        if($vindi) $rows=$rows->concat((clone $vindi)->whereNotNull('started_at')->get(['product_name','price_cents','started_at','cancelled_at','replaced'])
+            ->map(fn($c)=>['start'=>$c->started_at,'stop'=>$c->cancelled_at,'cents'=>$c->price_cents,'plan'=>$c->product_name,'replaced'=>$c->replaced]))->values();
         $alive=fn($at)=>$rows->filter(fn($r)=>$r['start']->lt($at) && (!$r['stop'] || $r['stop']->gte($at)));
+        $within=fn(string $key,$from,$to)=>$rows->filter(fn($r)=>$r[$key] && $r[$key]->gte($from) && $r[$key]->lt($to));
         $last=CarbonImmutable::parse($filters['date_to'],'America/Sao_Paulo')->startOfMonth();
         $begin=CarbonImmutable::parse($filters['date_from'],'America/Sao_Paulo')->startOfMonth();
         // Período de um mês só, como o padrão: mostra os 12 meses até ele, para o crescimento aparecer.
         if($begin->equalTo($last)) $begin=$last->subMonths(11);
+        $received=[];
+        foreach($this->during(clone $payments,'paid_at',[$begin->utc(),$last->addMonth()->utc()])->get(['paid_at','amount_cents']) as $p) { $key=$p->paid_at->timezone('America/Sao_Paulo')->format('Y-m'); $received[$key]=($received[$key]??0)+$p->amount_cents; }
         $months=[];
         for($month=$begin;$month<=$last;$month=$month->addMonth()) {
             $from=$month->utc(); $to=$month->addMonth()->utc(); $at=$to->lt(CarbonImmutable::now())?$to:CarbonImmutable::now()->addSecond()->utc(); // mês atual: conta até agora, inclusive
-            $now=$alive($at);
+            $now=$alive($at); $before=$alive($from)->count();
+            $stops=$within('stop',$from,$to); $replaced=$stops->where('replaced',true)->count(); $left=$stops->where('replaced',false);
             $months[]=['month'=>$month->locale('pt_BR')->translatedFormat('M/y'),'active'=>$now->count(),'mrr_cents'=>(int)$now->sum('cents'),
-                'entered'=>$rows->filter(fn($r)=>$r['start']->gte($from) && $r['start']->lt($to))->count(),
-                'left'=>$rows->filter(fn($r)=>$r['stop'] && $r['stop']->gte($from) && $r['stop']->lt($to))->count()];
+                'entered'=>max(0,$within('start',$from,$to)->count()-$replaced),'left'=>$left->count(),'replaced'=>$replaced,'lost_cents'=>(int)$left->sum('cents'),
+                'churn'=>$before?round($left->count()*100/$before,1):null,'received_cents'=>$received[$month->format('Y-m')]??0];
         }
         $start=$alive($begin->utc());
         $first=['active'=>$start->count(),'mrr_cents'=>(int)$start->sum('cents')];
         $end=end($months);
+        // Quem saiu na janela do gráfico: por plano e por quanto tempo ficou.
+        $gone=$within('stop',$begin->utc(),$last->addMonth()->utc())->where('replaced',false);
+        $tenure=array_fill_keys(['Até 3 meses','3 a 6 meses','6 a 12 meses','Mais de 1 ano'],0);
+        foreach($gone as $r){ $m=(int)floor(abs($r['start']->diffInMonths($r['stop']))); $tenure[$m<3?'Até 3 meses':($m<6?'3 a 6 meses':($m<12?'6 a 12 meses':'Mais de 1 ano'))]++; }
+        $period=$within('stop',$bounds[0],$bounds[1])->where('replaced',false);
+        $churns=array_filter(array_column($months,'churn'),fn($v)=>$v!==null);
         return ['months'=>$months,'start'=>$first,'range_label'=>count($months)===1?'no mês':'em '.count($months).' meses','active_delta'=>$end['active']-$first['active'],'mrr_delta_cents'=>$end['mrr_cents']-$first['mrr_cents'],
             'active_growth'=>$first['active']?round(($end['active']-$first['active'])*100/$first['active'],1):null,
-            'entered'=>array_sum(array_column($months,'entered')),'left'=>array_sum(array_column($months,'left')),'max'=>max(1,...array_column($months,'active'))];
+            'entered'=>array_sum(array_column($months,'entered')),'left'=>array_sum(array_column($months,'left')),'max'=>max(1,...array_column($months,'active')),
+            'received_cents'=>array_sum(array_column($months,'received_cents')),'with_vindi'=>(bool)$vindi,
+            'cancellations'=>['period_count'=>$period->count(),'period_lost_cents'=>(int)$period->sum('cents'),'count'=>$gone->count(),'lost_cents'=>(int)$gone->sum('cents'),
+                'replaced'=>array_sum(array_column($months,'replaced')),'churn'=>$churns?round(array_sum($churns)/count($churns),1):null,'tenure'=>$tenure,
+                'plans'=>$gone->groupBy(fn($r)=>self::planKey($r['plan']))->map(fn($g)=>['name'=>self::planDisplay($g->pluck('plan')),'count'=>$g->count(),'lost_cents'=>(int)$g->sum('cents')])->sortByDesc('count')->values()->take(6)->all()]];
     }
 
     private function portfolioInsights(array $filters,$active,Builder $subscriptions,Builder $invoices,Builder $payments,array $bounds,$sales): array

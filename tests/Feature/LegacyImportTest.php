@@ -128,6 +128,47 @@ class LegacyImportTest extends TestCase
         $this->assertSame(['Plano Econômico', 'Pacote Banho Quinzenal', 'Plano VIP'], array_map([\App\Services\Reports\DashboardService::class, 'planLabel'],
             ['Plano Econômico + 2 hemogramas (base antiga)', 'Pacote Banho Quinzenal + taxa (base antiga)', 'Plano VIP (base antiga)']), 'Variação conta no plano principal.');    }
 
+    public function test_vindi_cancellations_close_old_contracts_and_feed_the_dashboard_without_writing_to_vindi(): void
+    {
+        config(['integrations.vindi.enabled' => true, 'integrations.vindi.api_key' => 'test-only']);
+        app(LegacyImport::class)->run($this->data(), $this->admin, true);
+        $item = fn ($id, $name, $price) => ['id' => $id, 'status' => 'active', 'product' => ['name' => $name], 'pricing_schema' => ['price' => $price]];
+        $canceled = [
+            // A assinatura 500 (Rex e o pet ainda por escolher) foi cancelada na Vindi depois da importação.
+            ['id' => 500, 'customer' => ['id' => 'v1'], 'plan' => ['name' => 'PLANO SUPER ECONOMICO'], 'start_at' => '2025-03-10T00:00:00-03:00', 'cancel_at' => '2026-10-05T10:00:00-03:00',
+                'product_items' => [$item(9001, 'Plano Super Econômico⠀', '52.0'), $item(9002, 'Plano Super Econômico⠀', '52.0')]],
+            // Cancelada, mas o cliente seguiu com a 500 (plano do mesmo tipo): não é saída.
+            ['id' => 700, 'customer' => ['id' => 'v1'], 'plan' => ['name' => 'PLANO SUPER ECONOMICO'], 'start_at' => '2025-01-01T00:00:00-03:00', 'cancel_at' => '2026-02-01T09:00:00-03:00',
+                'product_items' => [$item(7001, 'Plano Super Econômico', '48.0')]],
+            // Cliente que saiu antes da importação; "GASTOS EXTRAS" não é pet.
+            ['id' => 701, 'customer' => ['id' => 'v9'], 'plan' => ['name' => 'PLANO ECONOMICO FELINO'], 'start_at' => '2025-06-01T00:00:00-03:00', 'cancel_at' => '2026-06-15T09:00:00-03:00',
+                'product_items' => [$item(7101, 'Plano Econômico Felino', '24.0'), $item(7102, 'GASTOS EXTRAS', '30.0')]],
+            ['id' => 702, 'customer' => ['id' => 'v9'], 'plan' => ['name' => 'teste'], 'start_at' => '2025-06-01T00:00:00-03:00', 'cancel_at' => '2026-06-15T09:00:00-03:00', 'product_items' => [$item(7201, 'Plano A', '1.0')]],
+        ];
+        \Illuminate\Support\Facades\Http::fake(fn ($request) => $request->method() === 'GET' && str_contains($request->url(), '/subscriptions') ? \Illuminate\Support\Facades\Http::response(['subscriptions' => $canceled]) : \Illuminate\Support\Facades\Http::response([], 500));
+        $this->artisan('plans:sync-vindi-cancellations')->expectsOutputToContain('contratos_encerrados: 1')->assertSuccessful();
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request) => $request->method() === 'GET');
+        \Illuminate\Support\Facades\Http::assertNotSent(fn ($request) => $request->method() !== 'GET');
+
+        $rex = Subscription::where('vindi_product_item_id', '9001')->sole();
+        $this->assertSame(['cancelled', '2026-10-05'], [$rex->status, $rex->cancelled_at->timezone('America/Sao_Paulo')->toDateString()]);
+        $this->assertSame('released', PetProductSlot::where('subscription_id', $rex->id)->value('state'));
+        $this->assertSame('cancelled_in_vindi', LegacyPendingItem::where('vindi_product_item_id', '9002')->value('resolution'));
+        $this->assertSame(['7001' => true, '7101' => false, '9001' => false, '9002' => false], \App\Models\VindiCancellation::orderBy('vindi_product_item_id')->pluck('replaced', 'vindi_product_item_id')->all());
+        $this->assertSame('active', Subscription::where('vindi_product_item_id', '9003')->value('status'), 'O pacote de outra assinatura continua.');
+
+        // No painel, quem saiu conta uma vez só (o 9001 pelo contrato daqui), e a assinatura refeita não conta.
+        $dashboard = app(\App\Services\Reports\DashboardService::class);
+        $c = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['date_from' => '2026-01-01', 'date_to' => now()->toDateString()]))['growth']['cancellations'];
+        $this->assertSame([3, 1], [$c['count'], $c['replaced']]);
+        $this->assertSame([['Plano Super Econômico', 2], ['Plano Econômico Felino', 1]], array_map(fn ($p) => [$p['name'], $p['count']], $c['plans']));
+        $novos = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['base' => 'novos', 'date_from' => '2026-01-01', 'date_to' => now()->toDateString()]));
+        $this->assertSame(0, $novos['growth']['cancellations']['count'], 'Planos novos não veem a base antiga.');
+        // Rodar de novo não duplica nem reabre nada.
+        $this->artisan('plans:sync-vindi-cancellations')->expectsOutputToContain('contratos_encerrados: 0')->assertSuccessful();
+        $this->assertSame(4, \App\Models\VindiCancellation::count());
+    }
+
     public function test_only_central_admin_and_unit_managers_choose_pets(): void
     {
         app(LegacyImport::class)->run($this->data(), $this->admin, true);

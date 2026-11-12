@@ -120,6 +120,11 @@ Artisan::command('plans:refresh-status',function(\App\Services\Domain\FinancialS
 })->purpose('Suspender quem passou da carência sem pagar e devolver o plano de quem ficou em dia');
 // 06:20 de Brasília.
 Schedule::command('plans:refresh-status')->dailyAt('09:20')->withoutOverlapping();
+Artisan::command('plans:sync-vindi-cancellations',function(\App\Services\Integrations\VindiCancellationSync $sync) {
+    foreach($sync->run() as $key=>$value) $this->line($key.': '.$value);
+})->purpose('Trazer da Vindi, só lendo, as assinaturas canceladas e encerrar aqui os contratos da base antiga que estavam nelas');
+// 06:40 de Brasília.
+Schedule::command('plans:sync-vindi-cancellations')->dailyAt('09:40')->withoutOverlapping();
 // 03:10 de Brasília: pega quem passou do último dia do mês sem pagar e quem teve o plano encerrado.
 Schedule::command('plans:sync-tudoprapet')->dailyAt('06:10')->withoutOverlapping();
 // 03:40 de Brasília: o que não chegou ao SimplesVet de dia (robô fora, aviso resolvido pela recepção) entra de novo.
