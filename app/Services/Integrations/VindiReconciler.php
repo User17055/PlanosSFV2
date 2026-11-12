@@ -175,7 +175,9 @@ class VindiReconciler
         // Uma consulta por rodada: as 50 faturas mais recentes já vêm completas na listagem. As mais antigas foram conferidas em rodadas anteriores.
         $locals = Subscription::where('provider_account', $subscription->provider_account)->where('vindi_subscription_id', $subscription->vindi_subscription_id)->get();
         $imported = $locals->every(fn ($s) => $s->imported_at);
-        foreach ($this->client->billsForSubscription((string) $subscription->vindi_subscription_id) as $bill) {
+        $bills = $this->client->billsForSubscription((string) $subscription->vindi_subscription_id);
+        $this->flagSkippedMonths($locals, $bills);
+        foreach ($bills as $bill) {
             // Base antiga: fatura só de itens ainda sem pet aqui (ou de antes do pet entrar) não tem o que conferir.
             if ($imported && ! collect($bill['bill_items'] ?? [])->contains(fn ($item) => $locals->contains('vindi_product_item_id', (string) data_get($item, 'product_item.id')))) {
                 continue;
@@ -187,6 +189,31 @@ class VindiReconciler
         }
         $this->refreshChecked($subscription);
         return $count;
+    }
+
+    /**
+     * A Vindi não gera a fatura de um ciclo quando o dia de cobrança é mudado para antes do início dele (assinatura 67976666 ficou sem
+     * a de setembro/2026). Um dos dois últimos meses sem fatura, havendo fatura antes dele, vira aviso no painel para a equipe gerar a avulsa.
+     */
+    private function flagSkippedMonths($locals, array $bills): void
+    {
+        $owner = $locals->first(fn ($s) => ! $s->isTerminal());
+        $months = collect($bills)->map(fn ($b) => data_get($b, 'period.start_at'))->filter()
+            ->map(fn ($d) => CarbonImmutable::parse($d)->setTimezone('America/Sao_Paulo')->format('Y-m'))->unique()->sort()->values();
+        if (! $owner || $months->isEmpty()) {
+            return;
+        }
+        $now = CarbonImmutable::now('America/Sao_Paulo');
+        // O mês passado só depois do dia 10: a fatura de um ciclo pode sair só no começo do mês seguinte.
+        foreach (array_filter([$now->subMonths(2)->format('Y-m'), $now->day > 10 ? $now->subMonth()->format('Y-m') : null]) as $month) {
+            if ($month > $months->first() && ! $months->contains($month)) {
+                \App\Models\IntegrationEvent::firstOrCreate(['idempotency_key' => 'vindi:bill-skipped:'.$owner->vindi_subscription_id.':'.$month], [
+                    'provider' => 'vindi', 'provider_account' => $owner->provider_account, 'event_type' => 'bill_skipped', 'entity_type' => 'local_subscription',
+                    'entity_id' => $owner->id, 'status' => 'manual', 'received_at' => now(), 'payload' => ['vindi_subscription_id' => $owner->vindi_subscription_id, 'month' => $month],
+                    'error' => 'A Vindi não gerou a fatura de '.CarbonImmutable::parse($month.'-01')->format('m/Y').' desta assinatura. Confira o dia de cobrança e gere a fatura avulsa na Vindi.',
+                ]);
+            }
+        }
     }
 
     /** Fatura que já está conferida aqui na mesma versão da Vindi: aplicar de novo só repetiria a auditoria. */

@@ -147,17 +147,35 @@ class DashboardService
     public function matches(array $address,array $filters): bool
     {
         foreach(['state','city'] as $key) if(!empty($filters[$key]) && self::normalize($address[$key]??'')!==self::normalize($filters[$key])) return false;
-        return empty($filters['neighborhood']) || self::sameNeighborhood($address['neighborhood']??'',$filters['neighborhood']);
+        if(empty($filters['neighborhood'])) return true;
+        $names=$this->neighborhoodNames();
+        return self::normalize($names->name($address['state']??'',$address['city']??'',$address['neighborhood']??''))===self::normalize($names->name($address['state']??'',$address['city']??'',$filters['neighborhood']))
+            || self::sameNeighborhood($address['neighborhood']??'',$filters['neighborhood']);
+    }
+
+    private ?NeighborhoodNames $neighborhoodNames=null;
+
+    /** Bairros de todos os cadastros, por cidade, com os nomes do mapa da cidade quando houver. */
+    private function neighborhoodNames(): NeighborhoodNames
+    {
+        if($this->neighborhoodNames) return $this->neighborhoodNames;
+        $entries=Customer::whereNotNull('address')->get(['address'])->map(fn($c)=>[((array)$c->address)['state']??null,((array)$c->address)['city']??null,((array)$c->address)['neighborhood']??null])->all();
+        $codes=[];
+        foreach(self::cityCatalog() as $code=>$entry) $codes[NeighborhoodNames::cityKey(self::STATES[$entry['state']]??'',$entry['name'])]=(string)$code;
+        $catalog=[];
+        foreach(array_unique(array_map(fn($e)=>NeighborhoodNames::cityKey($e[0],$e[1]),$entries)) as $key) {
+            foreach(isset($codes[$key])?[$codes[$key].'.json',$codes[$key].'-points.json']:[] as $file) {
+                $path=public_path('assets/maps/neighborhoods/'.$file);
+                if(is_file($path)) { $catalog[$key]=array_values(array_filter(array_map(fn($f)=>$f['properties']['name']??null,json_decode(file_get_contents($path),true)['features']??[]))); break; }
+            }
+        }
+        return $this->neighborhoodNames=new NeighborhoodNames($entries,$catalog);
     }
 
     /** Bairro digitado sem o tipo ("Humberto Salvador") é o mesmo do mapa com o tipo ("Jardim Humberto Salvador"); tipos diferentes ("Vila" x "Parque Furquim") não. */
     public static function sameNeighborhood(?string $a,?string $b): bool
     {
-        $strip=fn(string $v)=>preg_replace('/^(jardim|vila|parque|residencial|conjunto habitacional|conjunto|nucleo habitacional|nucleo|chacaras?|loteamento|condominio|bairro)\s+/','',$v);
-        // "Jd." é "Jardim", "Vl." é "Vila" e assim por diante.
-        $full=fn(?string $v)=>preg_replace(['/^jd\.?\s+/','/^vl\.?\s+/','/^pq\.?\s+/','/^res\.?\s+/','/^(cj|conj)\.?\s+/'],['jardim ','vila ','parque ','residencial ','conjunto '],self::normalize($v));
-        [$a,$b]=[$full($a),$full($b)];
-        return $a===$b || ($strip($a)===$strip($b) && ($strip($a)===$a || $strip($b)===$b));
+        return NeighborhoodNames::same($a,$b);
     }
 
     public function report(User $user,array $filters): array
@@ -377,6 +395,8 @@ class DashboardService
             $states[$state]??=['state'=>$state,'plans'=>0,'active_plans'=>0,'customers'=>[]]; $states[$state]['plans']++; $states[$state]['active_plans']+=(int)$isActive; $states[$state]['customers'][$s->customer_id]=true;
             $cities[$key]??=['state'=>$state,'city'=>$city,'plans'=>0,'active_plans'=>0,'customers'=>[]]; $cities[$key]['plans']++; $cities[$key]['active_plans']+=(int)$isActive; $cities[$key]['customers'][$s->customer_id]=true;
             if(!$this->matches($a,array_merge($filters,['neighborhood'=>null]))) continue;
+            // Grafias do mesmo bairro numa linha só, com o nome do mapa quando ele está lá.
+            $neighborhood=$this->neighborhoodNames()->name($state,$city,$neighborhood);
             $nkey=$key.'|'.self::normalize($neighborhood);
             $neighborhoods[$nkey]??=['state'=>$state,'city'=>$city,'name'=>$neighborhood?:'Bairro não informado','plans'=>0,'active_plans'=>0,'customers'=>[],'missing'=>!$neighborhood];
             $neighborhoods[$nkey]['plans']++; $neighborhoods[$nkey]['active_plans']+=(int)$isActive; $neighborhoods[$nkey]['customers'][$s->customer_id]=true;

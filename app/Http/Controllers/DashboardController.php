@@ -14,7 +14,17 @@ class DashboardController extends Controller
         $user=$request->user();
         $filters=$dashboard->filters($user,$request->query());
         $recentLeads=in_array($user->role,['central_admin','manager','sales','operator'],true) && $user->canOpen('leads') ? $access->scope(Lead::visibleTo($user)->where('status','new')->where('source','!=','teste'),$user)->latest('id')->limit(3)->get() : collect();
-        return response()->view('dashboard',$dashboard->report($user,$filters)+['recentLeads'=>$recentLeads,'simplesvetPending'=>$this->simplesvetPending($user,$access),'legacyPending'=>in_array($user->role,['central_admin','manager'],true) && $user->canUse('customers.update')?\App\Models\LegacyPendingItem::whereNull('resolved_at')->count():0])->header('Cache-Control','private, no-store');
+        return response()->view('dashboard',$dashboard->report($user,$filters)+['recentLeads'=>$recentLeads,'simplesvetPending'=>$this->simplesvetPending($user,$access),'legacyPending'=>in_array($user->role,['central_admin','manager'],true) && $user->canUse('customers.update')?\App\Models\LegacyPendingItem::whereNull('resolved_at')->count():0,'skippedBills'=>$this->skippedBills($user,$access)])->header('Cache-Control','private, no-store');
+    }
+
+    /** Meses em que a Vindi não gerou a fatura (ver VindiReconciler::flagSkippedMonths), dos contratos das unidades de quem vê. */
+    private function skippedBills($user, AccessService $access)
+    {
+        if (! in_array($user->role,['central_admin','manager','finance'],true)) return collect();
+        $events=\App\Models\IntegrationEvent::where('event_type','bill_skipped')->where('status','manual')->where('received_at','>=',now()->subMonths(3))->latest('id')->get(['entity_id','payload']);
+        $subscriptions=$access->scope(\App\Models\Subscription::with('customer:id,name')->whereIn('id',$events->pluck('entity_id')),$user)->get()->keyBy('id');
+        return $events->filter(fn($event)=>$subscriptions->has($event->entity_id))->map(fn($event)=>['subscription'=>$subscriptions[$event->entity_id],'vindi'=>$event->payload['vindi_subscription_id']??'',
+            'month'=>\Carbon\Carbon::parse(($event->payload['month']??'').'-01')->locale('pt_BR')->translatedFormat('F/Y')])->values();
     }
 
     /** Onde o robô do SimplesVet parou (conferência de gente), só dos contratos das unidades de quem vê. */

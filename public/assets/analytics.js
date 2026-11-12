@@ -83,14 +83,14 @@
   };
   const percent = value => value === null || value === undefined ? '—' : `${String(value).replace('.', ',')}%`;
   const monthCharts = {
-    growth: { height: 260, area: true, series: [{ key: 'active', color: '--blue' }],
-      tip: m => [['Na carteira', whole(m.active), '--blue'], ['Receita da carteira', whole(m.mrr_cents, true), '--green'], ['Entraram', whole(m.entered), '--aqua'], ['Saíram', whole(m.left), '--red']] },
-    flow: { height: 170, series: [{ key: 'entered', color: '--aqua' }, { key: 'left', color: '--red', down: true }],
-      tip: m => [['Entraram', whole(m.entered), '--aqua'], ['Saíram', whole(m.left), '--red']] },
-    received: { height: 230, label: true, series: [{ key: 'received_cents', color: '--violet', cents: true }],
-      tip: m => [['Recebido', whole(m.received_cents, true), '--violet']] },
-    cancel: { height: 200, label: true, series: [{ key: 'left', color: '--red' }],
-      tip: m => [['Saíram', whole(m.left), '--red'], ['Taxa de cancelamento', percent(m.churn), '--orange'], ['Receita perdida', `${whole(m.lost_cents, true)}/mês`, '--red'], ...(m.replaced ? [['Continuaram com outra assinatura', whole(m.replaced), '--muted']] : [])] },
+    growth: { height: 260, area: true, series: [{ key: 'active', color: '--c-main' }],
+      tip: m => [['Na carteira', whole(m.active), '--c-main'], ['Receita da carteira', whole(m.mrr_cents, true), '--c-navy'], ['Entraram', whole(m.entered), '--c-in'], ['Saíram', whole(m.left), '--c-out']] },
+    flow: { height: 170, series: [{ key: 'entered', color: '--c-in' }, { key: 'left', color: '--c-out', down: true }],
+      tip: m => [['Entraram', whole(m.entered), '--c-in'], ['Saíram', whole(m.left), '--c-out']] },
+    received: { height: 230, label: true, series: [{ key: 'received_cents', color: '--c-main2', cents: true }],
+      tip: m => [['Recebido', whole(m.received_cents, true), '--c-main2']] },
+    cancel: { height: 200, label: true, series: [{ key: 'left', color: '--c-out' }],
+      tip: m => [['Saíram', whole(m.left), '--c-out'], ['Taxa de cancelamento', percent(m.churn), '--c-gray'], ['Receita perdida', `${whole(m.lost_cents, true)}/mês`, '--c-out'], ...(m.replaced ? [['Continuaram com outra assinatura', whole(m.replaced), '--c-muted']] : [])] },
   };
   function monthChart(host, config) {
     const months = data.months || [];

@@ -268,6 +268,14 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertFalse($same('Centro','Vila Furquim'));
     }
 
+    public function test_neighborhood_spellings_count_together_in_the_ranking_and_the_filter(): void
+    {
+        foreach(['Jardim Maracanã','JD MARACANA','jardim maracana '] as $hood) $this->sale(Customer::create(['name'=>'Tutor','address'=>['city'=>'Presidente Prudente','state'=>'SP','neighborhood'=>$hood]]));
+        $rows=collect($this->report($this->admin)['geo']['neighborhoods'])->where('city','Presidente Prudente');
+        $this->assertSame([['Jardim Maracanã',3]],$rows->map(fn($n)=>[$n['name'],$n['plans']])->values()->all(),'Uma linha só, com o nome do mapa.');
+        $this->assertSame(3,$this->report($this->admin,['state'=>'SP','city'=>'Presidente Prudente','neighborhood'=>'Jardim Maracanã'])['summary']['active_count']);
+    }
+
     public function test_general_plans_include_the_old_base_but_sales_and_new_plans_never_count_it(): void
     {
         $this->sale();

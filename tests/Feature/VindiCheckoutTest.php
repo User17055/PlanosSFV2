@@ -359,6 +359,23 @@ class VindiCheckoutTest extends TestCase
         $this->assertSame(0,$this->subscriptionPosts,'A assinatura que já existe na Vindi continua a mesma.');
     }
 
+    public function test_month_the_vindi_skipped_becomes_a_dashboard_warning(): void
+    {
+        // A Vindi gerou o ciclo de 3 meses atrás e o do mês passado, mas não o do meio (dia de cobrança mudado para antes do ciclo).
+        $this->subscription->invoices()->delete();
+        Subscription::whereKey($this->subscription->id)->update(['vindi_subscription_id'=>'444','vindi_product_item_id'=>'9001','imported_at'=>now(),'status'=>'active']);
+        $bill=fn($id,$months)=>['id'=>$id,'subscription'=>['id'=>444],'customer'=>['id'=>111],'amount'=>'99.0','status'=>'paid','url'=>null,'updated_at'=>now()->toIso8601String(),
+            'due_at'=>now()->subMonths($months)->toDateString(),'period'=>['start_at'=>now()->subMonths($months)->startOfMonth()->addDays(5)->toIso8601String()],
+            'charges'=>[['status'=>'paid','paid_at'=>now()->subMonths($months)->toIso8601String()]],'bill_items'=>[['amount'=>'99.0','product_item'=>['id'=>9001]]]];
+        $this->subscriptionBills=[$bill(702,1),$bill(700,3)];
+        app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
+        app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
+        $events=\App\Models\IntegrationEvent::where('event_type','bill_skipped')->get();
+        $this->assertSame([now()->subMonths(2)->format('Y-m')],$events->pluck('payload.month')->all(),'Um aviso só, mesmo conferindo duas vezes.');
+        $admin=User::factory()->create(['role'=>'central_admin','active'=>true]);
+        $this->actingAs($admin)->get(route('dashboard'))->assertOk()->assertSee('Faturas que a Vindi não gerou: 1')->assertSee('Assinatura 444 na Vindi');
+    }
+
     public function test_other_customer_cannot_issue_or_access_checkout(): void
     {
         $stranger=User::factory()->create(['role'=>'customer','active'=>true,'email_verified_at'=>now()]);
