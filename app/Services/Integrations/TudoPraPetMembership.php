@@ -16,7 +16,8 @@ class TudoPraPetMembership
 
     public function desired(Customer $customer): bool
     {
-        $inForce = Subscription::where('customer_id', $customer->id)->where('category', 'health_plan')
+        // Base antiga fica fora do Clube até o usuário decidir: a ativação pode gerar e-mail do lado da Tudo pra Pet.
+        $inForce = Subscription::where('customer_id', $customer->id)->where('category', 'health_plan')->whereNull('imported_at')
             ->whereNotNull('activated_at')->whereNotIn('status', Subscription::TERMINAL)->exists();
         if (! $inForce) {
             return false;

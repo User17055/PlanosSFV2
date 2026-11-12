@@ -22,7 +22,7 @@ class JobRole extends DomainModel
         'leads.destroy' => ['Apagar lead de teste', ['leads.destroy']],
         'customers.view' => ['Ver tutores e pets', ['customers.index', 'customers.show', 'pets.photo']],
         'customers.create' => ['Cadastrar novo tutor', ['customers.create', 'customers.store']],
-        'customers.update' => ['Editar tutor e pets, adicionar pets', ['customers.edit', 'customers.update', 'customers.pets.store', 'pets.edit', 'pets.update', 'pets.photo.store']],
+        'customers.update' => ['Editar tutor e pets, adicionar pets e escolher o pet dos planos da base antiga', ['customers.edit', 'customers.update', 'customers.pets.store', 'pets.edit', 'pets.update', 'pets.photo.store', 'legacy.pending', 'legacy.pending.link', 'legacy.pending.dismiss']],
         'catalog.view' => ['Ver planos e pacotes', ['catalog.index']],
         'proposals.view' => ['Ver propostas e contratos', ['proposals.index', 'proposals.show', 'proposals.preview-pdf', 'proposals.contract', 'contracts.download', 'sales.proposal']],
         'proposals.create' => ['Criar proposta e enviar link', ['proposals.create', 'proposals.store', 'proposals.registration-link', 'proposals.regenerate-contract', 'proposals.link']],

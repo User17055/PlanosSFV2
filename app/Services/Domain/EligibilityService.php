@@ -41,6 +41,10 @@ class EligibilityService
         if ($s->isTerminal()) {
             $issues[] = $this->issue('SUBSCRIPTION_ENDED', 'Contrato cancelado ou encerrado.');
         }
+        // Base antiga: o plano já vale pela Vindi. Não exige entrada, contrato assinado aqui, nem idade ou espécie do pet; o escaneado entra depois.
+        if ($s->imported_at) {
+            return array_merge($issues, $this->ongoingImpediments($s));
+        }
         $issues = array_merge($issues, $this->petEligibility($s->pet, $s->productVersion));
         $document = $s->documents()->orderByDesc('version')->first();
         $valid = $s->document_status === 'valid' && $document && $document->status === 'valid' && $document->kind === 'final_contract'
@@ -56,6 +60,13 @@ class EligibilityService
         if ($initial->isEmpty()) {
             $issues[] = $this->issue('FIRST_PAYMENT_PENDING', 'Primeiro pagamento integral ainda não confirmado.');
         }
+        return array_merge($issues, $this->ongoingImpediments($s));
+    }
+
+    /** O que vale para todo contrato em vigor: vaga do pet, vigência e mensalidade em dia. */
+    private function ongoingImpediments(Subscription $s): array
+    {
+        $issues = [];
         if (! PetProductSlot::where('pet_id', $s->pet_id)->where('product_category', $s->category)->where('subscription_id', $s->id)->whereIn('state', ['reserved', 'occupied'])->exists()) {
             $issues[] = $this->issue('SLOT_NOT_OWNED', 'Vaga da categoria não assegurada para esta contratação.');
         }

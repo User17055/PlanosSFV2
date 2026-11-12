@@ -24,7 +24,9 @@ class ActivationService
                 return ['eligible' => false, 'code' => 'SUBSCRIPTION_ENDED', 'message' => 'Contrato encerrado.', 'impediments' => $issues];
             }
             if ($issues) {
-                if ($s->status === 'active') {
+                // Base antiga: só suspende por motivo real (atraso, fim); conferência financeira ainda por rodar não tira o plano de quem já paga.
+                $real = ! $s->imported_at || collect($issues)->contains(fn ($issue) => $issue['code'] !== 'FINANCIAL_VERIFICATION_PENDING');
+                if ($s->status === 'active' && $real) {
                     $s->update(['status' => 'suspended']);
                     Audit::record('subscription_suspended', $s, null, ['impediments' => $issues]);
                     $this->outbox($s, 'suspended');

@@ -2260,3 +2260,20 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-growth-table table{margin-top:8px}
 .theme-dash .dash-simple .dash-growth{border-radius:20px}
 @media(max-width:700px){.dash-growth-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-growth-stats small{white-space:normal}.dash-growth-chart{height:150px}.dash-growth-col:nth-last-child(even) small{display:none}}
+
+/* Base antiga: aviso no painel e a lista "Pets para escolher" */
+.dash-legacy{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-left-color:var(--primary)}
+.dash-legacy .dash-simple-note{margin:0}
+.legacy-pending{padding:18px 20px;margin:0 0 16px}
+.legacy-pending-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.legacy-pending-head h2{font-size:16px;margin:0}
+.legacy-pending-head h2 a{color:var(--text)}
+.legacy-pending-head small{color:var(--text-3);font-size:13px}
+.legacy-pending-item{padding:14px 0;border-top:1px solid var(--border,#d7e2ea)}
+.legacy-pending-item>div:first-child strong{display:block;font-weight:600}
+.legacy-pending-item>div:first-child small{display:block;margin-top:2px;color:var(--text-3);font-size:13px}
+.legacy-pending-form{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:10px}
+.legacy-pending-form .field{flex:1 1 260px;margin:0}
+.legacy-pending-dismiss{margin-top:8px}
+.legacy-pending-dismiss summary{cursor:pointer;font-size:13px;color:var(--text-3)}
+.theme-dash .legacy-pending{border-radius:20px}

@@ -61,7 +61,9 @@ class VindiReconciler
             if ($subscriptions->isEmpty()) {
                 throw new IntegrationPendingException('Fatura sem vínculo financeiro local inequívoco; conciliação manual necessária.');
             }
-            $parts = $subscriptions->count() === 1 ? [[$subscriptions->first(), $amount]] : $this->partsByPet($bill, $subscriptions, $amount);
+            // Base antiga: a fatura pode ter item de pet ainda sem contrato aqui; cada contrato fica só com o próprio item.
+            $imported = $subscriptions->every(fn ($s) => $s->imported_at);
+            $parts = $subscriptions->count() === 1 && ! $imported ? [[$subscriptions->first(), $amount]] : $this->partsByPet($bill, $subscriptions, $amount, $imported);
         }
         if ($invoices->contains(fn ($invoice) => ! collect($parts)->contains(fn ($part) => $part[0]->id === $invoice->subscription_id))) {
             throw new IntegrationPendingException('O vínculo da fatura diverge da assinatura; nenhuma alteração aplicada.');
@@ -126,18 +128,22 @@ class VindiReconciler
     }
 
     /** Fatura de uma assinatura Vindi com vários pets: cada item vai para o contrato do pet dono dele. */
-    private function partsByPet(array $bill, \Illuminate\Support\Collection $subscriptions, int $amount): array
+    private function partsByPet(array $bill, \Illuminate\Support\Collection $subscriptions, int $amount, bool $partial = false): array
     {
         $parts = [];
         foreach ($bill['bill_items'] ?? [] as $item) {
             $itemId = (string) data_get($item, 'product_item.id');
             $owner = $subscriptions->first(fn ($subscription) => $itemId !== '' && $subscription->vindi_product_item_id === $itemId);
+            if (! $owner && $partial) {
+                continue;
+            }
             if (! $owner || isset($parts[$owner->id])) {
                 throw new IntegrationPendingException('Item da fatura sem contrato de pet identificado; conciliação manual necessária.');
             }
             $parts[$owner->id] = [$owner, self::decimalToCents($item['amount'] ?? null)];
         }
-        if (! $parts || array_sum(array_column($parts, 1)) !== $amount) {
+        $sum = array_sum(array_column($parts, 1));
+        if (! $parts || ($partial ? $sum > $amount : $sum !== $amount)) {
             throw new IntegrationPendingException('Os itens da fatura não somam o valor dela; conciliação manual necessária.');
         }
         return array_values($parts);
@@ -166,7 +172,13 @@ class VindiReconciler
             return $count;
         }
         // Uma consulta por rodada: as 50 faturas mais recentes já vêm completas na listagem. As mais antigas foram conferidas em rodadas anteriores.
+        $locals = Subscription::where('provider_account', $subscription->provider_account)->where('vindi_subscription_id', $subscription->vindi_subscription_id)->get();
+        $imported = $locals->every(fn ($s) => $s->imported_at);
         foreach ($this->client->billsForSubscription((string) $subscription->vindi_subscription_id) as $bill) {
+            // Base antiga: fatura só de itens ainda sem pet aqui (ou de antes do pet entrar) não tem o que conferir.
+            if ($imported && ! collect($bill['bill_items'] ?? [])->contains(fn ($item) => $locals->contains('vindi_product_item_id', (string) data_get($item, 'product_item.id')))) {
+                continue;
+            }
             if (! $this->unchanged($bill, $subscription->provider_account)) {
                 $this->reconcileBill((string) $bill['id'], $subscription->provider_account, $bill);
                 $count++;

@@ -343,11 +343,16 @@ class VindiCheckoutTest extends TestCase
         $this->subscription->invoices()->delete();
         Subscription::whereKey($this->subscription->id)->update(['vindi_subscription_id'=>'444','vindi_product_item_id'=>'9001','imported_at'=>now()]);
         $this->customerUser->update(['email_verified_at'=>null]);
-        $this->subscriptionBills=[['id'=>600,'subscription'=>['id'=>444],'customer'=>['id'=>111],'amount'=>'99.0','status'=>'paid','url'=>null,
-            'updated_at'=>now()->toIso8601String(),'due_at'=>now()->toDateString(),'charges'=>[['status'=>'paid','paid_at'=>now()->toIso8601String()]]]];
+        // A fatura tem também o item de um pet ainda sem contrato aqui (9002): cada contrato fica só com o próprio item.
+        $this->subscriptionBills=[['id'=>600,'subscription'=>['id'=>444],'customer'=>['id'=>111],'amount'=>'198.0','status'=>'paid','url'=>null,
+            'updated_at'=>now()->toIso8601String(),'due_at'=>now()->toDateString(),'charges'=>[['status'=>'paid','paid_at'=>now()->toIso8601String()]],
+            'bill_items'=>[['amount'=>'99.0','product_item'=>['id'=>9001]],['amount'=>'99.0','product_item'=>['id'=>9002]]]],
+            ['id'=>601,'subscription'=>['id'=>444],'customer'=>['id'=>111],'amount'=>'99.0','status'=>'pending','url'=>null,
+            'updated_at'=>now()->toIso8601String(),'due_at'=>now()->addMonth()->toDateString(),'charges'=>[],'bill_items'=>[['amount'=>'99.0','product_item'=>['id'=>9002]]]]];
         app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
         $invoice=Invoice::where('external_id','600')->sole();
-        $this->assertSame(['paid',false],[$invoice->status,$invoice->is_initial],'A mensalidade antiga não vira entrada.');
+        $this->assertSame(['paid',false,9900],[$invoice->status,$invoice->is_initial,$invoice->amount_cents],'A mensalidade antiga não vira entrada.');
+        $this->assertSame(0,Invoice::where('external_id','601')->count(),'Fatura só do pet ainda sem contrato fica de fora, sem travar a conferência.');
         $this->assertSame(0,\App\Models\Commission::count());
         \Illuminate\Support\Facades\Notification::assertNothingSent();
         $this->assertSame(0,$this->subscriptionPosts,'A assinatura que já existe na Vindi continua a mesma.');

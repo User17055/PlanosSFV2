@@ -117,6 +117,9 @@ Route::middleware(['auth','active'])->group(function () {
         Route::get('/clientes/novo',[CustomerController::class,'create'])->middleware('role:central_admin,manager,sales')->name('customers.create');
         Route::post('/clientes',[CustomerController::class,'store'])->middleware('role:central_admin,manager,sales')->name('customers.store');
         Route::get('/clientes/{customer}',[CustomerController::class,'show'])->name('customers.show');
+        Route::get('/base-antiga/pets',[\App\Http\Controllers\LegacyPendingController::class,'index'])->middleware('role:central_admin,manager')->name('legacy.pending');
+        Route::post('/base-antiga/pets/{item}',[\App\Http\Controllers\LegacyPendingController::class,'link'])->middleware(['role:central_admin,manager','throttle:60,1'])->name('legacy.pending.link');
+        Route::post('/base-antiga/pets/{item}/dispensar',[\App\Http\Controllers\LegacyPendingController::class,'dismiss'])->middleware(['role:central_admin,manager','throttle:30,1'])->name('legacy.pending.dismiss');
         Route::get('/catalogo',[CatalogController::class,'index'])->name('catalog.index');
         Route::get('/catalogo/novo',[CatalogController::class,'create'])->middleware('role:central_admin')->name('catalog.create');
         Route::get('/catalogo/{version}/modelo',[CatalogController::class,'previewTemplate'])->middleware('role:central_admin')->name('catalog.template-preview');

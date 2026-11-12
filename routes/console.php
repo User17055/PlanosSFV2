@@ -93,6 +93,15 @@ Artisan::command('plans:import-vindi-customers {--apply : Grava os cadastros; se
     if(!$apply) $this->comment('Nada foi gravado. Para gravar, rode de novo com --apply.');
 })->purpose('Trazer da Vindi o cadastro de quem tem plano ativo, sem pet, contrato ou assinatura');
 
+Artisan::command('plans:import-legacy {arquivo : JSON da conciliação (Vindi + SimplesVet)} {--apply : Grava; sem esta opção, simula e desfaz}',function(\App\Services\Domain\LegacyImport $import) {
+    $data=json_decode((string)file_get_contents($this->argument('arquivo')),true,512,JSON_THROW_ON_ERROR);
+    $actor=\App\Models\User::where('role','central_admin')->where('active',true)->orderBy('id')->firstOrFail();
+    $report=$import->run($data,$actor,(bool)$this->option('apply'));
+    // Só contagens: nome e CPF não vão para o terminal.
+    $this->table(['Resultado','Quantidade'],collect($report)->map(fn($total,$label)=>[str_replace('_',' ',$label),$total])->values()->all());
+    $this->comment($this->option('apply')?'Gravado.':'Nada foi gravado. Para gravar, rode de novo com --apply.');
+})->purpose('Base antiga: contratos ativos ligados à Vindi, pets do SimplesVet na ficha e os itens sem pet em "Pets para escolher"');
+
 Schedule::command('plans:recover-events')->everyFiveMinutes()->withoutOverlapping();
 // A cada 30 minutos: a conferência vale 60, e as rodadas dividem o limite de consultas por minuto da Vindi com os avisos.
 Schedule::command('plans:reconcile')->everyThirtyMinutes()->withoutOverlapping();
