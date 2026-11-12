@@ -336,6 +336,23 @@ class VindiCheckoutTest extends TestCase
         $this->assertSame(0,Invoice::where('external_id','601')->count());
     }
 
+    public function test_imported_contract_from_the_old_base_never_creates_commission_or_email(): void
+    {
+        // Contrato da base antiga: já ligado à assinatura e ao item da Vindi, sem entrada.
+        \Illuminate\Support\Facades\Notification::fake();
+        $this->subscription->invoices()->delete();
+        Subscription::whereKey($this->subscription->id)->update(['vindi_subscription_id'=>'444','vindi_product_item_id'=>'9001','imported_at'=>now()]);
+        $this->customerUser->update(['email_verified_at'=>null]);
+        $this->subscriptionBills=[['id'=>600,'subscription'=>['id'=>444],'customer'=>['id'=>111],'amount'=>'99.0','status'=>'paid','url'=>null,
+            'updated_at'=>now()->toIso8601String(),'due_at'=>now()->toDateString(),'charges'=>[['status'=>'paid','paid_at'=>now()->toIso8601String()]]]];
+        app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
+        $invoice=Invoice::where('external_id','600')->sole();
+        $this->assertSame(['paid',false],[$invoice->status,$invoice->is_initial],'A mensalidade antiga não vira entrada.');
+        $this->assertSame(0,\App\Models\Commission::count());
+        \Illuminate\Support\Facades\Notification::assertNothingSent();
+        $this->assertSame(0,$this->subscriptionPosts,'A assinatura que já existe na Vindi continua a mesma.');
+    }
+
     public function test_other_customer_cannot_issue_or_access_checkout(): void
     {
         $stranger=User::factory()->create(['role'=>'customer','active'=>true,'email_verified_at'=>now()]);

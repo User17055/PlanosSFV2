@@ -17,7 +17,7 @@ class PaymentReminders
     public function due(): Collection
     {
         return Proposal::whereNotNull('accepted_at')->where('accepted_at', '<=', now()->subDay())->where('signature_method', 'digital')->where('status', '!=', 'cancelled')
-            ->whereHas('subscription', fn ($s) => $s->whereNotIn('status', \App\Models\Subscription::TERMINAL)
+            ->whereHas('subscription', fn ($s) => $s->whereNotIn('status', \App\Models\Subscription::TERMINAL)->whereNull('imported_at')
                 ->whereHas('invoices', fn ($i) => $i->where('is_initial', true)->whereNotIn('status', ['paid', 'cancelled', 'refunded'])))
             ->with(['customer', 'pet', 'productVersion', 'campaign'])->get()
             ->filter(function (Proposal $p) {

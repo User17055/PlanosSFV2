@@ -17,7 +17,7 @@ class Subscription extends DomainModel
 
     protected function casts(): array
     {
-        return ['contract_snapshot' => 'array', 'locked_at' => 'datetime', 'requested_start_at' => 'datetime', 'effective_start_at' => 'datetime', 'activated_at' => 'datetime', 'ends_at' => 'datetime', 'cancelled_at' => 'datetime', 'financial_checked_at' => 'datetime', 'attribution_snapshot' => 'array', 'first_touch_at' => 'datetime', 'last_touch_at' => 'datetime', 'marketing_link_id' => 'integer', 'link_owner_id' => 'integer', 'referrer_customer_id' => 'integer', 'first_touch_id' => 'integer', 'last_touch_id' => 'integer'];
+        return ['contract_snapshot' => 'array', 'locked_at' => 'datetime', 'requested_start_at' => 'datetime', 'effective_start_at' => 'datetime', 'activated_at' => 'datetime', 'ends_at' => 'datetime', 'cancelled_at' => 'datetime', 'financial_checked_at' => 'datetime', 'imported_at' => 'datetime', 'attribution_snapshot' => 'array', 'first_touch_at' => 'datetime', 'last_touch_at' => 'datetime', 'marketing_link_id' => 'integer', 'link_owner_id' => 'integer', 'referrer_customer_id' => 'integer', 'first_touch_id' => 'integer', 'last_touch_id' => 'integer'];
     }
 
     public function customer()

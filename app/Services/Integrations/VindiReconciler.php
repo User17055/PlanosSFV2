@@ -106,7 +106,8 @@ class VindiReconciler
                     'customer_id' => $locked->customer_id,
                     'originating_franchise_id' => $locked->originating_franchise_id,
                     'amount_cents' => $partAmount, 'due_at' => $dueAt, 'status' => 'pending',
-                    'is_initial' => ! Invoice::where('subscription_id', $locked->id)->exists(),
+                    // Contrato da base antiga não tem entrada: a primeira fatura trazida é só mais uma mensalidade.
+                    'is_initial' => ! $locked->imported_at && ! Invoice::where('subscription_id', $locked->id)->exists(),
                     'competence_start' => data_get($bill, 'period.start_at') ? $this->instant(data_get($bill, 'period.start_at')) : null,
                     'competence_end' => data_get($bill, 'period.end_at') ? $this->instant(data_get($bill, 'period.end_at')) : null,
                     'payment_url' => $this->safePaymentUrl($bill['url'] ?? null),

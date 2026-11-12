@@ -161,7 +161,8 @@ class ContractService
     {
         $subscription = $document->subscription;
         $email = $subscription?->customer?->email;
-        if ($document->kind !== 'final_contract' || $document->status !== 'valid' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // A base antiga não recebe e-mail automático, nem quando o contrato escaneado é validado.
+        if ($document->kind !== 'final_contract' || $document->status !== 'valid' || ! filter_var($email, FILTER_VALIDATE_EMAIL) || $subscription->imported_at) {
             return false;
         }
         if (! $subscription->activated_at && ! $subscription->invoices()->where('is_initial', true)->where('status', 'paid')->exists()) {

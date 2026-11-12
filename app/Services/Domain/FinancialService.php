@@ -103,7 +103,8 @@ class FinancialService
 
             return $current;
         }, 3);
-        if ($result->status === 'paid') {
+        // Decisão do usuário (12/11/2026): a base antiga não recebe e-mail automático.
+        if ($result->status === 'paid' && ! Subscription::whereKey($invoice->subscription_id)->value('imported_at')) {
             app(ContactVerificationService::class)->requestAfterPayment($invoice->customer_id);
             $contract = ContractDocument::where('subscription_id', $invoice->subscription_id)->where('kind', 'final_contract')->where('status', 'valid')->latest('version')->first();
             if ($contract) {

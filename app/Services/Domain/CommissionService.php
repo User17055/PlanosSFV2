@@ -31,7 +31,8 @@ class CommissionService
     /** Chamado por FinancialService::applyVerifiedInvoice, dentro da mesma transação, a cada mudança de fatura. */
     public function syncForInvoice(Invoice $invoice): ?Commission
     {
-        if (! $invoice->is_initial) {
+        // Decisão do usuário (12/11/2026): os planos da base antiga não geram comissão.
+        if (! $invoice->is_initial || $invoice->subscription?->imported_at) {
             return null;
         }
         $commission = Commission::where('subscription_id', $invoice->subscription_id)->lockForUpdate()->first();
