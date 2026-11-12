@@ -118,6 +118,7 @@
     const ranges = mapScale(max);
     mapLegend(host, ranges);
     const names = []; // nomes por último, para nenhum bairro desenhado depois cobrir o texto
+    let dragged = false; // arrastar o mapa não conta como clique no bairro
     features.forEach(feature => {
       const item = info(feature);
       const d = rings(feature.geometry).map(ring => ring.map((p, i) => `${i ? 'L' : 'M'}${project(p).map(n => n.toFixed(2)).join(',')}`).join(' ') + ' Z').join(' ');
@@ -130,20 +131,88 @@
       const show = () => { tooltip.textContent = title; tooltip.hidden = false; };
       path.addEventListener('mouseenter', show); path.addEventListener('focus', show);
       path.addEventListener('mouseleave', () => { tooltip.hidden = true; }); path.addEventListener('blur', () => { tooltip.hidden = true; });
-      path.addEventListener('click', () => onSelect(item));
+      path.addEventListener('click', () => { if (!dragged) onSelect(item); });
       path.addEventListener('keydown', e => { if (['Enter', ' '].includes(e.key)) { e.preventDefault(); onSelect(item); } });
       svg.append(path);
       if (labels === 'plans' ? item.label && item.plans > 0 : labels && item.label && (!isPoint || item.customers)) {
         const box = bounds([feature]); const pos = project([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2]);
-        names.push(make('text', { x: pos[0], y: pos[1], 'text-anchor': 'middle', 'font-size': 10 }, item.plans ? `${item.label} (${item.plans})` : item.label));
+        names.push(make('text', { x: pos[0], y: pos[1], 'text-anchor': 'middle', 'font-size': 10, 'data-plans': item.plans }, item.plans ? `${item.label} (${item.plans})` : item.label));
       }
     });
     svg.append(...names);
-    host.replaceChildren(svg, tooltip);
-    // Nomes com cerca de 12px na tela, do computador ao celular (o desenho encolhe junto com a tela).
-    const box = svg.getBoundingClientRect();
-    const zoom = Math.min(box.width / w, box.height / h) || 1;
-    names.forEach(name => { name.style.fontSize = `${Math.max(10, 12 / zoom).toFixed(1)}px`; name.style.strokeWidth = (3.5 / zoom).toFixed(1); });
+    // Zoom (roda do mouse, pinça ou + e −) e arrasto mexem só no viewBox.
+    const controls = document.createElement('div'); controls.className = 'analytics-map-zoom';
+    const button = (action, label, text) => { const el = document.createElement('button'); el.type = 'button'; el.dataset.mapZoom = action; el.title = label; el.setAttribute('aria-label', label); el.textContent = text; controls.append(el); return el; };
+    const zoomIn = button('in', 'Aproximar', '+'), zoomOut = button('out', 'Afastar', '−'), reset = button('reset', 'Ver o mapa todo', 'Ver tudo');
+    host.replaceChildren(svg, tooltip, controls);
+    const minWidth = w / 12;
+    let view = [0, 0, w, h];
+    // Nomes com cerca de 12px na tela em qualquer zoom. Só aparecem os que cabem sem encostar em outro, do lugar com mais planos
+    // para o com menos: no mapa inteiro ficam os principais, e aproximar revela os demais.
+    const order = names.sort((a, b) => b.dataset.plans - a.dataset.plans);
+    const layout = () => {
+      if (!svg.getBoundingClientRect().width) return; // aba escondida: mede quando ela abrir
+      const px =1 / (svg.getScreenCTM()?.a || 1); // unidades do desenho por pixel da tela
+      order.forEach(name => { name.style.fontSize = `${(13 * px).toFixed(3)}px`; name.style.strokeWidth = (3.5 * px).toFixed(3); name.style.display = ''; });
+      // Os botões de zoom contam como um nome já colocado, e a borda guarda uma margem: nenhum nome fica cortado ou escondido.
+      const c = controls.getBoundingClientRect(), [cx, cy] = toMap(c.left, c.top);
+      const gap = 4 * px, edge = 6 * px, placed = [{ x: cx, y: cy, width: c.width * px, height: c.height * px }];
+      order.map(name => [name, name.getBBox()]).forEach(([name, b]) => {
+        const inside = b.x >= view[0] + edge && b.y >= view[1] + edge && b.x + b.width <= view[0] + view[2] - edge && b.y + b.height <= view[1] + view[3] - edge;
+        const free = !placed.some(p => b.x < p.x + p.width + gap && p.x < b.x + b.width + gap && b.y < p.y + p.height + gap && p.y < b.y + b.height + gap);
+        if (inside && free) placed.push(b); else name.style.display = 'none';
+      });
+    };
+    let queued = false;
+    const relayout = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; layout(); }); } };
+    const setView = (x, y, vw) => {
+      vw = Math.min(w, Math.max(minWidth, vw)); const vh = vw * h / w;
+      view = [Math.min(Math.max(x, 0), w - vw), Math.min(Math.max(y, 0), h - vh), vw, vh];
+      svg.setAttribute('viewBox', view.map(n => n.toFixed(2)).join(' '));
+      const zoomed = vw < w;
+      svg.classList.toggle('is-zoomed', zoomed);
+      svg.style.touchAction = zoomed ? 'none' : 'pan-y'; // sem zoom, o dedo continua rolando a página
+      zoomOut.disabled = !zoomed; reset.hidden = !zoomed; zoomIn.disabled = vw <= minWidth;
+      relayout();
+    };
+    const zoomAt = (factor, cx, cy) => { const vw = Math.min(w, Math.max(minWidth, view[2] / factor)), k = vw / view[2]; setView(cx - (cx - view[0]) * k, cy - (cy - view[1]) * k, vw); };
+    const toMap = (clientX, clientY) => { const p = new DOMPoint(clientX, clientY).matrixTransform(svg.getScreenCTM().inverse()); return [p.x, p.y]; };
+    const center = () => [view[0] + view[2] / 2, view[1] + view[3] / 2];
+    zoomIn.addEventListener('click', () => zoomAt(1.6, ...center()));
+    zoomOut.addEventListener('click', () => zoomAt(1 / 1.6, ...center()));
+    reset.addEventListener('click', () => setView(0, 0, w));
+    svg.addEventListener('wheel', event => {
+      if (event.deltaY > 0 && view[2] >= w) return; // mapa inteiro: rolar para baixo continua descendo a página
+      event.preventDefault();
+      zoomAt(Math.exp(-Math.max(-100, Math.min(100, event.deltaY)) * 0.003), ...toMap(event.clientX, event.clientY));
+    }, { passive: false });
+    const pointers = new Map();
+    svg.addEventListener('pointerdown', event => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, x0: event.clientX, y0: event.clientY });
+      dragged = false;
+    });
+    window.addEventListener('pointermove', event => {
+      const last = pointers.get(event.pointerId);
+      if (!last) return;
+      const other = [...pointers.entries()].find(([id]) => id !== event.pointerId)?.[1];
+      if (other) { // pinça: aproxima ou afasta em volta do meio dos dois dedos
+        const before = Math.hypot(last.x - other.x, last.y - other.y), after = Math.hypot(event.clientX - other.x, event.clientY - other.y);
+        if (before > 0) zoomAt(after / before, ...toMap((event.clientX + other.x) / 2, (event.clientY + other.y) / 2));
+      } else if (view[2] < w) {
+        const k = 1 / svg.getScreenCTM().a;
+        setView(view[0] - (event.clientX - last.x) * k, view[1] - (event.clientY - last.y) * k, view[2]);
+      }
+      if (other || Math.hypot(event.clientX - last.x0, event.clientY - last.y0) > 4) dragged = true;
+      last.x = event.clientX; last.y = event.clientY;
+    });
+    const release = event => pointers.delete(event.pointerId);
+    window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
+    // Mede de novo quando o mapa ganha o tamanho final (aba aberta, tela girada): a primeira medida pode sair antes disso.
+    if (window.ResizeObserver) new ResizeObserver(relayout).observe(svg); else window.addEventListener('resize', relayout);
+    setView(0, 0, w);
+    layout();
+    document.fonts?.ready.then(relayout); // a fonte do site deixa os nomes mais largos: mede de novo quando ela chega
   }
   async function json(url, cache = 'default') { const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache }); if (!response.ok) throw new Error('Mapa temporariamente indisponível. Consulte os números ao lado.'); return response.json(); }
   function fail(host, error) { const p = document.createElement('p'); p.className = 'analytics-loading'; p.textContent = error.message; host.replaceChildren(p); }

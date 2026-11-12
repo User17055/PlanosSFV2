@@ -220,6 +220,15 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame(6000,$plans['Plano real']['received_cents']);$this->assertSame(4000,$plans['Segundo plano']['received_cents']);
         $this->assertSame(1,$plans['Segundo plano']['cancelled']);$this->assertSame(1,$report['summary']['cancelled_count']);
         $this->assertCount(1,$report['insights']['recent_cancelled']);
+        // Variação da base antiga ("+ 2 hemogramas") e a venda nova sem "Plano" no nome contam no plano principal, numa linha só.
+        $variant=Product::create(['name'=>'Plano real + 2 hemogramas (base antiga)','code'=>'BA-REAL-H','category'=>'health_plan']);
+        $this->version=ProductVersion::create(['product_id'=>$variant->id,'version'=>1,'name'=>'Real + 2 hemogramas','price_cents'=>9000,'billing_cycle'=>'monthly','species'=>['dog'],'contract_template'=>'Condições','is_demo'=>false]);
+        $this->sale();
+        $bare=Product::create(['name'=>'Real','code'=>'SF-REAL','category'=>'health_plan']);
+        $this->version=ProductVersion::create(['product_id'=>$bare->id,'version'=>1,'name'=>'Real','price_cents'=>9000,'billing_cycle'=>'monthly','species'=>['dog'],'contract_template'=>'Condições','is_demo'=>false]);
+        $this->sale();
+        $plans=$this->report($this->admin)['plans'];
+        $this->assertSame(['Plano real'=>3,'Segundo plano'=>1],$plans->pluck('sales','name')->all());
     }
 
     public function test_origins_referrers_and_revenue_preserve_distinct_customer_counts(): void

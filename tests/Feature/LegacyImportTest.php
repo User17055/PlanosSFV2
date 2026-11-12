@@ -124,7 +124,9 @@ class LegacyImportTest extends TestCase
         $report = $general->report($this->admin, $general->filters($this->admin, []));
         $this->assertSame([2, 0], [$report['summary']['active_count'], $report['summary']['sold_count']], 'Planos de saúde por padrão; o banho fica em Pacotes.');
         $this->assertSame(0, $general->report($this->admin, $general->filters($this->admin, ['base' => 'novos']))['summary']['active_count']);
-    }
+        $this->assertSame([['Plano Super Econômico', 2]], $report['plans']->map(fn ($p) => [$p['name'], $p['active']])->all(), 'No painel, o plano aparece sem "(base antiga)".');
+        $this->assertSame(['Plano Econômico', 'Pacote Banho Quinzenal', 'Plano VIP'], array_map([\App\Services\Reports\DashboardService::class, 'planLabel'],
+            ['Plano Econômico + 2 hemogramas (base antiga)', 'Pacote Banho Quinzenal + taxa (base antiga)', 'Plano VIP (base antiga)']), 'Variação conta no plano principal.');    }
 
     public function test_only_central_admin_and_unit_managers_choose_pets(): void
     {

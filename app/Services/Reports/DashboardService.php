@@ -23,6 +23,12 @@ class DashboardService
         return Str::lower(Str::ascii(preg_replace('/\s+/u',' ',trim((string)$value))));
     }
 
+    /** Nome do plano no painel: sem "(base antiga)" e sem variação ("+ 2 hemogramas", "+ taxa"), que conta no plano principal. */
+    public static function planLabel(string $name): string
+    {
+        return trim(preg_replace('/\s*\+.*$|\s*\(base antiga\)$/u','',$name));
+    }
+
     public static function cityCatalog(): array
     {
         static $cities;
@@ -203,7 +209,11 @@ class DashboardService
         }
         $growth=$this->growth($scoped,$filters);
         return compact('filters','summary','geo','series','channels','insights','growth')+[
-            'plans'=>collect($planRows)->sortByDesc($filters['base']==='gerais'?'active':'sales')->values(),
+            // Mesmo plano da base antiga ("Plano Econômico") e da venda nova ("Econômico"), e suas variações, numa linha só, com o nome "Plano …".
+            'plans'=>collect($planRows)->groupBy(fn($row)=>preg_replace('/^plano /','',self::normalize(self::planLabel($row['name']))))
+                ->map(fn($rows)=>collect(['sales','sold_cents','active','mrr_cents','received_cents','cancelled','month_expected_cents'])->mapWithKeys(fn($k)=>[$k=>$rows->sum($k)])
+                    ->put('name',$rows->map(fn($row)=>self::planLabel($row['name']))->sortByDesc(fn($name)=>(bool)preg_match('/^(plano|pacote)\b/iu',$name))->first())->all())
+                ->sortByDesc($filters['base']==='gerais'?'active':'sales')->values(),
             'ranking'=>collect($sellerRows)->sortByDesc('sales')->values()->take(10),
             'recentProposals'=>$newOnly(clone $geoBase)->with(['customer:id,name','pet:id,name','productVersion:id,name','originatingFranchise:id,name'])->latest()->take(6)->get(),
             'options'=>['employees'=>$this->employees($user)->orderBy('name')->get(['id','name']),
