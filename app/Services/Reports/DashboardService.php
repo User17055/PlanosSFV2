@@ -32,7 +32,7 @@ class DashboardService
     public function filters(User $user,array $input): array
     {
         $today=CarbonImmutable::now('America/Sao_Paulo');
-        $input=array_merge(['date_from'=>$today->startOfMonth()->toDateString(),'date_to'=>$today->toDateString(),'data_mode'=>'real','category'=>'health_plan'],$input);
+        $input=array_merge(['date_from'=>$today->startOfMonth()->toDateString(),'date_to'=>$today->toDateString(),'data_mode'=>'real','category'=>'health_plan','base'=>'gerais'],$input);
         $data=Validator::make($input,[
             'date_from'=>'required|date_format:Y-m-d|after_or_equal:2000-01-01|before_or_equal:'.$today->toDateString(),
             'date_to'=>'required|date_format:Y-m-d|after_or_equal:date_from|before_or_equal:'.$today->toDateString(),
@@ -42,6 +42,8 @@ class DashboardService
             'acquisition_source'=>['nullable',Rule::in(array_keys(\App\Services\Attribution\TrackingSanitizer::sourceLabels()))],
             'data_mode'=>['required',Rule::in(config('plans.demo')?['real','demo']:['real'])],
             'category'=>'required|in:health_plan,package,all',
+            // Planos gerais: a carteira inteira, com a base antiga importada. Planos novos: só o que foi vendido pelo sistema.
+            'base'=>'required|in:gerais,novos',
         ])->validate();
         if (CarbonImmutable::parse($data['date_from'])->diffInDays(CarbonImmutable::parse($data['date_to']))>365) throw ValidationException::withMessages(['date_to'=>'Selecione um período de até 366 dias.']);
         if (!empty($data['franchise_id'])) $this->access->franchise($user,(int)$data['franchise_id']);
@@ -126,19 +128,22 @@ class DashboardService
     {
         $bounds=$this->bounds($filters);
         $base=$this->proposals($user,$filters);
-        $subscriptions=Subscription::whereIn('proposal_id',(clone $base)->select('proposals.id'));
+        // A base antiga nunca conta como venda; a carteira segue a escolha entre planos gerais e planos novos.
+        $newOnly=fn(Builder $q)=>$q->whereDoesntHave('subscription',fn($s)=>$s->whereNotNull('imported_at'));
+        $portfolio=fn(Builder $q)=>$filters['base']==='novos'?$q->whereNull('imported_at'):$q;
+        $subscriptions=$portfolio(Subscription::whereIn('proposal_id',(clone $base)->select('proposals.id')));
         $allActive=(clone $subscriptions)->whereIn('status',['active','scheduled_cancellation'])
             ->with(['customer:id,address','pet:id,species','productVersion:id,product_id,name,billing_cycle','productVersion.product:id,name'])
             ->get(['id','customer_id','pet_id','category','product_version_id','price_cents','status']);
         $geo=$this->geoReport($allActive,$filters);
         $geoBase=$this->geography(clone $base,$filters);
-        $scoped=Subscription::whereIn('proposal_id',(clone $geoBase)->select('proposals.id'));
+        $scoped=$portfolio(Subscription::whereIn('proposal_id',(clone $geoBase)->select('proposals.id')));
         $invoices=Invoice::whereIn('subscription_id',(clone $scoped)->select('subscriptions.id'));
         $payments=Payment::whereHas('invoice',fn($q)=>$q->whereIn('invoices.id',(clone $invoices)->select('invoices.id'))->where('reconciliation_status','verified')->whereNotNull('confirmed_at')->whereIn('status',['paid','partial']));
         $payments->where('source',$filters['data_mode']==='demo'?'like':'not like','demo%');
         // Contract sales are accepted commitments; cash is independently dated by payment.
-        $sold=$this->during(clone $geoBase,'accepted_at',$bounds);
-        $created=$this->during(clone $geoBase,'created_at',$bounds);
+        $sold=$this->during($newOnly(clone $geoBase),'accepted_at',$bounds);
+        $created=$this->during($newOnly(clone $geoBase),'created_at',$bounds);
         $periodInvoices=$this->during(clone $invoices,'due_at',$bounds);
         $open=(clone $periodInvoices)->whereNotIn('status',['cancelled','refunded','paid']);
         $commissionBase=app(CommissionService::class)->query($user)->whereIn('proposal_id',(clone $geoBase)->select('proposals.id'))->where('is_demo',$filters['data_mode']==='demo');
@@ -163,6 +168,7 @@ class DashboardService
             'cancelled_count'=>$this->during(clone $scoped,'cancelled_at',$bounds)->where('status','cancelled')->count(),
         ];
         $summary['ticket_cents']=$summary['sold_count']?(int)round($summary['sold_cents']/$summary['sold_count']):0;
+        $summary['active_ticket_cents']=$summary['active_count']?(int)round($summary['mrr_cents']/$summary['active_count']):0;
         $summary['net_after_commissions_cents']=$summary['received_cents']-$summary['commission_paid_cents'];
         $cohortAccepted=(clone $created)->whereNotNull('accepted_at')->count();
         $summary['conversion']=$summary['proposals_count']?round($cohortAccepted*100/$summary['proposals_count'],1):0;
@@ -186,19 +192,20 @@ class DashboardService
             $planRows[$pid]['sales']++; $planRows[$pid]['sold_cents']+=$sale->price_cents;
             $channels[$sale->channel]=($channels[$sale->channel]??0)+1;
         }
-        foreach($active as $s) { $pid=$s->productVersion->product_id; $planRows[$pid]??=['name'=>$s->productVersion->product->name,'sales'=>0,'sold_cents'=>0,'active'=>0]; $planRows[$pid]['active']++; }
+        foreach($active as $s) { $pid=$s->productVersion->product_id; $planRows[$pid]??=['name'=>$s->productVersion->product->name,'sales'=>0,'sold_cents'=>0,'active'=>0]; $planRows[$pid]['active']++; $planRows[$pid]['mrr_cents']=($planRows[$pid]['mrr_cents']??0)+($s->productVersion->billing_cycle==='monthly'?$s->price_cents:0); }
         $insights=$this->portfolioInsights($filters,$active,$scoped,$invoices,$payments,$bounds,$sales);
         foreach($insights['plans'] as $pid=>$row) $planRows[$pid]=array_merge(['sales'=>0,'sold_cents'=>0,'active'=>0],$planRows[$pid]??[],$row);
-        foreach($planRows as &$row)$row+=['received_cents'=>0,'cancelled'=>0,'month_expected_cents'=>0];unset($row);
+        foreach($planRows as &$row)$row+=['received_cents'=>0,'cancelled'=>0,'month_expected_cents'=>0,'mrr_cents'=>0];unset($row);
         foreach($this->during(clone $payments,'paid_at',$bounds)->get(['paid_at','amount_cents']) as $p) { $key=$p->paid_at->timezone('America/Sao_Paulo')->format('Y-m'); if(isset($series[$key]))$series[$key]['received_cents']+=$p->amount_cents; }
         foreach((clone $paidCommissions)->get(['paid_at','amount_cents']) as $c) { $key=$c->paid_at->timezone('America/Sao_Paulo')->format('Y-m'); if(isset($series[$key]))$series[$key]['commission_cents']+=$c->amount_cents; }
         foreach((clone $earned)->whereIn('status',['payable','paid'])->get(['beneficiary_user_id','beneficiary_name','amount_cents']) as $c) {
             $id=$c->beneficiary_user_id??0; $sellerRows[$id]??=['id'=>$id,'name'=>$c->beneficiary_name,'sales'=>0,'sold_cents'=>0,'commission_cents'=>0]; $sellerRows[$id]['commission_cents']+=$c->amount_cents;
         }
-        return compact('filters','summary','geo','series','channels','insights')+[
-            'plans'=>collect($planRows)->sortByDesc('sales')->values(),
+        $growth=$this->growth($scoped,$filters);
+        return compact('filters','summary','geo','series','channels','insights','growth')+[
+            'plans'=>collect($planRows)->sortByDesc($filters['base']==='gerais'?'active':'sales')->values(),
             'ranking'=>collect($sellerRows)->sortByDesc('sales')->values()->take(10),
-            'recentProposals'=>(clone $geoBase)->with(['customer:id,name','pet:id,name','productVersion:id,name','originatingFranchise:id,name'])->latest()->take(6)->get(),
+            'recentProposals'=>$newOnly(clone $geoBase)->with(['customer:id,name','pet:id,name','productVersion:id,name','originatingFranchise:id,name'])->latest()->take(6)->get(),
             'options'=>['employees'=>$this->employees($user)->orderBy('name')->get(['id','name']),
                 'franchises'=>Franchise::when($user->role!=='central_admin',fn($q)=>$q->whereIn('id',$this->access->franchiseIds($user)))->orderBy('name')->get(['id','name']),
                 'products'=>Product::whereHas('versions',function($q)use($filters){
@@ -207,6 +214,34 @@ class DashboardService
                 })->orderBy('name')->get(['id','name'])],
             'isSales'=>$user->role==='sales','generatedAt'=>CarbonImmutable::now('America/Sao_Paulo'),
         ];
+    }
+
+    /** Carteira mês a mês no período do filtro: ativos e mensalidade no fim de cada mês, quem entrou e quem saiu. */
+    private function growth(Builder $scoped,array $filters): array
+    {
+        $rows=(clone $scoped)->where(fn($q)=>$q->whereNotNull('activated_at')->orWhereNotNull('imported_at')->orWhereIn('status',['active','scheduled_cancellation']))
+            ->with('productVersion:id,billing_cycle')->get(['id','product_version_id','price_cents','status','locked_at','activated_at','effective_start_at','cancelled_at','ends_at','updated_at','imported_at'])
+            ->map(fn($s)=>['start'=>$s->effective_start_at??$s->activated_at??$s->locked_at,'stop'=>$s->cancelled_at??($s->isTerminal()?($s->ends_at??$s->updated_at):null),
+                'cents'=>$s->productVersion?->billing_cycle==='monthly'?$s->price_cents:0])->filter(fn($r)=>$r['start']);
+        $alive=fn($at)=>$rows->filter(fn($r)=>$r['start']->lt($at) && (!$r['stop'] || $r['stop']->gte($at)));
+        $last=CarbonImmutable::parse($filters['date_to'],'America/Sao_Paulo')->startOfMonth();
+        $begin=CarbonImmutable::parse($filters['date_from'],'America/Sao_Paulo')->startOfMonth();
+        // Período de um mês só, como o padrão: mostra os 12 meses até ele, para o crescimento aparecer.
+        if($begin->equalTo($last)) $begin=$last->subMonths(11);
+        $months=[];
+        for($month=$begin;$month<=$last;$month=$month->addMonth()) {
+            $from=$month->utc(); $to=$month->addMonth()->utc(); $at=$to->lt(CarbonImmutable::now())?$to:CarbonImmutable::now()->addSecond()->utc(); // mês atual: conta até agora, inclusive
+            $now=$alive($at);
+            $months[]=['month'=>$month->locale('pt_BR')->translatedFormat('M/y'),'active'=>$now->count(),'mrr_cents'=>(int)$now->sum('cents'),
+                'entered'=>$rows->filter(fn($r)=>$r['start']->gte($from) && $r['start']->lt($to))->count(),
+                'left'=>$rows->filter(fn($r)=>$r['stop'] && $r['stop']->gte($from) && $r['stop']->lt($to))->count()];
+        }
+        $start=$alive($begin->utc());
+        $first=['active'=>$start->count(),'mrr_cents'=>(int)$start->sum('cents')];
+        $end=end($months);
+        return ['months'=>$months,'start'=>$first,'range_label'=>count($months)===1?'no mês':'em '.count($months).' meses','active_delta'=>$end['active']-$first['active'],'mrr_delta_cents'=>$end['mrr_cents']-$first['mrr_cents'],
+            'active_growth'=>$first['active']?round(($end['active']-$first['active'])*100/$first['active'],1):null,
+            'entered'=>array_sum(array_column($months,'entered')),'left'=>array_sum(array_column($months,'left')),'max'=>max(1,...array_column($months,'active'))];
     }
 
     private function portfolioInsights(array $filters,$active,Builder $subscriptions,Builder $invoices,Builder $payments,array $bounds,$sales): array

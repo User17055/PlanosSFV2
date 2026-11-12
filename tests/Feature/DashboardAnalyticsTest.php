@@ -258,4 +258,29 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertFalse($same('Vila Furquim','Parque Furquim'));
         $this->assertFalse($same('Centro','Vila Furquim'));
     }
+
+    public function test_general_plans_include_the_old_base_but_sales_and_new_plans_never_count_it(): void
+    {
+        $this->sale();
+        $old=$this->sale();
+        // Base antiga importada: começou em março de 2025 e não é venda do sistema.
+        Subscription::whereKey($old->id)->update(['imported_at'=>now(),'effective_start_at'=>'2025-03-10 12:00:00']);
+        $general=$this->report($this->admin);
+        $this->assertSame([2,20000,1,1],[$general['summary']['active_count'],$general['summary']['mrr_cents'],$general['summary']['sold_count'],$general['summary']['proposals_count']]);
+        $this->assertSame(10000,$general['summary']['active_ticket_cents']);
+        $new=$this->report($this->admin,['base'=>'novos']);
+        $this->assertSame([1,10000,1],[$new['summary']['active_count'],$new['summary']['mrr_cents'],$new['summary']['sold_count']]);
+        // Período de um mês: os 12 meses até ele. A base antiga já estava lá no começo; o plano novo entrou em outubro.
+        $growth=$general['growth'];
+        $this->assertCount(12,$growth['months']);
+        $this->assertSame([1,10000],[$growth['start']['active'],$growth['start']['mrr_cents']]);
+        $this->assertSame(['active'=>2,'mrr_cents'=>20000,'entered'=>1,'left'=>0],array_diff_key(end($growth['months']),['month'=>1]));
+        $this->assertSame([1,10000,100.0],[$growth['active_delta'],$growth['mrr_delta_cents'],$growth['active_growth']]);
+        $this->assertSame([0,1],[$new['growth']['start']['active'],end($new['growth']['months'])['active']]);
+        // O crescimento segue o período escolhido no filtro.
+        $this->assertCount(3,$this->report($this->admin,['date_from'=>'2026-08-01'])['growth']['months']);
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<option value="gerais" selected>Planos gerais</option>',false)->assertSee('Crescimento dos planos gerais')->assertSee('Receita mensal');
+        $this->get(route('dashboard',['base'=>'novos']))->assertOk()->assertSee('Crescimento dos planos novos')->assertSee('Contratos fechados');
+        $this->get(route('dashboard',['base'=>'todos']))->assertSessionHasErrors('base');
+    }
 }

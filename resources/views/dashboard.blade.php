@@ -10,6 +10,9 @@ $dashboardData=['series'=>[],'geo'=>$geo,'state'=>$filters['state'] ?: 'SP','cit
 $neighborhoods=collect($geo['neighborhoods'])->sortByDesc('plans')->take(8);
 $maxNeighborhood=max(1,$neighborhoods->max('plans'));
 $funnelBase=max(1,$summary['proposals_count']);
+$general=$filters['base']==='gerais';
+$growthEnd=end($growth['months']);
+$signed=fn($value,$format)=>($value>0?'+':($value<0?'−':'')).$format(abs($value));
 @endphp
 <div class="dashboard-workspace dash-simple">
 <div class="page-heading analytics-heading"><div><h1>{{ $isSales?'Meus resultados':'Oi, '.(collect(preg_split('/\s+/',trim(auth()->user()->name)))->first(fn($word)=>!str_ends_with($word,'.')) ?? 'equipe').'!' }}</h1><p>De {{ \Carbon\Carbon::parse($filters['date_from'])->format('d/m') }} a {{ \Carbon\Carbon::parse($filters['date_to'])->format('d/m/Y') }} · atualizado às {{ $generatedAt->format('H:i') }}</p></div><div class="analytics-heading-actions">@if(in_array(auth()->user()->role,['central_admin','manager','sales']) && auth()->user()->canUse('proposals.create'))<a class="button button-primary" href="{{ route('proposals.create') }}">@include('components.icon',['name'=>'plus']) Nova contratação</a>@endif @if(auth()->user()->canUse('dashboard.export'))<a class="button button-secondary" href="{{ route('dashboard.export',$filters) }}">@include('components.icon',['name'=>'download']) Exportar</a>@endif</div></div>
@@ -17,6 +20,7 @@ $funnelBase=max(1,$summary['proposals_count']);
 <label class="field">De<input type="date" name="date_from" required value="{{ $filters['date_from'] }}" max="{{ $generatedAt->toDateString() }}"></label>
 <label class="field">Até<input type="date" name="date_to" required value="{{ $filters['date_to'] }}" max="{{ $generatedAt->toDateString() }}"></label>
 <label class="field">Unidade<select name="franchise_id"><option value="">Todas do meu acesso</option>@foreach($options['franchises'] as $option)<option value="{{ $option->id }}" @selected($filters['franchise_id']==$option->id)>{{ $option->name }}</option>@endforeach</select></label>
+<label class="field" title="Planos gerais: toda a carteira, com a base antiga. Planos novos: só o que foi vendido pelo sistema.">Planos<select name="base"><option value="gerais" @selected($filters['base']==='gerais')>Planos gerais</option><option value="novos" @selected($filters['base']==='novos')>Planos novos</option></select></label>
 <div class="analytics-filter-actions"><button class="button button-primary">Aplicar</button><a class="text-link" href="{{ route('dashboard') }}">Limpar</a></div>
 <details class="dashboard-more-filters" @if($filters['employee_id'] || $filters['product_id'] || $filters['acquisition_source'] || $filters['city'] || $filters['neighborhood'] || $filters['category']!=='health_plan' || $filters['data_mode']!=='real') open @endif><summary>Mais filtros</summary><div class="dashboard-more-filter-grid">@unless($isSales)<label class="field">Funcionário<select name="employee_id"><option value="">Toda a equipe</option>@foreach($options['employees'] as $option)<option value="{{ $option->id }}" @selected($filters['employee_id']==$option->id)>{{ $option->name }}</option>@endforeach</select></label>@endunless
 <label class="field">Produto<select name="product_id"><option value="">Todos os produtos</option>@foreach($options['products'] as $option)<option value="{{ $option->id }}" @selected($filters['product_id']==$option->id)>{{ $option->name }}</option>@endforeach</select></label>
@@ -34,7 +38,12 @@ $funnelBase=max(1,$summary['proposals_count']);
 </section>@endif
 @if($filters['data_mode']==='demo')<div class="alert alert-warning"><div>Só dados de demonstração. Eles não entram nos números reais.</div></div>@endif
 <div class="analytics-kpis" id="resumo">
-@foreach([
+@foreach($general ? [
+['Planos ativos',$number($summary['active_count']),'heart','purple'],
+['Receita mensal',$money($summary['mrr_cents']),'wallet','green'],
+['Recebido no período',$money($summary['received_cents']),'check','ochre'],
+['Ticket médio',$money($summary['active_ticket_cents']),'chart','blue'],
+] : [
 ['Propostas oferecidas',$number($summary['proposals_count']),'file','blue'],
 ['Contratos fechados',$number($summary['sold_count']),'check','green'],
 ['Recebido',$money($summary['received_cents']),'wallet','ochre'],
@@ -44,13 +53,19 @@ $funnelBase=max(1,$summary['proposals_count']);
 @endforeach
 </div>
 <p class="dash-simple-line">Cães com plano ativo: <strong>{{ $number($insights['species']['dog']) }}</strong> · Gatos com plano ativo: <strong>{{ $number($insights['species']['cat']) }}</strong> · A receber: <strong>{{ $money($summary['open_cents']) }}</strong>@if($summary['overdue_cents']) · Em atraso: <strong>{{ $money($summary['overdue_cents']) }}</strong>@endif</p>
+<section class="card dash-growth" id="crescimento" aria-labelledby="dash-growth-title"><div class="dash-growth-head"><div><h2 id="dash-growth-title">Crescimento dos {{ $general?'planos gerais':'planos novos' }}</h2><p class="dash-simple-note">Planos ativos no fim de cada mês, de {{ $growth['months'][0]['month'] }} a {{ $growthEnd['month'] }}.</p></div>
+<dl class="dash-growth-stats"><div><dt>Planos ativos</dt><dd>{{ $number($growthEnd['active']) }}</dd><small>{{ $signed($growth['active_delta'],$number) }} {{ $growth['range_label'] }}@if($growth['active_growth']!==null) ({{ $signed($growth['active_growth'],fn($v)=>number_format($v,1,',','.')) }}%)@endif</small></div><div><dt>Receita mensal</dt><dd>{{ $money($growthEnd['mrr_cents']) }}</dd><small>{{ $signed($growth['mrr_delta_cents'],$money) }} {{ $growth['range_label'] }}</small></div><div><dt>Entraram</dt><dd>{{ $number($growth['entered']) }}</dd><small>{{ $growth['range_label'] }}</small></div><div><dt>Saíram</dt><dd>{{ $number($growth['left']) }}</dd><small>{{ $growth['range_label'] }}</small></div></dl></div>
+<div class="dash-growth-chart" role="img" aria-label="Planos ativos no fim de cada mês: {{ collect($growth['months'])->map(fn($m)=>$m['month'].' '.$m['active'])->implode(', ') }}">@foreach($growth['months'] as $m)<div class="dash-growth-col" title="{{ $m['month'] }}: {{ $number($m['active']) }} planos ativos · {{ $number($m['entered']) }} entraram · {{ $number($m['left']) }} saíram · {{ $money($m['mrr_cents']) }} por mês">@if($loop->last)<b>{{ $number($m['active']) }}</b>@endif<span style="height:{{ $m['active']?max(2,$m['active']*100/$growth['max']):0 }}%"></span><small>{{ $m['month'] }}</small></div>@endforeach</div>
+<details class="dash-growth-table"><summary>Ver mês a mês</summary><div class="table-scroll"><table><thead><tr><th>Mês</th><th>Planos ativos</th><th>Entraram</th><th>Saíram</th><th>Receita mensal</th></tr></thead><tbody>@foreach(array_reverse($growth['months']) as $m)<tr><td>{{ $m['month'] }}</td><td>{{ $number($m['active']) }}</td><td>{{ $number($m['entered']) }}</td><td>{{ $number($m['left']) }}</td><td>{{ $money($m['mrr_cents']) }}</td></tr>@endforeach</tbody></table></div></details>
+@if($general)<p class="dash-simple-note">A base antiga entra pela data de início de cada plano. Quem cancelou antes da importação não aparece nos meses anteriores.</p>@endif
+</section>
 @if($recentLeads->isNotEmpty())<section class="dash-leads" aria-labelledby="dash-leads-title"><div class="dash-leads-head"><h2 id="dash-leads-title">Leads novos</h2><a class="text-link" href="{{ route('leads.index',['situacao'=>'new']) }}">Ver todos</a></div><div class="dash-leads-grid">@foreach($recentLeads as $lead)<article class="dash-lead"><div class="dash-lead-top"><span class="dash-lead-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($lead->name,0,1)) }}</span><small title="Veio de: {{ $lead->origin()['label'] ?? 'Não informado' }}">@foreach($lead->origin()['logos'] ?? [] as $logo)<img src="{{ asset('assets/brand/'.$logo.'.svg') }}" alt="{{ ucfirst($logo) }}" width="15" height="15">@endforeach {{ $lead->created_at->locale('pt_BR')->diffForHumans() }}</small></div><h3>{{ $lead->name }}</h3><p>{{ $lead->campaignLabel() }}</p><div class="dash-lead-actions">@if($lead->whatsappUrl())<a class="button button-primary button-small" href="{{ $lead->whatsappUrl($lead->greeting()) }}" target="_blank" rel="noopener">WhatsApp</a>@endif<a class="button button-secondary button-small" href="{{ route('leads.index',['situacao'=>'new']) }}">Abrir</a></div></article>@endforeach</div></section>@endif
 <div class="dash-simple-grid">
 <section class="card"><h2>Da proposta ao pagamento</h2>
 @foreach([['proposals_count','Propostas oferecidas'],['cohort_accepted','Aceitas'],['cohort_documents','Contratos assinados'],['cohort_initial_paid','Primeiro pagamento']] as [$key,$label])<div class="analytics-funnel-step"><div><span>{{ $label }}</span><strong>{{ $number($summary[$key]) }}</strong></div><div class="analytics-progress"><span style="width:{{ min(100,$summary[$key]*100/$funnelBase) }}%"></span></div></div>@endforeach
 </section>
 <section class="card" id="produtos"><h2>Planos</h2>
-@forelse($plans as $plan)<div class="analytics-location-row"><div><strong>{{ $plan['name'] }}</strong><small>{{ $number($plan['sales']) }} fechado(s) no período</small></div><b>{{ $number($plan['active']) }}<small>ativo(s)</small></b></div>@empty<div class="analytics-empty">Nenhum plano no período.</div>@endforelse
+@forelse($plans as $plan)<div class="analytics-location-row"><div><strong>{{ $plan['name'] }}</strong><small>@if($general){{ $money($plan['mrr_cents']) }} por mês · @endif{{ $number($plan['sales']) }} fechado(s) no período</small></div><b>{{ $number($plan['active']) }}<small>ativo(s)</small></b></div>@empty<div class="analytics-empty">Nenhum plano no período.</div>@endforelse
 </section>
 <section class="card dash-simple-map" id="mapa"><h2>Mapa dos planos ativos</h2>
 <div class="analytics-map-toolbar"><div class="analytics-map-tabs" role="tablist" aria-label="Abrangência do mapa"><button type="button" role="tab" id="map-regional-tab" aria-controls="map-regional-panel" aria-selected="true" data-map-tab="regional">Prudente e região</button><button type="button" role="tab" id="map-bairros-tab" aria-controls="map-bairros-panel" aria-selected="false" data-map-tab="bairros">Bairros</button></div>@if($filters['city'])<div class="analytics-map-breadcrumb"><a href="{{ $go(['state'=>null,'city'=>null,'neighborhood'=>null]) }}">Prudente e região</a><span>›</span><span>{{ $filters['city'] }}</span></div>@endif</div>
