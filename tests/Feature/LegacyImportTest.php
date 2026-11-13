@@ -161,10 +161,10 @@ class LegacyImportTest extends TestCase
         // O nome em maiúsculas da Vindi dá lugar ao do cadastro de planos daqui.
         Product::create(['name' => 'Econômico Felino', 'code' => 'SF-FEL', 'category' => 'health_plan', 'active' => true]);
         $dashboard = app(\App\Services\Reports\DashboardService::class);
-        $c = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['date_from' => '2026-01-01', 'date_to' => now()->toDateString()]))['growth']['cancellations'];
+        $c = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['date_from' => '2026-01-01', 'date_to' => now('America/Sao_Paulo')->toDateString()]))['growth']['cancellations'];
         $this->assertSame([3, 1], [$c['count'], $c['replaced']]);
         $this->assertSame([['Plano Super Econômico', 2], ['Plano Econômico Felino', 1]], array_map(fn ($p) => [$p['name'], $p['count']], $c['plans']));
-        $novos = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['base' => 'novos', 'date_from' => '2026-01-01', 'date_to' => now()->toDateString()]));
+        $novos = $dashboard->report($this->admin, $dashboard->filters($this->admin, ['base' => 'novos', 'date_from' => '2026-01-01', 'date_to' => now('America/Sao_Paulo')->toDateString()]));
         $this->assertSame(0, $novos['growth']['cancellations']['count'], 'Planos novos não veem a base antiga.');
         // Rodar de novo não duplica nem reabre nada.
         $this->artisan('plans:sync-vindi-cancellations')->expectsOutputToContain('contratos_encerrados: 0')->assertSuccessful();

@@ -72,7 +72,7 @@ class NeighborhoodNames
     /** Sem acento, maiúsculas, pontuação e abreviação; números romanos viram algarismos. */
     public static function full(string $name): string
     {
-        $words = preg_split('/\s+/', DashboardService::normalize(preg_replace('/[.,;:\/\-]+/', ' ', $name)), -1, PREG_SPLIT_NO_EMPTY);
+        $words = preg_split('/\s+/', DashboardService::normalize(preg_replace('/[.,;:\/\-]+/', ' ', str_replace('&', ' e ', $name))), -1, PREG_SPLIT_NO_EMPTY);
 
         return implode(' ', array_map(fn ($word) => self::ABBREVIATIONS[$word] ?? self::ROMAN[$word] ?? $word, $words));
     }
@@ -80,12 +80,31 @@ class NeighborhoodNames
     /** O nome sem o tipo do bairro na frente ("Conjunto Habitacional Jardim Humberto Salvador" vira "humberto salvador"). */
     public static function bare(string $full): string
     {
-        do {
-            $before = $full;
-            $full = preg_replace('/^'.self::TYPES.'\s+/', '', $full);
-        } while ($full !== $before);
+        return self::split($full)[1];
+    }
 
-        return $full;
+    /** [palavras dos tipos na frente do nome ("conjunto habitacional" vira "conjunto" e "habitacional"), nome sem eles]. */
+    private static function split(string $full): array
+    {
+        $types = [];
+        while (preg_match('/^'.self::TYPES.'\s+/', $full, $m)) {
+            array_push($types, ...explode(' ', $m[1]));
+            $full = substr($full, strlen($m[0]));
+        }
+
+        return [$types, $full];
+    }
+
+    /**
+     * Mesmo nome sem o tipo, e o tipo de um está contido no do outro: "Humberto Salvador", "Jardim Humberto Salvador" e
+     * "Conjunto Habitacional Jardim Humberto Salvador" são o mesmo; "Jardim Bongiovani" e "Residencial Bongiovani", não.
+     */
+    private static function sameBare(string $a, string $b): bool
+    {
+        [$typesA, $bareA] = self::split($a);
+        [$typesB, $bareB] = self::split($b);
+
+        return $bareA !== '' && $bareA === $bareB && (! array_diff($typesA, $typesB) || ! array_diff($typesB, $typesA));
     }
 
     /** Mesmo bairro, comparando duas grafias soltas (sem o resto da cidade). */
@@ -93,7 +112,7 @@ class NeighborhoodNames
     {
         [$a, $b] = [self::full((string) $a), self::full((string) $b)];
 
-        return $a === $b || (self::bare($a) !== '' && self::bare($a) === self::bare($b) && (self::bare($a) === $a || self::bare($b) === $b));
+        return $a === $b || self::sameBare($a, $b);
     }
 
     /** O grupo em que esta grafia entra; null quando é um bairro novo. Só junta quando há um único candidato. */
@@ -103,10 +122,8 @@ class NeighborhoodNames
             return $full;
         }
         $hits = ['bare' => [], 'cut' => [], 'typo' => []];
-        $bare = self::bare($full);
         foreach (array_keys($groups) as $key) {
-            $keyBare = self::bare($key);
-            if ($bare !== '' && $bare === $keyBare && ($bare === $full || $keyBare === $key)) {
+            if (self::sameBare($full, (string) $key)) {
                 $hits['bare'][] = $key;
             } elseif ($length === self::CUT && str_starts_with($key, $full)) {
                 $hits['cut'][] = $key;

@@ -149,10 +149,11 @@ class DashboardAnalyticsTest extends TestCase
         $this->version->update(['status'=>'local_preview']);
         $this->assertSame(0,$this->report($this->admin)['summary']['sold_count']);
         $this->assertSame(1,$this->report($this->admin,['data_mode'=>'demo'])['summary']['sold_count']);
-        // Presidente Prudente: divisão aproximada dos bairros (área urbana do IBGE e bairros do OpenStreetMap; o IBGE não tem os bairros da cidade).
+        // Presidente Prudente: bairros do cadastro de endereços do Censo 2022 (IBGE), mais os condomínios do OpenStreetMap como ponto.
         $this->actingAs($this->admin)->get(route('dashboard.neighborhoods','3541406'))->assertOk()->assertHeader('Content-Type','application/geo+json');
         $prudente=json_decode(file_get_contents(public_path('assets/maps/neighborhoods/3541406.json')),true);
-        $this->assertTrue($prudente['approximate']);
+        $this->assertFalse($prudente['approximate']);
+        $this->assertGreaterThan(300,count($prudente['features']));
         $this->assertContains($prudente['features'][0]['geometry']['type'],['Polygon','MultiPolygon']);
         // Cidade sem base nenhuma continua respondendo uma coleção vazia, com o ranking de bairros como alternativa.
         $this->get(route('dashboard.neighborhoods','3539806'))->assertOk()->assertJsonPath('type','FeatureCollection')->assertJsonCount(0,'features');
