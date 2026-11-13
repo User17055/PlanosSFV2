@@ -69,6 +69,8 @@ class DashboardService
     {
         $today=CarbonImmutable::now('America/Sao_Paulo');
         $input=array_merge(['date_from'=>$today->startOfMonth()->toDateString(),'date_to'=>$today->toDateString(),'data_mode'=>'real','category'=>'health_plan','base'=>'gerais'],$input);
+        // Na tela é um filtro só ("Planos"): carteira toda (gerais) ou só o vendido aqui (novos), com o tipo. Links e exportação seguem com base e categoria.
+        if(preg_match('/^(gerais|novos)\|(health_plan|package|all)$/D',(string)($input['planos']??''),$m)) [$input['base'],$input['category']]=[$m[1],$m[2]];
         $data=Validator::make($input,[
             'date_from'=>'required|date_format:Y-m-d|after_or_equal:2000-01-01|before_or_equal:'.$today->toDateString(),
             'date_to'=>'required|date_format:Y-m-d|after_or_equal:date_from|before_or_equal:'.$today->toDateString(),

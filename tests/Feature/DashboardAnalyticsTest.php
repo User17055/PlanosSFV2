@@ -308,8 +308,16 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame([0,1],[$new['growth']['start']['active'],end($new['growth']['months'])['active']]);
         // O crescimento segue o período escolhido no filtro.
         $this->assertCount(3,$this->report($this->admin,['date_from'=>'2026-08-01'])['growth']['months']);
-        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<option value="gerais" selected>Planos gerais</option>',false)->assertSee('Crescimento dos planos gerais')->assertSee('Receita mensal');
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<option value="gerais|health_plan" selected>Planos gerais</option>',false)
+            ->assertSeeInOrder(['>Geral<','>Planos gerais<','>Pacotes gerais<','>Planos novos<','>Pacotes novos<'],false)->assertDontSee('name="category"',false)->assertSee('Crescimento dos planos gerais')->assertSee('Receita mensal');
         $this->get(route('dashboard',['base'=>'novos']))->assertOk()->assertSee('Crescimento dos planos novos')->assertSee('Contratos fechados');
+        // Um filtro só na tela: cada opção vira a carteira (gerais ou novos) e o tipo.
+        $service=app(DashboardService::class);
+        foreach(['gerais|package'=>['gerais','package'],'novos|health_plan'=>['novos','health_plan'],'gerais|all'=>['gerais','all']] as $choice=>$expected) {
+            $chosen=$service->filters($this->admin,['planos'=>$choice]);
+            $this->assertSame($expected,[$chosen['base'],$chosen['category']],$choice);
+        }
+        $this->get(route('dashboard',['planos'=>'novos|package']))->assertOk()->assertSee('<option value="novos|package" selected>Pacotes novos</option>',false);
         $this->get(route('dashboard',['base'=>'todos']))->assertSessionHasErrors('base');
     }
 }
