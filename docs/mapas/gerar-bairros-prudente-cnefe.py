@@ -1,8 +1,8 @@
 """Bairros de Presidente Prudente a partir do cadastro de endereços do Censo 2022 (IBGE, CNEFE).
 
 Cada endereço do distrito sede tem bairro (DSC_LOCALIDADE) e coordenada. O território fica dividido entre os
-endereços (diagrama de Voronoi), recortado à área urbana (contorno do IBGE e loteamentos novos colados nele), e as partes
-de cada bairro são unidas. Endereço com bairro trocado (longe do resto do bairro) não conta.
+endereços: em quadradinhos de ~150 m, cada um fica com o bairro da maioria (contando os vizinhos), dentro da área urbana
+(contorno do IBGE e loteamentos novos colados nele); pedaço solto passa para o vizinho e as divisas são simplificadas sem frestas. Endereço com bairro trocado (longe do resto do bairro) não conta.
 Nomes: com acento quando a mesma grafia, sem acento, aparece na lista de nomes (mapa anterior do OSM e cadastros).
 
 Uso: python gerar-bairros-prudente-cnefe.py <3541406_PRESIDENTE_PRUDENTE.zip> <nomes.json> <contorno.json> <saida.json>
@@ -17,7 +17,7 @@ import statistics
 import sys
 import unicodedata
 import zipfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 import shapely
 from shapely.geometry import MultiPoint, Point, mapping
@@ -27,6 +27,7 @@ ABBREVIATIONS = {'jd': 'jardim', 'jdm': 'jardim', 'vl': 'vila', 'pq': 'parque', 
                  'hab': 'habitacional', 'cond': 'condominio', 'sta': 'santa', 'sto': 'santo'}
 ROMAN = {'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5', 'vi': '6'}
 SEDE = '354140605'
+GRID = 0.0015  # lado do quadradinho, em graus (~150 m)
 
 
 def full(name):
@@ -98,37 +99,67 @@ def main(cnefe_zip, names_path, outline_path, out_path):
                 sites.append(p)
                 labels.append(name)
 
-    # Um ponto por coordenada: o primeiro bairro que aparece fica com ela.
-    seen, uniq, uniq_labels = set(), [], []
-    for p, name in zip(sites, labels):
-        if p not in seen:
-            seen.add(p)
-            uniq.append(p)
-            uniq_labels.append(name)
-
     # Área urbana: o contorno do mapa anterior (setores urbanos do IBGE) mais os loteamentos novos colados nele.
     urban = shapely.union_all([shapely.geometry.shape(f['geometry']) for f in json.load(open(outline_path, encoding='utf-8'))['features']], grid_size=1e-6)
     urban = urban.buffer(0.0004).buffer(-0.0004)
     near = urban.buffer(0.012)
-    keep = [i for i, p in enumerate(uniq) if near.contains(Point(p))]
-    uniq, uniq_labels = [uniq[i] for i in keep], [uniq_labels[i] for i in keep]
-    built = shapely.union_all([urban, shapely.union_all(shapely.buffer(shapely.points(uniq), 0.0012, quad_segs=3))], grid_size=1e-6)
+    inside = [(p, name) for p, name in zip(sites, labels) if near.contains(Point(p))]
+    built = shapely.union_all([urban, shapely.union_all(shapely.buffer(shapely.points([p for p, _ in inside]), 0.0012, quad_segs=3))], grid_size=1e-6)
     built = shapely.Polygon(max(shapely.get_parts(built.buffer(0.0008).buffer(-0.0008)), key=lambda g: g.area).exterior)  # um contorno só, sem buracos
-    cells = shapely.voronoi_polygons(MultiPoint(uniq), extend_to=built.envelope.buffer(0.01), ordered=True)
-    parts = defaultdict(list)
-    for name, cell in zip(uniq_labels, shapely.get_parts(cells)):
-        parts[name].append(cell)
+
+    # Quadradinhos de ~150 m: cada um fica com o bairro da maioria dos endereços dele e dos vizinhos (tira o ruído do cadastro).
+    counts, spots = defaultdict(Counter), defaultdict(lambda: defaultdict(list))
+    for p, name in inside:
+        cell = (int(p[0] // GRID), int(p[1] // GRID))
+        counts[cell][name] += 1
+        spots[cell][name].append(p)
+    label = {}
+    for (gx, gy), own in counts.items():
+        votes = Counter()
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                votes.update(counts.get((gx + dx, gy + dy), Counter()))
+        votes.update({k: 2 * v for k, v in own.items()})  # o próprio quadradinho pesa mais
+        label[(gx, gy)] = max(own, key=lambda k: (votes[k], own[k]))  # só bairros com endereço no quadradinho
+    keys = list(label)
+    # O ponto do quadradinho fica no meio dos endereços do bairro escolhido: as divisas seguem as ruas, não a grade.
+    seeds = [tuple(map(statistics.fmean, zip(*spots[k][label[k]]))) for k in keys]
+    cells = list(shapely.get_parts(shapely.voronoi_polygons(MultiPoint(seeds), extend_to=built.envelope.buffer(0.01), ordered=True)))
+    names = [label[k] for k in keys]
+    # Pedaço solto (nenhum vizinho do mesmo bairro, e o bairro tem outros pedaços) passa para o bairro vizinho mais comum.
+    tree = shapely.STRtree(cells)
+    neighbours = [[j for j in tree.query(cell, predicate='intersects') if j != i] for i, cell in enumerate(cells)]
+    for _ in range(3):
+        total = Counter(names)
+        for i, ns in enumerate(neighbours):
+            if total[names[i]] > 1 and ns and not any(names[j] == names[i] for j in ns):
+                names[i] = Counter(names[j] for j in ns).most_common(1)[0][0]
+    groups = defaultdict(list)
+    for name, cell in zip(names, cells):
+        groups[name].append(cell)
+    order = list(groups)
+    # Grade fixa de ~10 cm na união; a simplificação de cobertura mantém as divisas iguais dos dois lados (sem frestas).
+    polygons = lambda g: shapely.union_all([p for p in shapely.get_parts(g) if p.geom_type == 'Polygon'], grid_size=1e-6)
+    areas = [polygons(shapely.intersection(shapely.union_all(groups[n], grid_size=1e-6), built, grid_size=1e-6)) for n in order]
+    order, areas = zip(*[(n, a) for n, a in zip(order, areas) if not a.is_empty])
+    areas = shapely.coverage_simplify(list(areas), 0.00025)
 
     features = []
-    for name, cells_of_name in parts.items():
-        # Grade fixa de ~10 cm: a união das células do Voronoi sem ela esbarra em erro de precisão.
-        area = shapely.union_all(shapely.make_valid(cells_of_name), grid_size=1e-6)
-        area = shapely.intersection(area, built, grid_size=1e-6).buffer(0.00005).buffer(-0.00005).simplify(0.00012, preserve_topology=True)
+    for name, area in zip(order, areas):
+        area = shapely.make_valid(area)
+        area = shapely.union_all([g for g in shapely.get_parts(area) if g.geom_type == 'Polygon' and g.area > 2e-8], grid_size=1e-6)
         if area.is_empty:
             continue
         area = shapely.set_precision(area, 0.00001)
-        display = nice.get(full(name), (pretty(name),))[0]
-        features.append({'type': 'Feature', 'properties': {'name': display}, 'geometry': mapping(area)})
+        features.append({'type': 'Feature', 'properties': {'name': nice.get(full(name), (pretty(name),))[0]}, 'geometry': mapping(area)})
+    # Bairro pequeno, que perdeu todos os quadradinhos para um vizinho maior, entra como ponto no meio dos seus endereços.
+    drawn = {full(n) for n in order}
+    for name, pts in points.items():
+        if full(name) not in drawn and len(pts) >= 15:
+            middle = Point(statistics.median(p[0] for p in pts), statistics.median(p[1] for p in pts))
+            if built.contains(middle):
+                features.append({'type': 'Feature', 'properties': {'name': nice.get(full(name), (pretty(name),))[0], 'kind': 'ponto'},
+                                 'geometry': mapping(shapely.set_precision(middle, 0.00001))})
     # Condomínios e loteamentos que o IBGE não separa (Central Park, Damha...) mas o mapa anterior tinha: entram como ponto.
     ibge = [full(f['properties']['name']) for f in features]
     for old in json.load(open(outline_path, encoding='utf-8'))['features']:
@@ -140,7 +171,7 @@ def main(cnefe_zip, names_path, outline_path, out_path):
     features.sort(key=lambda f: (f['geometry']['type'] == 'Point', f['properties']['name']))
     json.dump({'type': 'FeatureCollection', 'source': 'IBGE, CNEFE do Censo 2022 (endereços do distrito sede)', 'approximate': False, 'features': features},
               open(out_path, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
-    print(len(features), 'bairros', len(uniq), 'pontos')
+    print(len(features), 'bairros', sum(f['geometry']['type'] == 'Point' for f in features), 'pontos', sum(len(f['geometry']['coordinates']) if f['geometry']['type'] == 'MultiPolygon' else 1 for f in features), 'partes')
 
 
 if __name__ == '__main__':

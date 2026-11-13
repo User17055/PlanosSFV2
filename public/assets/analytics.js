@@ -234,14 +234,18 @@
     const ranges = mapScale(max);
     mapLegend(host, ranges);
     const names = []; // nomes por último, para nenhum bairro desenhado depois cobrir o texto
+    const mixed = features.some(f => f.geometry.type !== 'Point');
     let dragged = false; // arrastar o mapa não conta como clique no bairro
     features.forEach(feature => {
       const item = info(feature);
+      if (mixed && feature.geometry.type === 'Point' && !item.plans) return; // ponto sem plano no meio dos bairros só polui
       const d = rings(feature.geometry).map(ring => ring.map((p, i) => `${i ? 'L' : 'M'}${project(p).map(n => n.toFixed(2)).join(',')}`).join(' ') + ' Z').join(' ');
       const title = `${item.name}: ${item.customers} tutor(es), ${item.plans} plano(s) ativo(s)`;
       let attrs = { d, fill: ranges.find(range => item.plans >= range.min && item.plans <= range.max)?.color || '#e3e8eb', 'fill-rule': 'evenodd', tabindex: 0, role: 'button', 'aria-label': title, 'aria-pressed': String(selected(item)), class: selected(item) ? 'is-selected' : '' };
       const isPoint = feature.geometry.type === 'Point';
-      if (isPoint) { const [cx, cy] = project(feature.geometry.coordinates); attrs = { ...attrs, cx, cy, r: item.plans ? 6 + 14 * Math.sqrt(item.plans / Math.max(1, max)) : 4, stroke: '#fff', 'stroke-width': 1.5 }; delete attrs.d; }
+      // No meio de bairros desenhados, o condomínio é um ponto pequeno; num mapa só de pontos, o tamanho mostra quantos planos.
+      const radius = mixed ? (item.plans ? 5 : 3) : (item.plans ? 6 + 14 * Math.sqrt(item.plans / Math.max(1, max)) : 4);
+      if (isPoint) { const [cx, cy] = project(feature.geometry.coordinates); attrs = { ...attrs, cx, cy, r: radius, stroke: '#fff', 'stroke-width': 1.5 }; delete attrs.d; }
       const path = make(isPoint ? 'circle' : 'path', attrs);
       path.append(make('title', {}, title));
       const show = () => { tooltip.textContent = title; tooltip.hidden = false; };
@@ -279,8 +283,9 @@
         if (inside && free) placed.push(b); else name.style.display = 'none';
       });
     };
-    let queued = false;
-    const relayout = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; layout(); }); } };
+    // Enquanto o mapa se mexe, os nomes saem e voltam medidos quando ele para: medir a cada quadro travava o mapa de bairros.
+    let timer = 0;
+    const relayout = () => { svg.classList.add('is-moving'); clearTimeout(timer); timer = setTimeout(() => { layout(); svg.classList.remove('is-moving'); }, 140); };
     const setView = (x, y, vw) => {
       vw = Math.min(w, Math.max(minWidth, vw)); const vh = vw * h / w;
       view = [Math.min(Math.max(x, 0), w - vw), Math.min(Math.max(y, 0), h - vh), vw, vh];

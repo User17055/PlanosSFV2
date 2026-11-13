@@ -2281,6 +2281,7 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* Mapa do painel: zoom e arrasto */
 .analytics-map svg{user-select:none;-webkit-user-select:none}
 .analytics-map svg.is-zoomed{cursor:grab}
+.analytics-map svg.is-moving text{visibility:hidden}
 .analytics-map svg.is-zoomed:active{cursor:grabbing}
 .analytics-map-tooltip{max-width:calc(100% - 84px)}
 .analytics-map-zoom{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
