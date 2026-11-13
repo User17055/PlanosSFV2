@@ -94,7 +94,8 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame(20000,$report['summary']['mrr_cents']);
         // Bairro clicado: a pessoa aparece uma vez, com os dois planos.
         $this->assertSame([[$one->customer_id,$one->customer->name,2]],array_map(fn($p)=>[$p['id'],$p['name'],count($p['plans'])],$report['geo']['people']));
-        $this->assertSame([],$this->report($this->admin,['state'=>'SP','city'=>'presidente prudente'])['geo']['people'],'Sem bairro escolhido, não lista ninguém.');
+        $this->assertSame([$one->customer_id],array_column($this->report($this->admin,['state'=>'SP','city'=>'presidente prudente'])['geo']['people'],'id'),'Cidade clicada também lista quem tem plano.');
+        $this->assertSame([],$this->report($this->admin,[])['geo']['people'],'Sem cidade nem bairro, não lista ninguém.');
         $this->actingAs($this->admin)->get(route('dashboard',['state'=>'SP','city'=>'Presidente Prudente','neighborhood'=>'Centro']))->assertOk()
             ->assertSee('Quem tem plano em Centro: 1')->assertSee(route('customers.show',$one->customer_id));
     }

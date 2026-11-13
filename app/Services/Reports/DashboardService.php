@@ -400,8 +400,8 @@ class DashboardService
             $nkey=$key.'|'.self::normalize($neighborhood);
             $neighborhoods[$nkey]??=['state'=>$state,'city'=>$city,'name'=>$neighborhood?:'Bairro não informado','plans'=>0,'active_plans'=>0,'customers'=>[],'missing'=>!$neighborhood];
             $neighborhoods[$nkey]['plans']++; $neighborhoods[$nkey]['active_plans']+=(int)$isActive; $neighborhoods[$nkey]['customers'][$s->customer_id]=true;
-            // Bairro clicado no mapa: quem tem plano nele, com o pet e o plano.
-            if(!empty($filters['neighborhood']) && $this->matches($a,$filters)) $people[$s->customer_id][]=trim(($s->pet?->name??'Pet').' · '.self::planLabel((string)$s->productVersion?->name));
+            // Cidade ou bairro clicado no mapa: quem tem plano ali, com o pet e o plano.
+            if((!empty($filters['city']) || !empty($filters['neighborhood'])) && $this->matches($a,$filters)) $people[$s->customer_id][]=trim(($s->pet?->name??'Pet').' · '.self::planLabel((string)$s->productVersion?->name));
         }
         $finish=fn($rows)=>collect($rows)->map(fn($r)=>array_merge($r,['customers'=>count($r['customers'])]))->sortByDesc('customers')->values()->all();
         return ['states'=>$finish($states),'cities'=>$finish($cities),'neighborhoods'=>$finish($neighborhoods),'people'=>collect($people)->map(fn($plans,$id)=>['id'=>$id,'name'=>$active->firstWhere('customer_id',$id)?->customer?->name,'plans'=>$plans])->sortBy('name')->values()->all(),'missing_address'=>$missing,'map_cities'=>array_values($mapCities),'total'=>$mapped,'active_total'=>$activeCount,'pending_total'=>$pendingCount];
