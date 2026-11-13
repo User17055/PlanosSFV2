@@ -45,6 +45,7 @@ $maxTenure=max(1,max($cancel['tenure']));
 <article class="dash-kpi" style="--kpi:var(--{{ $color }})"><div class="dash-kpi-top"><span class="dash-kpi-icon">@include('components.icon',['name'=>$icon])</span><span class="dash-kpi-label">{{ $label }}</span></div><strong class="dash-kpi-value">{{ $value }}</strong><small class="dash-kpi-sub {{ $trend }}">{{ $sub }}</small>{!! $spark($series,$color) !!}</article>
 @endforeach
 </div>
+@if($general && !empty($summary['package_active_count']))<p class="dash-simple-note dash-packages-aside">Pacotes de banho (só exibição, fora dos números acima): <strong>{{ $number($summary['package_active_count']) }} ativos · {{ $money($summary['package_mrr_cents']) }} por mês</strong></p>@endif
 
 <section class="card dash-panel" id="crescimento" aria-labelledby="dash-growth-title">
 <div class="dash-panel-head"><div><h2 id="dash-growth-title">Crescimento dos {{ $general?'planos gerais':'planos novos' }}</h2><p>Planos na carteira (em dia e em atraso) no fim de cada mês, de {{ $months[0]['month'] }} a {{ end($months)['month'] }}.</p></div>

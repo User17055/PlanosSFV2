@@ -223,6 +223,12 @@ class DashboardService
             'pending_count'=>(clone $created)->whereNull('locked_at')->where('expires_at','>',now())->where('status','!=','cancelled')->count(),
             'cancelled_count'=>$this->during(clone $scoped,'cancelled_at',$bounds)->where('status','cancelled')->count(),
         ];
+        if($filters['category']==='health_plan') {
+            // O foco são os planos de saúde; os pacotes de banho aparecem só como informação, com os mesmos filtros.
+            $packages=$load($portfolio(Subscription::whereIn('proposal_id',$this->proposals($user,array_merge($filters,['category'=>'package']))->select('proposals.id')))->whereIn('status',['active','scheduled_cancellation']))
+                ->filter(fn($s)=>$this->matches((array)$s->customer?->address,$filters));
+            $summary+=['package_active_count'=>$packages->count(),'package_mrr_cents'=>(int)$packages->where('productVersion.billing_cycle','monthly')->sum('price_cents')];
+        }
         $summary['ticket_cents']=$summary['sold_count']?(int)round($summary['sold_cents']/$summary['sold_count']):0;
         $summary['active_ticket_cents']=$summary['active_count']?(int)round($summary['mrr_cents']/$summary['active_count']):0;
         $summary['net_after_commissions_cents']=$summary['received_cents']-$summary['commission_paid_cents'];

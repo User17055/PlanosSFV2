@@ -2204,6 +2204,7 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-simple-map .analytics-map-toolbar{margin-bottom:12px}
 .dash-people{margin-top:18px;scroll-margin-top:16px}
 .dash-people h3{margin:0 0 10px;font-size:16px;font-weight:600;color:var(--text)}
+.dash-packages-aside{margin:10px 4px 0}
 .dash-people-suspended{color:var(--danger-text);font-weight:500}
 .dash-people .analytics-location-row.is-suspended{background:var(--danger-soft);border-color:rgba(232,86,86,.45)}
 .dash-people .analytics-location-row.is-suspended:hover{background:#fff;border-color:var(--danger)}

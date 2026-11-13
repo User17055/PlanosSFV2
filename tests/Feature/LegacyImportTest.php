@@ -146,6 +146,9 @@ class LegacyImportTest extends TestCase
         $general = app(\App\Services\Reports\DashboardService::class);
         $report = $general->report($this->admin, $general->filters($this->admin, []));
         $this->assertSame([2, 0], [$report['summary']['active_count'], $report['summary']['sold_count']], 'Planos de saúde por padrão; o banho fica em Pacotes.');
+        $this->assertSame([1, 13200], [$report['summary']['package_active_count'], $report['summary']['package_mrr_cents']], 'O pacote de banho aparece à parte, só para exibir.');
+        $this->get(route('dashboard'))->assertOk()->assertSee('Pacotes de banho (só exibição, fora dos números acima)')->assertSee('R$ 132,00 por mês');
+        $this->assertArrayNotHasKey('package_active_count', $general->report($this->admin, $general->filters($this->admin, ['category' => 'all']))['summary']);
         $this->assertSame(0, $general->report($this->admin, $general->filters($this->admin, ['base' => 'novos']))['summary']['active_count']);
         $this->assertSame([['Plano Super Econômico', 2]], $report['plans']->map(fn ($p) => [$p['name'], $p['active']])->all(), 'No painel, o plano aparece sem "(base antiga)".');
         $this->assertSame(['Plano Econômico', 'Pacote Banho Quinzenal', 'Plano VIP'], array_map([\App\Services\Reports\DashboardService::class, 'planLabel'],
