@@ -187,7 +187,7 @@ class DashboardService
         $portfolio=fn(Builder $q)=>$filters['base']==='novos'?$q->whereNull('imported_at'):$q;
         $subscriptions=$portfolio(Subscription::whereIn('proposal_id',(clone $base)->select('proposals.id')));
         $allActive=(clone $subscriptions)->whereIn('status',['active','scheduled_cancellation'])
-            ->with(['customer:id,address','pet:id,species','productVersion:id,product_id,name,billing_cycle','productVersion.product:id,name'])
+            ->with(['customer:id,name,address','pet:id,name,species','productVersion:id,product_id,name,billing_cycle','productVersion.product:id,name'])
             ->get(['id','customer_id','pet_id','category','product_version_id','price_cents','status']);
         $geo=$this->geoReport($allActive,$filters);
         $geoBase=$this->geography(clone $base,$filters);
@@ -378,7 +378,7 @@ class DashboardService
 
     private function geoReport($active,array $filters): array
     {
-        $states=[]; $cities=[]; $neighborhoods=[]; $missing=0; $mapped=0; $activeCount=0; $pendingCount=0;
+        $states=[]; $cities=[]; $neighborhoods=[]; $people=[]; $missing=0; $mapped=0; $activeCount=0; $pendingCount=0;
         $catalog=[];
         foreach(self::cityCatalog() as $code=>$entry) $catalog[self::STATES[$entry['state']].'|'.self::normalize($entry['name'])]=['code'=>(string)$code,'name'=>$entry['name'],'state'=>self::STATES[$entry['state']]];
         $mapCities=['3541406'=>['code'=>'3541406','name'=>'Presidente Prudente','state'=>'SP']];
@@ -400,8 +400,10 @@ class DashboardService
             $nkey=$key.'|'.self::normalize($neighborhood);
             $neighborhoods[$nkey]??=['state'=>$state,'city'=>$city,'name'=>$neighborhood?:'Bairro não informado','plans'=>0,'active_plans'=>0,'customers'=>[],'missing'=>!$neighborhood];
             $neighborhoods[$nkey]['plans']++; $neighborhoods[$nkey]['active_plans']+=(int)$isActive; $neighborhoods[$nkey]['customers'][$s->customer_id]=true;
+            // Bairro clicado no mapa: quem tem plano nele, com o pet e o plano.
+            if(!empty($filters['neighborhood']) && $this->matches($a,$filters)) $people[$s->customer_id][]=trim(($s->pet?->name??'Pet').' · '.self::planLabel((string)$s->productVersion?->name));
         }
         $finish=fn($rows)=>collect($rows)->map(fn($r)=>array_merge($r,['customers'=>count($r['customers'])]))->sortByDesc('customers')->values()->all();
-        return ['states'=>$finish($states),'cities'=>$finish($cities),'neighborhoods'=>$finish($neighborhoods),'missing_address'=>$missing,'map_cities'=>array_values($mapCities),'total'=>$mapped,'active_total'=>$activeCount,'pending_total'=>$pendingCount];
+        return ['states'=>$finish($states),'cities'=>$finish($cities),'neighborhoods'=>$finish($neighborhoods),'people'=>collect($people)->map(fn($plans,$id)=>['id'=>$id,'name'=>$active->firstWhere('customer_id',$id)?->customer?->name,'plans'=>$plans])->sortBy('name')->values()->all(),'missing_address'=>$missing,'map_cities'=>array_values($mapCities),'total'=>$mapped,'active_total'=>$activeCount,'pending_total'=>$pendingCount];
     }
 }

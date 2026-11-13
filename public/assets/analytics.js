@@ -31,6 +31,7 @@
     form.elements.state.value = state;
     form.elements.city.value = city;
     form.elements.neighborhood.value = neighborhood;
+    form.action = form.action.split('#')[0] + (neighborhood ? '#pessoas-do-bairro' : '#mapa'); // volta ao mapa, com a lista do bairro à vista
     form.requestSubmit();
   }
   form.elements.state.addEventListener('change', () => { form.elements.city.value = ''; form.elements.neighborhood.value = ''; });

@@ -92,6 +92,11 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame(2,$report['geo']['neighborhoods'][0]['plans']);
         $this->assertSame(1,$report['geo']['neighborhoods'][0]['customers']);
         $this->assertSame(20000,$report['summary']['mrr_cents']);
+        // Bairro clicado: a pessoa aparece uma vez, com os dois planos.
+        $this->assertSame([[$one->customer_id,$one->customer->name,2]],array_map(fn($p)=>[$p['id'],$p['name'],count($p['plans'])],$report['geo']['people']));
+        $this->assertSame([],$this->report($this->admin,['state'=>'SP','city'=>'presidente prudente'])['geo']['people'],'Sem bairro escolhido, não lista ninguém.');
+        $this->actingAs($this->admin)->get(route('dashboard',['state'=>'SP','city'=>'Presidente Prudente','neighborhood'=>'Centro']))->assertOk()
+            ->assertSee('Quem tem plano em Centro: 1')->assertSee(route('customers.show',$one->customer_id));
     }
 
     public function test_sales_scope_includes_customer_owned_links_but_not_other_sellers(): void
