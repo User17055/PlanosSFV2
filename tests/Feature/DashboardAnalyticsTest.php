@@ -96,8 +96,13 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame([[$one->customer_id,$one->customer->name,2]],array_map(fn($p)=>[$p['id'],$p['name'],count($p['plans'])],$report['geo']['people']));
         $this->assertSame([$one->customer_id],array_column($this->report($this->admin,['state'=>'SP','city'=>'presidente prudente'])['geo']['people'],'id'),'Cidade clicada também lista quem tem plano.');
         $this->assertSame([],$this->report($this->admin,[])['geo']['people'],'Sem cidade nem bairro, não lista ninguém.');
+        // Suspenso entra na lista, primeiro e em vermelho, mas não nas contagens do mapa.
+        $late=$this->sale(); $late->update(['status'=>'suspended']);
+        $report=$this->report($this->admin,['state'=>'SP','city'=>'presidente prudente','neighborhood'=>'centro']);
+        $this->assertSame([[$late->customer_id,true],[$one->customer_id,false]],array_map(fn($p)=>[$p['id'],$p['suspended']],$report['geo']['people']));
+        $this->assertSame(2,$report['geo']['neighborhoods'][0]['plans']);
         $this->actingAs($this->admin)->get(route('dashboard',['state'=>'SP','city'=>'Presidente Prudente','neighborhood'=>'Centro']))->assertOk()
-            ->assertSee('Quem tem plano em Centro: 1')->assertSee(route('customers.show',$one->customer_id));
+            ->assertSee('Quem tem plano em Centro: 2')->assertSee('1 com plano suspenso')->assertSee('is-suspended')->assertSee('(suspenso)')->assertSee(route('customers.show',$one->customer_id));
     }
 
     public function test_sales_scope_includes_customer_owned_links_but_not_other_sellers(): void

@@ -186,10 +186,12 @@ class DashboardService
         $newOnly=fn(Builder $q)=>$q->whereDoesntHave('subscription',fn($s)=>$s->whereNotNull('imported_at'));
         $portfolio=fn(Builder $q)=>$filters['base']==='novos'?$q->whereNull('imported_at'):$q;
         $subscriptions=$portfolio(Subscription::whereIn('proposal_id',(clone $base)->select('proposals.id')));
-        $allActive=(clone $subscriptions)->whereIn('status',['active','scheduled_cancellation'])
-            ->with(['customer:id,name,address','pet:id,name,species','productVersion:id,product_id,name,billing_cycle','productVersion.product:id,name'])
+        $load=fn(Builder $q)=>$q->with(['customer:id,name,address','pet:id,name,species','productVersion:id,product_id,name,billing_cycle','productVersion.product:id,name'])
             ->get(['id','customer_id','pet_id','category','product_version_id','price_cents','status']);
-        $geo=$this->geoReport($allActive,$filters);
+        $allActive=$load((clone $subscriptions)->whereIn('status',['active','scheduled_cancellation']));
+        // Suspensos entram só na lista de pessoas da cidade ou do bairro clicado, não nas contagens do mapa.
+        $suspended=$filters['city']||$filters['neighborhood']?$load((clone $subscriptions)->where('status','suspended')):collect();
+        $geo=$this->geoReport($allActive,$filters,$suspended);
         $geoBase=$this->geography(clone $base,$filters);
         $scoped=$portfolio(Subscription::whereIn('proposal_id',(clone $geoBase)->select('proposals.id')));
         $invoices=Invoice::whereIn('subscription_id',(clone $scoped)->select('subscriptions.id'));
@@ -376,8 +378,12 @@ class DashboardService
             'recent_cancelled'=>(clone $cancelled)->with(['customer:id,name','pet:id,name','productVersion:id,name'])->orderByDesc('cancelled_at')->limit(8)->get()];
     }
 
-    private function geoReport($active,array $filters): array
+    private function geoReport($active,array $filters,$suspended): array
     {
+        $person=function($s,bool $isSuspended)use(&$people){
+            $people[$s->customer_id]['name']=$s->customer?->name;
+            $people[$s->customer_id]['plans'][]=['label'=>trim(($s->pet?->name??'Pet').' · '.self::planLabel((string)$s->productVersion?->name)),'suspended'=>$isSuspended];
+        };
         $states=[]; $cities=[]; $neighborhoods=[]; $people=[]; $missing=0; $mapped=0; $activeCount=0; $pendingCount=0;
         $catalog=[];
         foreach(self::cityCatalog() as $code=>$entry) $catalog[self::STATES[$entry['state']].'|'.self::normalize($entry['name'])]=['code'=>(string)$code,'name'=>$entry['name'],'state'=>self::STATES[$entry['state']]];
@@ -401,9 +407,10 @@ class DashboardService
             $neighborhoods[$nkey]??=['state'=>$state,'city'=>$city,'name'=>$neighborhood?:'Bairro não informado','plans'=>0,'active_plans'=>0,'customers'=>[],'missing'=>!$neighborhood];
             $neighborhoods[$nkey]['plans']++; $neighborhoods[$nkey]['active_plans']+=(int)$isActive; $neighborhoods[$nkey]['customers'][$s->customer_id]=true;
             // Cidade ou bairro clicado no mapa: quem tem plano ali, com o pet e o plano.
-            if((!empty($filters['city']) || !empty($filters['neighborhood'])) && $this->matches($a,$filters)) $people[$s->customer_id][]=trim(($s->pet?->name??'Pet').' · '.self::planLabel((string)$s->productVersion?->name));
+            if((!empty($filters['city']) || !empty($filters['neighborhood'])) && $this->matches($a,$filters)) $person($s,false);
         }
+        foreach($suspended as $s) if($this->matches((array)$s->customer?->address,$filters)) $person($s,true);
         $finish=fn($rows)=>collect($rows)->map(fn($r)=>array_merge($r,['customers'=>count($r['customers'])]))->sortByDesc('customers')->values()->all();
-        return ['states'=>$finish($states),'cities'=>$finish($cities),'neighborhoods'=>$finish($neighborhoods),'people'=>collect($people)->map(fn($plans,$id)=>['id'=>$id,'name'=>$active->firstWhere('customer_id',$id)?->customer?->name,'plans'=>$plans])->sortBy('name')->values()->all(),'missing_address'=>$missing,'map_cities'=>array_values($mapCities),'total'=>$mapped,'active_total'=>$activeCount,'pending_total'=>$pendingCount];
+        return ['states'=>$finish($states),'cities'=>$finish($cities),'neighborhoods'=>$finish($neighborhoods),'people'=>collect($people)->map(fn($p,$id)=>['id'=>$id,'name'=>$p['name'],'plans'=>$p['plans'],'suspended'=>collect($p['plans'])->contains('suspended',true)])->sortBy(fn($p)=>[! $p['suspended'],$p['name']])->values()->all(),'missing_address'=>$missing,'map_cities'=>array_values($mapCities),'total'=>$mapped,'active_total'=>$activeCount,'pending_total'=>$pendingCount];
     }
 }

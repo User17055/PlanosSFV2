@@ -2204,6 +2204,10 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-simple-map .analytics-map-toolbar{margin-bottom:12px}
 .dash-people{margin-top:18px;scroll-margin-top:16px}
 .dash-people h3{margin:0 0 10px;font-size:16px;font-weight:600;color:var(--text)}
+.dash-people-suspended{color:var(--danger-text);font-weight:500}
+.dash-people .analytics-location-row.is-suspended{background:var(--danger-soft);border-color:rgba(232,86,86,.45)}
+.dash-people .analytics-location-row.is-suspended:hover{background:#fff;border-color:var(--danger)}
+.dash-people .analytics-location-row.is-suspended strong,.dash-people .analytics-location-row.is-suspended small,.dash-people .analytics-location-row.is-suspended b{color:var(--danger-text)}
 /* Visão geral: cantos mais arredondados e iguais, sem faixa vazia no mapa e ajustes do celular */
 .theme-dash .dash-simple .card,.theme-dash .dash-simple .analytics-kpi,.theme-dash .dash-simple .dash-lead{border-radius:20px}
 .theme-dash .dash-simple .analytics-map{border-radius:14px}
