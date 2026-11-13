@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\{Customer, Franchise, Invoice, LegacyPendingItem, Pet, PetProductSlot, Product, Subscription, User};
 use App\Services\Domain\{ActivationService, EligibilityService, LegacyImport};
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\{Notification, Queue};
+use Illuminate\Support\Facades\{Http, Notification, Queue};
 use Tests\TestCase;
 
 /** Base antiga: contratos ativos ligados à Vindi, pets do SimplesVet na ficha e os itens sem pet em "Pets para escolher". */
@@ -75,6 +75,26 @@ class LegacyImportTest extends TestCase
         $again = $import->run($this->data(), $this->admin, true);
         $this->assertSame([0, 0, 4], [$again['contratos_criados'], $again['pets_para_escolher'], $again['itens_ja_importados']]);
         $this->assertSame(2, Subscription::count());
+    }
+
+    public function test_pet_linked_later_gets_its_share_of_a_bill_already_reconciled(): void
+    {
+        config(['integrations.vindi.enabled' => true, 'integrations.vindi.api_key' => 'test-only']);
+        app(LegacyImport::class)->run($this->data(), $this->admin, true);
+        $bill = ['id' => 700, 'subscription' => ['id' => 500], 'customer' => ['id' => 1], 'amount' => '104.0', 'status' => 'paid', 'url' => null,
+            'updated_at' => now()->subDay()->toIso8601String(), 'due_at' => now()->subDays(2)->toDateString(), 'charges' => [['status' => 'paid', 'paid_at' => now()->subDay()->toIso8601String()]],
+            'bill_items' => [['amount' => '52.0', 'product_item' => ['id' => 9001]], ['amount' => '52.0', 'product_item' => ['id' => 9002]]]];
+        Http::fake(['*/bills*' => Http::response(['bills' => [$bill]])]);
+        $rex = Subscription::where('vindi_product_item_id', '9001')->sole();
+        $reconciler = app(\App\Services\Integrations\VindiReconciler::class);
+        $reconciler->reconcileSubscription($rex);
+        $this->assertSame([$rex->id], Invoice::where('external_id', '700')->pluck('subscription_id')->all(), 'O item ainda sem pet fica de fora.');
+        $mia = app(LegacyImport::class)->link(LegacyPendingItem::where('vindi_product_item_id', '9002')->sole(), Pet::where('simplesvet_id', '101')->sole(), $this->admin);
+        $reconciler->reconcileSubscription($rex->fresh());
+        $this->assertSame([[$rex->id, 5200, 'paid'], [$mia->id, 5200, 'paid']], Invoice::where('external_id', '700')->orderBy('subscription_id')->get()
+            ->map(fn ($i) => [$i->subscription_id, $i->amount_cents, $i->status])->all(), 'A Mia, ligada depois, ganha a parte dela da fatura já paga.');
+        $this->assertSame(2, \App\Models\Payment::count(), 'O pagamento do Rex não é duplicado.');
+        $this->assertSame(0, $reconciler->reconcileSubscription($rex->fresh()), 'Com os dois pets conferidos, a fatura volta a ser pulada.');
     }
 
     public function test_old_plan_is_not_suspended_by_missing_entry_contract_or_birth_date_and_stays_out_of_tudo_pra_pet(): void

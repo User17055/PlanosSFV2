@@ -182,7 +182,7 @@ class VindiReconciler
             if ($imported && ! collect($bill['bill_items'] ?? [])->contains(fn ($item) => $locals->contains('vindi_product_item_id', (string) data_get($item, 'product_item.id')))) {
                 continue;
             }
-            if (! $this->unchanged($bill, $subscription->provider_account)) {
+            if (! $this->unchanged($bill, $subscription->provider_account, $locals)) {
                 $this->reconcileBill((string) $bill['id'], $subscription->provider_account, $bill);
                 $count++;
             }
@@ -217,9 +217,14 @@ class VindiReconciler
     }
 
     /** Fatura que já está conferida aqui na mesma versão da Vindi: aplicar de novo só repetiria a auditoria. */
-    private function unchanged(array $bill, string $account): bool
+    private function unchanged(array $bill, string $account, $locals): bool
     {
         $invoices = Invoice::where('provider_account', $account)->where('external_id', (string) ($bill['id'] ?? ''))->get();
+        // Pet ligado depois da conferência ("Pets para escolher"): a fatura volta a ser aplicada para ele ganhar a parte dele.
+        $owners = collect($bill['bill_items'] ?? [])->map(fn ($item) => $locals->firstWhere('vindi_product_item_id', (string) data_get($item, 'product_item.id'))?->id)->filter();
+        if ($owners->diff($invoices->pluck('subscription_id'))->isNotEmpty()) {
+            return false;
+        }
         try {
             $updated = empty($bill['updated_at']) ? null : CarbonImmutable::parse($bill['updated_at'])->utc();
         } catch (\Throwable) {
