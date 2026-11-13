@@ -317,7 +317,8 @@ class DashboardAnalyticsTest extends TestCase
             $chosen=$service->filters($this->admin,['planos'=>$choice]);
             $this->assertSame($expected,[$chosen['base'],$chosen['category']],$choice);
         }
-        $this->get(route('dashboard',['planos'=>'novos|package']))->assertOk()->assertSee('<option value="novos|package" selected>Pacotes novos</option>',false);
+        $this->get(route('dashboard',['planos'=>'novos|package']))->assertOk()->assertSee('<option value="novos|package" selected>Pacotes novos</option>',false)->assertSee('Pacotes ativos');
+        $this->get(route('dashboard'))->assertSee('Planos ativos')->assertDontSee('Pacotes ativos');
         $this->get(route('dashboard',['base'=>'todos']))->assertSessionHasErrors('base');
     }
 }

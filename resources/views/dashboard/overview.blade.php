@@ -10,14 +10,15 @@ $spark=function(array $values,string $color){
     $line=implode(' ',$points);
     return '<svg class="dash-kpi-spark" viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true" focusable="false"><polygon points="0,36 '.$line.' 120,36" style="fill:var(--'.$color.')" fill-opacity=".14"/><polyline points="'.$line.'" style="stroke:var(--'.$color.')" fill="none" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>';
 };
+$activeLabel=$filters['category']==='package'?'Pacotes ativos':'Planos ativos';
 $kpis=$general ? [
-    ['Planos ativos',$number($summary['active_count']),'heart','c-main',$signed($growth['active_delta'],$number).' na carteira '.$growth['range_label'].($growth['active_growth']!==null?' ('.$signed($growth['active_growth'],fn($v)=>number_format($v,1,',','.')).'%)':''),$growth['active_delta']>=0?'is-up':'is-down',array_column($months,'active')],
+    [$activeLabel,$number($summary['active_count']),'heart','c-main',$signed($growth['active_delta'],$number).' na carteira '.$growth['range_label'].($growth['active_growth']!==null?' ('.$signed($growth['active_growth'],fn($v)=>number_format($v,1,',','.')).'%)':''),$growth['active_delta']>=0?'is-up':'is-down',array_column($months,'active')],
     ['Receita mensal',$money($summary['mrr_cents']),'wallet','c-navy','Ticket médio de '.$money($summary['active_ticket_cents']),'',array_column($months,'mrr_cents')],
     ['Recebido no período',$money($summary['received_cents']),'check','c-main2',$money($growth['received_cents']).' '.$growth['range_label'],'',array_column($months,'received_cents')],
     ['Cancelamentos',$number($summary['cancelled_count']),'close','c-out',$summary['cancelled_lost_cents']?$money($summary['cancelled_lost_cents']).' por mês a menos':'nenhum no período','',array_column($months,'left')],
 ] : [
     ['Contratos fechados',$number($summary['sold_count']),'file','c-main',$money($summary['sold_cents']).' em mensalidades vendidas','',array_column($months,'entered')],
-    ['Planos ativos',$number($summary['active_count']),'heart','c-navy',$signed($growth['active_delta'],$number).' '.$growth['range_label'],$growth['active_delta']>=0?'is-up':'is-down',array_column($months,'active')],
+    [$activeLabel,$number($summary['active_count']),'heart','c-navy',$signed($growth['active_delta'],$number).' '.$growth['range_label'],$growth['active_delta']>=0?'is-up':'is-down',array_column($months,'active')],
     ['Recebido',$money($summary['received_cents']),'check','c-main2',$money($growth['received_cents']).' '.$growth['range_label'],'',array_column($months,'received_cents')],
     ['Cancelamentos',$number($summary['cancelled_count']),'close','c-out',$summary['cancelled_lost_cents']?$money($summary['cancelled_lost_cents']).' por mês a menos':'nenhum no período','',array_column($months,'left')],
 ];
