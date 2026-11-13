@@ -34,6 +34,20 @@
     form.action = form.action.split('#')[0] + (city || neighborhood ? '#pessoas-do-bairro' : '#mapa'); // volta ao mapa, com a lista de quem tem plano à vista
     form.requestSubmit();
   }
+  // O painel leva alguns segundos: mostra que está carregando e trava o formulário, para um segundo clique não reenviar o filtro antigo.
+  const workspace = form.closest('.dashboard-workspace') || document.body;
+  const page = href => String(href).split(/[?#]/)[0];
+  const busy = (on = true) => {
+    workspace.classList.toggle('is-loading', on);
+    form.querySelectorAll('button').forEach(button => { button.disabled = on; button.textContent = on ? 'Carregando…' : 'Aplicar'; });
+  };
+  form.addEventListener('submit', () => busy());
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (link && !event.defaultPrevented && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && link.target !== '_blank'
+      && page(link.href) === page(form.action) && page(link.href) + (link.search || '') !== page(location.href) + location.search) busy();
+  });
+  window.addEventListener('pageshow', event => { if (event.persisted) busy(false); }); // voltar pelo navegador não deixa a tela travada
   form.elements.state.addEventListener('change', () => { form.elements.city.value = ''; form.elements.neighborhood.value = ''; });
   form.elements.city.addEventListener('change', () => {
     form.elements.neighborhood.value = '';
