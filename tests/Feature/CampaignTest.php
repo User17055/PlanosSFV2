@@ -133,6 +133,9 @@ class CampaignTest extends TestCase
 
         $this->assertSame(1, app(LeadDigisacAssign::class)->run());
         $this->assertSame($juliana->id, $queue->fresh()->handled_by);
+        $this->assertSame('contacted', $queue->fresh()->status, 'Quem puxou no Digisac já está atendendo: o lead vai para "Processando".');
+        $this->assertNotNull($queue->fresh()->contacted_at);
+        $this->assertSame('new', $taken->fresh()->status, 'Lead que já era de alguém não muda de situação por aqui.');
         $this->assertSame($this->admin->id, $taken->fresh()->handled_by, 'Quem já tinha o lead continua com ele.');
         $this->assertDatabaseHas('audit_logs', ['action' => 'lead.assigned_from_digisac', 'entity_id' => $queue->id]);
     }

@@ -35,7 +35,9 @@ class LeadDigisacAssign
             // Só quem pode ficar com o lead daquela unidade; quem puxou e não tem acesso a leads não vira responsável.
             if (! $userId || ! Lead::assignees((int) $lead->originating_franchise_id)->contains('id', $userId)) continue;
             if (Lead::whereKey($lead->id)->whereNull('handled_by')->update(['handled_by' => $userId])) {
-                Audit::record('lead.assigned_from_digisac', $lead, null, ['handled_by' => $userId]);
+                // Quem puxou a conversa já está atendendo: "Esperando" vira "Processando" (Finalizado e Sem interesse não mudam).
+                $started = Lead::whereKey($lead->id)->where('status', 'new')->update(['status' => 'contacted', 'contacted_at' => $lead->contacted_at ?? now()]);
+                Audit::record('lead.assigned_from_digisac', $lead, null, ['handled_by' => $userId] + ($started ? ['status' => 'contacted'] : []));
                 $assigned++;
             }
         }
