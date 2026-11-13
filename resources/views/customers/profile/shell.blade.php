@@ -9,7 +9,7 @@ $liveContracts=$customer->subscriptions->reject(fn($subscription)=>$subscription
 $pastContracts=$customer->subscriptions->filter(fn($subscription)=>$subscription->isTerminal());
 $activeContracts=$liveContracts->whereIn('status',['active','scheduled_cancellation']);
 $openProposals=$customer->proposals->filter(fn($proposal)=>!$proposal->locked_at && in_array($proposal->status,['draft','awaiting_acceptance']) && $proposal->expires_at?->isFuture());
-$pastProposals=$customer->proposals->reject(fn($proposal)=>$openProposals->contains('id',$proposal->id));
+$pastProposals=$customer->proposals->reject(fn($proposal)=>$proposal->channel==='legacy' || $openProposals->contains('id',$proposal->id));
 $pendingDocuments=$liveContracts->where('document_status','!=','valid');
 $openInvoices=$canFinance?$customer->invoices->whereNotIn('status',['cancelled','refunded'])->filter(fn($invoice)=>$invoice->outstanding_cents>0):collect();
 $overdueInvoices=$openInvoices->filter(fn($invoice)=>$invoice->due_at?->isPast());

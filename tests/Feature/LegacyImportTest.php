@@ -118,6 +118,9 @@ class LegacyImportTest extends TestCase
         $this->post(route('legacy.pending.dismiss', $other), ['reason' => 'x'])->assertSessionHasErrors('reason');
         $this->post(route('legacy.pending.dismiss', $other), ['reason' => 'Cobrança não é de pet'])->assertSessionHas('success');
         $this->assertSame('dismissed', $other->fresh()->resolution);
+        // O contrato antigo fica na ficha, mas não é proposta.
+        $this->get(route('proposals.index'))->assertOk()->assertDontSee($plan->number);
+        $this->get(route('customers.show', $plan->customer_id))->assertOk()->assertSee($plan->number)->assertDontSee('Histórico de propostas');
         $this->get(route('dashboard'))->assertOk()->assertDontSee('Pets para escolher:');
         // Planos gerais contam a base antiga; planos novos e vendas, não.
         $general = app(\App\Services\Reports\DashboardService::class);

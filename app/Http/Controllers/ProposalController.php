@@ -19,6 +19,7 @@ class ProposalController extends Controller
     public function index(Request $request)
     {
         $query = $request->user()->role === 'customer' ? Proposal::where('customer_id',$request->user()->customer_id) : $this->access->scope(Proposal::query(),$request->user());
+        $query->where('channel','!=','legacy'); // base antiga: o contrato fica na ficha, não é proposta
         if ($request->filled('status')) $query->where('status',$request->string('status')->toString());
         if ($request->user()->role !== 'customer') {
             $filters=$request->validate(['q'=>'nullable|string|max:80','channel'=>'nullable|in:site,link,presential','origem'=>'nullable|in:'.implode(',',array_keys(TrackingSanitizer::sourceLabels())),'etapa'=>'nullable|in:'.implode(',',array_keys(Proposal::STAGES))]);

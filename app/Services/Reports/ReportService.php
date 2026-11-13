@@ -126,7 +126,7 @@ class ReportService
 
     private function scopedProposals(User $user): Builder
     {
-        $query = Proposal::query();
+        $query = Proposal::where('proposals.channel', '!=', 'legacy'); // base antiga não é contratação do período
         return $user->role === 'central_admin' ? $query : $query->whereIn('proposals.originating_franchise_id', $this->franchiseIds($user));
     }
 
