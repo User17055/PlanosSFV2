@@ -303,8 +303,10 @@ class DashboardService
         // Base antiga: quem cancelou na Vindi, antes ou depois da importação, também conta. Cancelada e refeita na hora não é saída nem entrada.
         if($vindi) $rows=$rows->concat((clone $vindi)->whereNotNull('started_at')->get(['product_name','price_cents','started_at','cancelled_at','replaced'])
             ->map(fn($c)=>['start'=>$c->started_at,'stop'=>$c->cancelled_at,'cents'=>$c->price_cents,'plan'=>$c->product_name,'replaced'=>$c->replaced]))->values();
-        $alive=fn($at)=>$rows->filter(fn($r)=>$r['start']->lt($at) && (!$r['stop'] || $r['stop']->gte($at)));
-        $within=fn(string $key,$from,$to)=>$rows->filter(fn($r)=>$r[$key] && $r[$key]->gte($from) && $r[$key]->lt($to));
+        // Datas como número uma vez só: comparar objetos de data mês a mês em milhares de contratos levava segundos.
+        $rows=$rows->map(fn($r)=>$r+['ts_start'=>$r['start']->getTimestamp(),'ts_stop'=>$r['stop']?->getTimestamp()])->values();
+        $alive=function($at)use($rows){ $at=$at->getTimestamp(); return $rows->filter(fn($r)=>$r['ts_start']<$at && ($r['ts_stop']===null || $r['ts_stop']>=$at)); };
+        $within=function(string $key,$from,$to)use($rows){ [$from,$to,$key]=[$from->getTimestamp(),$to->getTimestamp(),'ts_'.$key]; return $rows->filter(fn($r)=>$r[$key]!==null && $r[$key]>=$from && $r[$key]<$to); };
         $last=CarbonImmutable::parse($filters['date_to'],'America/Sao_Paulo')->startOfMonth();
         $begin=CarbonImmutable::parse($filters['date_from'],'America/Sao_Paulo')->startOfMonth();
         // Período de um mês só, como o padrão: mostra os 12 meses até ele, para o crescimento aparecer.
