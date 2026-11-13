@@ -102,7 +102,13 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame([[$late->customer_id,true],[$one->customer_id,false]],array_map(fn($p)=>[$p['id'],$p['suspended']],$report['geo']['people']));
         $this->assertSame(2,$report['geo']['neighborhoods'][0]['plans']);
         $this->actingAs($this->admin)->get(route('dashboard',['state'=>'SP','city'=>'Presidente Prudente','neighborhood'=>'Centro']))->assertOk()
-            ->assertSee('Quem tem plano em Centro: 2')->assertSee('1 com plano suspenso')->assertSee('is-suspended')->assertSee('(suspenso)')->assertSee(route('customers.show',$one->customer_id));
+            ->assertSee('Quem tem plano em Centro: 2')->assertSee('1 com plano suspenso')->assertSee('is-suspended')->assertSee('(suspenso)')->assertSee(route('customers.show',$one->customer_id))
+            ->assertSee('Filtrando por:')->assertSee('Cidade: Presidente Prudente (SP)')->assertSee('Bairro: Centro')->assertSee('Limpar filtros');
+        // Cidade sem pacote: trocar para pacotes não deixa a cidade sumir da lista nem o estado valendo escondido.
+        $this->get(route('dashboard',['state'=>'MG','city'=>'Patos de Minas','planos'=>'gerais|package']))->assertOk()
+            ->assertSee('<option data-state="MG" value="Patos de Minas" selected>',false)->assertSee('Cidade: Patos de Minas (MG)')->assertSee('Nenhum plano ativo com estes filtros.');
+        $this->get(route('dashboard',['state'=>'MG']))->assertOk()->assertSee('Estado: MG');
+        $this->get(route('dashboard'))->assertOk()->assertDontSee('Filtrando por:');
     }
 
     public function test_sales_scope_includes_customer_owned_links_but_not_other_sellers(): void

@@ -2205,6 +2205,12 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 .dash-people{margin-top:18px;scroll-margin-top:16px}
 .dash-people h3{margin:0 0 10px;font-size:16px;font-weight:600;color:var(--text)}
 .dash-packages-aside{margin:10px 4px 0}
+.dash-active-filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 16px;padding:12px 16px;border-radius:var(--radius);background:#eef4fb;border:1px solid #c9d8ec;color:var(--text)}
+.dash-active-filters>span{font-weight:600}
+.dash-active-filters small{flex-basis:100%;color:var(--danger-text);font-weight:500}
+.dash-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:#fff;border:1px solid #c9d8ec;color:var(--text);font-size:14px;text-decoration:none}
+.dash-chip:hover,.dash-chip:focus-visible{border-color:var(--primary);color:var(--primary)}
+.dash-chip b{font-size:16px;line-height:1;font-weight:500}
 .dash-people-suspended{color:var(--danger-text);font-weight:500}
 .dash-people .analytics-location-row.is-suspended{background:var(--danger-soft);border-color:rgba(232,86,86,.45)}
 .dash-people .analytics-location-row.is-suspended:hover{background:#fff;border-color:var(--danger)}
