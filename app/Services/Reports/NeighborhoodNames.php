@@ -5,14 +5,15 @@ namespace App\Services\Reports;
 /**
  * Junta as grafias do mesmo bairro numa cidade: maiúsculas e acentos ("JD MARACANA", "jardim Maracanã"), abreviações ("Res.", "Jd"),
  * o nome sem o tipo ("Humberto Salvador"), número escrito diferente ("Damha 3" e "Damha III"), nome cortado em 20 letras
- * ("Residencial Maré Man") e um erro de digitação ("Jequitibá" e "Jequitibás"). Tipos diferentes não se misturam
+ * ("Residencial Maré Man"), um erro de digitação ("Jequitibá" e "Jequitibás"), "Condomínio" no lugar do tipo e o nome da cidade
+ * dentro do bairro ("Village Damha Presidente Prudente"). Tipos diferentes não se misturam
  * ("Jardim Bongiovani" e "Residencial Bongiovani"). Fica o nome do mapa, quando o bairro está nele; senão, a grafia mais usada.
  */
 class NeighborhoodNames
 {
     private const ABBREVIATIONS = ['jd' => 'jardim', 'jdm' => 'jardim', 'jrd' => 'jardim', 'vl' => 'vila', 'pq' => 'parque', 'pqe' => 'parque', 'pque' => 'parque',
         'res' => 'residencial', 'resid' => 'residencial', 'cj' => 'conjunto', 'conj' => 'conjunto', 'hab' => 'habitacional', 'cond' => 'condominio',
-        'nuc' => 'nucleo', 'sta' => 'santa', 'sto' => 'santo', 'chac' => 'chacara'];
+        'nuc' => 'nucleo', 'sta' => 'santa', 'sto' => 'santo', 'chac' => 'chacara', 'dhama' => 'damha', 'dahma' => 'damha'];
 
     private const ROMAN = ['i' => '1', 'ii' => '2', 'iii' => '3', 'iv' => '4', 'v' => '5', 'vi' => '6'];
 
@@ -39,15 +40,21 @@ class NeighborhoodNames
         }
         foreach ($counts as $city => $spellings) {
             $groups = [];
+            $known = []; // toda grafia já vista => grupo: o nome cortado acha a grafia inteira mesmo quando ela difere da do mapa
             foreach ($catalog[$city] ?? [] as $name) {
                 $groups[self::full($name)] ??= ['name' => $name, 'spellings' => []];
+                $known[self::full($name)] = self::full($name);
             }
+            $cityName = ' '.explode('|', $city, 2)[1].' ';
             arsort($spellings);
             foreach ($spellings as $raw => $count) {
                 $full = self::full($raw);
-                $key = self::match($full, mb_strlen($raw), $groups) ?? $full;
+                // "Village Damha Presidente Prudente" é o "Residencial Village Damha": o nome da cidade no bairro não conta.
+                $search = trim(str_replace($cityName, ' ', " $full ")) ?: $full;
+                $key = $known[$full] ?? self::match($search, mb_strlen($raw), $known) ?? $full;
                 $groups[$key] ??= ['name' => null, 'spellings' => []];
                 $groups[$key]['spellings'][$raw] = $count;
+                $known[$full] = $key;
                 $this->names[$city][$full] = $key;
             }
             foreach ($this->names[$city] as $full => $key) {
@@ -86,17 +93,33 @@ class NeighborhoodNames
     /** [palavras dos tipos na frente do nome ("conjunto habitacional" vira "conjunto" e "habitacional"), nome sem eles]. */
     private static function split(string $full): array
     {
+        static $memo = [];
+        if (isset($memo[$full])) {
+            return $memo[$full];
+        }
         $types = [];
-        while (preg_match('/^'.self::TYPES.'\s+/', $full, $m)) {
+        $rest = $full;
+        while (preg_match('/^'.self::TYPES.'\s+/', $rest, $m)) {
             array_push($types, ...explode(' ', $m[1]));
-            $full = substr($full, strlen($m[0]));
+            $rest = substr($rest, strlen($m[0]));
         }
 
-        return [$types, $full];
+        return $memo[$full] = [$types, $rest];
     }
 
     /**
-     * Mesmo nome sem o tipo, e o tipo de um está contido no do outro: "Humberto Salvador", "Jardim Humberto Salvador" e
+     * O tipo de um está contido no do outro ("Conjunto" e "Conjunto Habitacional Jardim"); "Jardim" e "Residencial", não.
+     * "Condomínio" não conta como tipo: "Condomínio Essenza" é o "Residencial Essenza".
+     */
+    private static function kin(array $a, array $b): bool
+    {
+        [$a, $b] = [array_diff($a, ['condominio']), array_diff($b, ['condominio'])];
+
+        return ! array_diff($a, $b) || ! array_diff($b, $a);
+    }
+
+    /**
+     * Mesmo nome sem o tipo, e tipos parentes: "Humberto Salvador", "Jardim Humberto Salvador" e
      * "Conjunto Habitacional Jardim Humberto Salvador" são o mesmo; "Jardim Bongiovani" e "Residencial Bongiovani", não.
      */
     private static function sameBare(string $a, string $b): bool
@@ -104,7 +127,7 @@ class NeighborhoodNames
         [$typesA, $bareA] = self::split($a);
         [$typesB, $bareB] = self::split($b);
 
-        return $bareA !== '' && $bareA === $bareB && (! array_diff($typesA, $typesB) || ! array_diff($typesB, $typesA));
+        return $bareA !== '' && $bareA === $bareB && self::kin($typesA, $typesB);
     }
 
     /** Mesmo bairro, comparando duas grafias soltas (sem o resto da cidade). */
@@ -115,25 +138,35 @@ class NeighborhoodNames
         return $a === $b || self::sameBare($a, $b);
     }
 
-    /** O grupo em que esta grafia entra; null quando é um bairro novo. Só junta quando há um único candidato. */
-    private static function match(string $full, int $length, array $groups): ?string
+    /**
+     * O grupo em que esta grafia entra; null quando é um bairro novo. Só junta quando há um único candidato.
+     *
+     * @param  array<string, string>  $known  grafia já vista => grupo dela
+     */
+    private static function match(string $full, int $length, array $known): ?string
     {
-        if (isset($groups[$full])) {
-            return $full;
+        if (isset($known[$full])) {
+            return $known[$full];
         }
+        [$types, $bare] = self::split($full);
         $hits = ['bare' => [], 'cut' => [], 'typo' => []];
-        foreach (array_keys($groups) as $key) {
-            if (self::sameBare($full, (string) $key)) {
-                $hits['bare'][] = $key;
-            } elseif ($length === self::CUT && str_starts_with($key, $full)) {
-                $hits['cut'][] = $key;
-            } elseif (strlen($full) >= 8 && self::numbers($full) === self::numbers($key) && levenshtein($full, $key) === 1) {
-                $hits['typo'][] = $key;
+        foreach ($known as $spelling => $key) {
+            $spelling = (string) $spelling;
+            [$otherTypes, $otherBare] = self::split($spelling);
+            $kin = $bare !== '' && self::kin($types, $otherTypes);
+            $long = $kin && strlen($bare) >= 8; // nome sem o tipo curto demais ("Residencial Parque d") não serve de pista
+            if ($kin && $bare === $otherBare) {
+                $hits['bare'][$key] = true;
+            } elseif ($length === self::CUT && (str_starts_with($spelling, $full) || ($long && str_starts_with($otherBare, $bare)))) {
+                $hits['cut'][$key] = true;
+            } elseif (strlen($full) >= 8 && self::numbers($full) === self::numbers($spelling)
+                && (levenshtein($full, $spelling) === 1 || ($long && levenshtein($bare, $otherBare) === 1))) { // "Jardins de Anahy" e "Jardins do Anahy"
+                $hits['typo'][$key] = true;
             }
         }
         foreach ($hits as $keys) {
             if (count($keys) === 1) {
-                return $keys[0];
+                return (string) array_key_first($keys);
             }
         }
 
