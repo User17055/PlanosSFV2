@@ -148,9 +148,9 @@ class DigisacClient
     }
 
     /** $file: ['base64', 'mimetype', 'name']. Com arquivo, a documentação manda sem "type": o Digisac usa o mimetype. */
-    public function send(DigisacConnection $connection, ?string $contactId, string $phone, string $text, ?array $file = null): void
+    public function send(DigisacConnection $connection, ?string $contactId, string $phone, string $text, ?array $file = null, ?string $userId = null): void
     {
-        $payload = ['text' => $text] + ($file ? ['file' => $file] : ['type' => 'chat']) + ['userId' => $connection->digisac_user_id, 'origin' => 'user'];
+        $payload = ['text' => $text] + ($file ? ['file' => $file] : ['type' => 'chat']) + ['userId' => $userId ?? $connection->digisac_user_id, 'origin' => 'user'];
         $payload += $contactId ? ['contactId' => $contactId] : ['number' => $phone, 'serviceId' => $connection->service_id];
         $this->request($connection, 'POST', 'messages', $payload);
     }

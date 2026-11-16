@@ -213,6 +213,26 @@ class LeadChatTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_without_their_own_token_the_team_uses_the_administrator_token_and_replies_as_themselves(): void
+    {
+        $this->connection($this->admin, 'token-da-equipe');
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact()]]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => [$this->message()]]),
+        ]);
+        $this->actingAs($this->ana)->get(route('leads.chat.show', $this->mine))->assertOk()->assertDontSee('Conecte seu Digisac');
+        $this->getJson(route('leads.chat.messages', $this->mine))->assertOk()->assertJsonPath('messages.0.text', 'Mensagem do cliente');
+        // Sem o "Usuário no Digisac", a resposta sairia como do dono do token: recusada antes de chamar o Digisac.
+        $this->postJson(route('leads.chat.send', $this->mine), $this->payload())->assertUnprocessable();
+        Http::assertNotSent(fn (HttpRequest $request) => $request->method() === 'POST');
+        $this->ana->forceFill(['digisac_user_id' => 'remote-ana'])->save();
+        $this->postJson(route('leads.chat.send', $this->mine), $this->payload())->assertOk();
+        Http::assertSent(fn (HttpRequest $request) => $request->method() === 'POST' && $request['userId'] === 'remote-ana'
+            && $request->hasHeader('Authorization', 'Bearer token-da-equipe'));
+        // O token da equipe não abre lead de outra pessoa.
+        $this->getJson(route('leads.chat.messages', $this->theirs))->assertForbidden();
+    }
+
     public function test_first_contact_can_be_messaged_by_phone_without_listing_unrelated_conversations(): void
     {
         $this->connection($this->ana);

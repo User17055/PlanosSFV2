@@ -28,10 +28,16 @@ class LeadChatController extends Controller
         abort_unless(Lead::visibleTo($request->user())->whereKey($lead->id)->whereNotNull('handled_by')->exists(), 403, 'Assuma o lead disponível para abrir a conversa. Leads de outras pessoas não podem ser acessados.');
     }
 
+    /** A conexão da pessoa; sem ela, a do administrador central, para a equipe atender com um token só. */
+    private function active(Request $request): ?DigisacConnection
+    {
+        return DigisacConnection::where('user_id', $request->user()->id)->whereNotNull('verified_at')->first() ?? DigisacConnection::admin();
+    }
+
     private function connection(Request $request): DigisacConnection
     {
-        $connection = DigisacConnection::where('user_id', $request->user()->id)->first();
-        abort_unless($connection?->verified_at, 422, 'Configure e valide sua conexão com o Digisac antes de conversar.');
+        $connection = $this->active($request);
+        abort_unless($connection, 422, 'Configure e valide sua conexão com o Digisac antes de conversar.');
         return $connection;
     }
 
@@ -57,7 +63,7 @@ class LeadChatController extends Controller
         return response()->view('leads.chat', [
             'leads' => $query->orderByDesc('updated_at')->orderByDesc('id')->paginate(25)->withQueryString(),
             'selected' => $lead, 'queue' => $queue, 'all' => $all, 'seesAll' => $seesAll, 'search' => $search,
-            'connection' => DigisacConnection::where('user_id', $request->user()->id)->first(),
+            'connection' => $this->active($request),
         ])->header('Cache-Control', 'private, no-store');
     }
 
@@ -122,15 +128,18 @@ class LeadChatController extends Controller
         $file = isset($data['file']) ? $this->attachment($data['file']) : null;
         abort_if($text === '' && ! $file, 422, 'Escreva uma mensagem antes de enviar.');
         $connection = $this->connection($request);
+        // Com o token da equipe, a mensagem sai com o "Usuário no Digisac" de quem respondeu, nunca com o do dono do token.
+        $sender = (int) $connection->user_id === (int) $request->user()->id ? $connection->digisac_user_id : $request->user()->digisac_user_id;
+        abort_unless($sender, 422, 'Peça à administração para preencher seu "Usuário no Digisac" em Funcionários antes de responder.');
         $phone = DigisacClient::phone($lead->phone);
         abort_unless($phone, 422, 'O lead precisa de um telefone válido para conversar.');
-        $key = 'digisac:send:'.$request->user()->id.':'.$lead->id.':'.$data['request_id'];
+        $key ='digisac:send:'.$request->user()->id.':'.$lead->id.':'.$data['request_id'];
         if (Cache::get($key) === 'sent') return response()->json(['sent' => true]);
         $contact = $client->contact($connection, $phone);
         $this->owned($request, $lead, $access);
         // Reserva antes de enviar. Uma falha de rede pode ocorrer depois da entrega remota.
         abort_unless(Cache::add($key, 'pending', now()->addDay()), 409, 'Este envio já foi iniciado. Confira a conversa antes de tentar novamente.');
-        $client->send($connection, isset($contact['id']) ? (string) $contact['id'] : null, $phone, $text, $file);
+        $client->send($connection, isset($contact['id']) ? (string) $contact['id'] : null, $phone, $text, $file, $sender);
         Cache::put($key, 'sent', now()->addDay());
         $lead->refresh();
         Lead::whereKey($lead->id)->where('handled_by', $request->user()->id)->update([
