@@ -1,0 +1,40 @@
+/* Natal na gestão da equipe: entra sozinho de 15/11 a 06/01 (layouts/app.blade.php). */
+:root{--xmas-red:#c8102e;--xmas-red-dark:#a00c24;--xmas-green:#1f7a3a;--xmas-gold:#f2c14e}
+
+/* Luzinhas penduradas na borda de baixo do topo, piscando em dois grupos. */
+.xmas-lights{position:absolute;left:0;right:0;bottom:-11px;height:16px;pointer-events:none;z-index:1}
+.xmas-lights::before,.xmas-lights::after{content:"";position:absolute;inset:0;background-repeat:repeat-x}
+.xmas-lights::before{background-image:linear-gradient(#3b4a3b,#3b4a3b),radial-gradient(circle at 50% 62%,var(--xmas-red) 0 4px,transparent 5px),radial-gradient(circle at 50% 62%,var(--xmas-gold) 0 4px,transparent 5px);
+  background-size:100% 1.5px,96px 16px,96px 16px;background-position:0 2px,0 0,48px 0;background-repeat:no-repeat,repeat-x,repeat-x;animation:xmas-blink 1.8s steps(1) infinite}
+.xmas-lights::after{background-image:radial-gradient(circle at 50% 62%,#2fb35a 0 4px,transparent 5px),radial-gradient(circle at 50% 62%,#3d8bfd 0 4px,transparent 5px);
+  background-size:96px 16px,96px 16px;background-position:24px 0,72px 0;animation:xmas-blink 1.8s steps(1) .9s infinite}
+@keyframes xmas-blink{50%{opacity:.35}}
+
+/* Neve na barra lateral, que é escura: no conteúdo branco ela não apareceria e atrapalharia a leitura. */
+.xmas-snow{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.xmas-snow::before,.xmas-snow::after{content:"";position:absolute;left:0;right:0;top:-260px;bottom:0;background-repeat:repeat}
+.xmas-snow::before{background-image:radial-gradient(1.6px 1.6px at 18px 22px,#fff 50%,transparent 60%),radial-gradient(1.4px 1.4px at 74px 96px,#fff 50%,transparent 60%),radial-gradient(1.8px 1.8px at 132px 40px,#fff 50%,transparent 60%),radial-gradient(1.3px 1.3px at 104px 168px,#fff 50%,transparent 60%),radial-gradient(1.5px 1.5px at 42px 140px,#fff 50%,transparent 60%);
+  background-size:160px 200px;opacity:.6;animation:xmas-fall-a 14s linear infinite}
+.xmas-snow::after{background-image:radial-gradient(2.6px 2.6px at 30px 60px,#fff 50%,transparent 60%),radial-gradient(2.2px 2.2px at 150px 190px,#fff 50%,transparent 60%),radial-gradient(2.8px 2.8px at 210px 110px,#fff 50%,transparent 60%);
+  background-size:260px 260px;opacity:.45;animation:xmas-fall-b 22s linear infinite}
+@keyframes xmas-fall-a{to{transform:translateY(200px)}}
+@keyframes xmas-fall-b{to{transform:translate(-26px,260px)}}
+
+/* Gorro de Papai Noel na cabeça do cachorro da logo. */
+.is-christmas .sidebar-brand{position:relative}
+.is-christmas .sidebar-brand::after{content:"";position:absolute;top:-12px;left:calc(50% - 51px);width:46px;height:34px;pointer-events:none;transform:rotate(-14deg);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'%3E%3Cpath d='M8 37C10 20 26 6 46 6c8 0 12 8 12 18-4-6-10-8-14-4-2 6-3 11-4 17z' fill='%23d6202a'/%3E%3Cpath d='M30 12c6-3 12-4 16-2' stroke='%23ff6b6b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Crect x='3' y='33' width='42' height='11' rx='5.5' fill='%23fff' stroke='%23e3e3e3'/%3E%3Ccircle cx='58' cy='26' r='6' fill='%23fff' stroke='%23e3e3e3'/%3E%3C/svg%3E") center/contain no-repeat;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+
+/* Saudação no topo. */
+.xmas-greeting{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:99px;background:linear-gradient(90deg,var(--xmas-red),#e0384e);color:#fff;font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px -3px rgba(200,16,46,.6)}
+@media (max-width:760px){.xmas-greeting{display:none}}
+
+/* Botões principais em vermelho e cartões com a faixa de cima alternando vermelho e verde. */
+.is-christmas .button-primary{background:var(--xmas-red);border-color:var(--xmas-red);color:#fff}
+.is-christmas .button-primary:hover{background:var(--xmas-red-dark);border-color:var(--xmas-red-dark);box-shadow:0 4px 12px -4px rgba(200,16,46,.55)}
+.is-christmas.theme-dash .card:not(.lead-list){border-top:3px solid var(--xmas-red)}
+.is-christmas.theme-dash .card:not(.lead-list):nth-of-type(even){border-top-color:var(--xmas-green)}
+.is-christmas .sidebar-cta .button{background:var(--xmas-green);border-color:var(--xmas-green);color:#fff}
+
+@media (prefers-reduced-motion:reduce){.xmas-lights::before,.xmas-lights::after,.xmas-snow::before,.xmas-snow::after{animation:none}}
