@@ -33,5 +33,33 @@
         "docx_sha256": "274861aaed73582419628896176e5af66232bd479e61e14190272a2af924feb4",
         "text_sha256": "f90face1963de77ec3a2fefaccc29db5cd7efb7052ad33258179a1b4407ed656",
         "changes": "Removido o desconto em ração, como nos outros planos (09/11/2026). Campos do cliente no mesmo tamanho de letra dos rótulos (CPF estava em 10,5) (09/11/2026)."
+    },
+    "188fe8c212f4b893c96ff67772af852a2031bc6fa5a229321acd8aed79c2d0c3": {
+        "source": "PLANO PRIME.docx",
+        "source_sha256": "a15773521bf2f255891610297040d7e7f56972a0d48ddd16ec3bee582990210d",
+        "docx_sha256": "6ce86c4202aace652e7e0160c215ba9f0da980266a77950cf1b6fd6027895d51",
+        "text_sha256": "6d3df9e62343eeff99598410bc114a0f9e096e83b1fd488f50887eb2e46121c5",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Removido o link de e-mail de um cliente antigo que ficou escondido no campo E-mail (09/11/2026). \"plano Master\" virou \"plano Prime\"; tumores de pele na lista de cirurgias; frase da morte do pet na cláusula sétima (16/11/2026)."
+    },
+    "33e9f28624122af47f5767891bd7994e983264cf36b2d1e05bdb0a474c2f6f73": {
+        "source": "PLANO SUPER ECONOMICO.docx",
+        "source_sha256": "150d4bcf1697556b8ea0d8e25f5fa3c3176eb57cc2081833277745f62ae73f71",
+        "docx_sha256": "70fd65f428a3f4c4891941fe720f6511d19b6ea278dfcb462a45fd0741061686",
+        "text_sha256": "4de35b4f923f06d0f33e1ec350e51a3e4a247f01f60b072c5ccf44e6ba6556b4",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). \"SEISENTOS\" corrigido para \"SEISCENTOS\" (16/11/2026)."
+    },
+    "1482dbafe3ad74ddcb0a02ad9d5d77f22be36ba44098696a5a40fc2f40350fde": {
+        "source": "PLANO ECONOMICO FELINO.docx",
+        "source_sha256": "e4185d52b25bffd59233a2c1f851651e33df991796887b2666445e0a6e3dd1fc",
+        "docx_sha256": "7606b2235c0917eeecb430229e6f60f547f28da477e32cf9e204122b452b5a62",
+        "text_sha256": "b302e9f622e8f8e47d97272ee02554507113edb90419860374a90a078e67e9a6",
+        "changes": "Removido o desconto em ração, como nos outros planos (09/11/2026). Campos do cliente no mesmo tamanho de letra dos rótulos (CPF estava em 10,5) (09/11/2026). \"VINTEE QUATRO\" corrigido para \"VINTE E QUATRO\" no texto (o Word já estava certo); vacinas com \"TODAS as doses\" (16/11/2026)."
+    },
+    "971e197c3c4048a63134c92c11bb914e7eb4be2c640a10314c91bc3d901ce132": {
+        "source": "PLANO ECONOMICO.docx",
+        "source_sha256": "38b2449125d96378eff3b77d8b55d0118a83daca13e11e6f44dbdaca8c0ae576",
+        "docx_sha256": "eb1ff714bacf302db922854d7ede03a5a7e4308c77f231a37daa3d7a53b21264",
+        "text_sha256": "a7c217cba1d85a674e5829c9a8280d68792b67a350fedb4f00b7b2cbea198215",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Bioquímicos do hospital listados, como no Essencial e no Prime (16/11/2026)."
     }
 }

@@ -42,7 +42,8 @@ class OriginalWordContractTest extends TestCase
     public function test_all_prepared_packages_have_fields_instead_of_customer_values(): void
     {
         $index=json_decode(file_get_contents(resource_path('contracts/word/index.json')),true);
-        $this->assertCount(5,$index);
+        // Cada plano tem a entrada do texto atual; as antigas ficam para as versões já publicadas e os contratos assinados.
+        $this->assertCount(5,array_unique(array_column($index,'source')));
         foreach($index as $entry) {
             $path=resource_path('contracts/word/'.$entry['docx_sha256'].'.docx');
             $this->assertSame($entry['docx_sha256'],hash_file('sha256',$path));
