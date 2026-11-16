@@ -31,7 +31,10 @@ class ProposalContextTest extends TestCase
             ->assertViewHas('selectedCustomer', fn ($customer) => $customer->is($pet->customer))
             ->assertViewHas('selectedPet', fn ($selectedPet) => $selectedPet->is($pet))
             ->assertSee('value="'.$pet->id.'" data-customer="'.$pet->customer_id.'" selected', false)
-            ->assertSee(route('customers.show', $pet->customer).'#pets', false);
+            ->assertSee(route('customers.show', $pet->customer).'#pets', false)
+            // Por enquanto a equipe só contrata por link: sem site nem presencial na escolha.
+            ->assertSee('name="channel" value="link" checked', false)->assertDontSee('value="presential"', false)->assertDontSee('value="site"', false)
+            ->assertSee('Tutor já cadastrado')->assertSee('value="'.$pet->customer_id.'" data-search=', false);
 
         $this->assertSame($customersBefore, Customer::count());
         $this->assertSame($petsBefore, Pet::count());

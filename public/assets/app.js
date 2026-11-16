@@ -16,22 +16,49 @@
     const update = () => { let selectionValid = false; $$('option', child).forEach(option => { if (!option.value) return; const enabled = option.dataset[dataKey] === parent.value; option.hidden = !enabled; option.disabled = !enabled; if (enabled && option.selected) selectionValid = true; }); if (!selectionValid) child.value = ''; if (child.options[0]) child.options[0].textContent = parent.value ? 'Selecione uma opção' : 'Selecione primeiro o cadastro acima'; };
     parent.addEventListener('change', update); update();
   };
-  const customerSearch = $('[data-customer-search]'), customerSelect = $('[data-customer-select]');
-  if (customerSearch && customerSelect) {
+  // Busca do tutor: a lista aparece enquanto digita e o clique escolhe; o select escondido guarda a escolha para o formulário.
+  const customerSearch = $('[data-customer-search]'), customerSelect = $('[data-customer-select]'), customerResults = $('[data-customer-results]');
+  if (customerSearch && customerSelect && customerResults) {
     const normalize = value => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    const status = $('[data-customer-search-status]');
+    const status = $('[data-customer-search-status]'), petSelect = $('[data-pet-select]');
+    const say = text => { if (status) status.textContent = text; };
+    const options = $$('option', customerSelect).filter(option => option.value);
+    const choose = option => {
+      customerSelect.value = option ? option.value : '';
+      customerSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      customerSearch.setCustomValidity(option ? '' : 'Busque e clique no tutor na lista.');
+      if (!option) return;
+      customerSearch.value = option.dataset.name;
+      customerResults.hidden = true; customerResults.replaceChildren();
+      const pets = petSelect ? $$('option', petSelect).filter(pet => pet.value && !pet.disabled) : [];
+      if (pets.length === 1) petSelect.value = pets[0].value;
+      say(`Tutor escolhido: ${option.textContent}.` + (pets.length ? '' : ' Ele ainda não tem pet: cadastre o pet na ficha do tutor.'));
+    };
     customerSearch.addEventListener('input', () => {
-      const terms = normalize(customerSearch.value).split(/\s+/).filter(Boolean), matches = [];
-      $$('option', customerSelect).forEach(option => {
-        if (!option.value) return;
+      if (customerSelect.value) choose(null);
+      const terms = normalize(customerSearch.value).split(/\s+/).filter(Boolean);
+      customerResults.replaceChildren();
+      if (!terms.length) { customerResults.hidden = true; say('Digite para buscar e clique no tutor.'); return; }
+      const matches = options.filter(option => {
         const text = normalize(`${option.textContent} ${option.dataset.search || ''}`), digits = text.replace(/\D/g, '');
-        const visible = terms.every(term => text.includes(term) || (/^[\d.\-()/]+$/.test(term) && term.replace(/\D/g, '') !== '' && digits.includes(term.replace(/\D/g, ''))));
-        option.hidden = !visible; option.disabled = !visible && !option.selected;
-        if (visible) matches.push(option);
+        return terms.every(term => text.includes(term) || (/^[\d.\-()/]+$/.test(term) && term.replace(/\D/g, '') !== '' && digits.includes(term.replace(/\D/g, ''))));
       });
-      if (matches.length === 1 && customerSelect.value !== matches[0].value) { customerSelect.value = matches[0].value; customerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-      if (status) { status.hidden = !terms.length; status.textContent = !matches.length ? 'Nenhum tutor encontrado. Confira a busca ou cadastre um novo tutor.' : matches.length === 1 ? `Tutor selecionado: ${matches[0].textContent}` : `${matches.length} tutores encontrados. Escolha na lista abaixo.`; }
+      for (const option of matches.slice(0, 8)) {
+        const button = document.createElement('button'), name = document.createElement('strong'), detail = document.createElement('small');
+        button.type = 'button'; button.className = 'customer-result';
+        name.textContent = option.dataset.name; detail.textContent = option.dataset.detail || '';
+        button.append(name, detail); button.addEventListener('click', () => choose(option));
+        customerResults.append(button);
+      }
+      customerResults.hidden = !matches.length;
+      say(!matches.length ? 'Nenhum tutor encontrado. Confira a busca, escolha "Tutor novo" ou cadastre o tutor.'
+        : matches.length > 8 ? `${matches.length} tutores encontrados. Continue digitando para achar o certo.`
+        : matches.length === 1 ? 'Clique no tutor para escolher.' : `${matches.length} tutores encontrados. Clique no certo.`);
     });
+    // Enter na busca escolhe o único resultado, em vez de avançar a etapa.
+    customerSearch.addEventListener('keydown', event => { if (event.key !== 'Enter') return; event.preventDefault(); if (customerResults.children.length === 1) customerResults.firstChild.click(); });
+    const preset = options.find(option => option.value === customerSelect.value);
+    if (preset) { customerSearch.value = preset.dataset.name; say(`Tutor escolhido: ${preset.textContent}.`); } else customerSearch.setCustomValidity('Busque e clique no tutor na lista.');
   }
   dependentSelect('[data-customer-select]', '[data-pet-select]', 'customer');
   dependentSelect('[data-subscription-select]', '[data-benefit-select]', 'subscription');

@@ -1131,6 +1131,11 @@ td form .text-button{margin-top:6px}
 .signing-evidence .evidence-agent{font-size:12px;color:var(--text-3)}
 .signing-evidence .selfie-preview{max-width:120px;margin-top:0}
 [data-customer-search]{margin-bottom:6px}
+.customer-results{display:grid;gap:6px;max-height:330px;margin-top:4px;overflow-y:auto}
+.customer-result{display:block;width:100%;padding:10px 12px;border:1px solid var(--line-2);border-radius:var(--radius-lg);background:#fff;color:var(--text);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
+.customer-result:hover,.customer-result:focus-visible{border-color:var(--primary);background:#f5fbfa}
+.customer-result strong{display:block;font-size:14px;font-weight:500}
+.field .customer-result small{display:block;margin-top:2px}
 .payment-methods{border:0;padding:0;margin:0 0 14px;display:grid;gap:10px}
 .payment-methods legend{font-weight:600;margin-bottom:8px}
 .payment-methods small{display:block;font-weight:400;color:var(--text-3)}
