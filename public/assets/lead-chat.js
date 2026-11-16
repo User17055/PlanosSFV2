@@ -160,6 +160,12 @@
     const bubble = document.createElement('article');
     bubble.className = `chat-message${message.outgoing ? ' is-outgoing' : ''}${message.type !== 'chat' ? ' has-media' : ''}`;
     bubble.setAttribute('aria-label', message.outgoing ? 'Mensagem enviada' : 'Mensagem recebida');
+    if (message.sender) {
+      const sender = document.createElement('strong');
+      sender.className = 'chat-sender';
+      sender.textContent = message.sender;
+      bubble.append(sender);
+    }
     if (message.type !== 'chat') bubble.append(media(message, bubble));
     // No documento, o Digisac repete o nome do arquivo como texto.
     if (message.text && !(message.type === 'document' && message.text === message.file?.name)) {
@@ -194,7 +200,7 @@
         previousDate = day;
       }
       // Reaproveita o balão que não mudou: a foto não pisca e o áudio tocando não para a cada atualização.
-      const signature = [message.type, message.text, message.outgoing, message.sent, message.at, message.file ? message.file.name : '-'].join('|');
+      const signature = [message.type, message.text, message.outgoing, message.sent, message.at, message.file ? message.file.name : '-', message.sender || ''].join('|');
       let bubble = nodes.get(message.id);
       if (!bubble || bubble.dataset.signature !== signature || bubble.dataset.stale) {
         bubble = bubbleFor(message, date);

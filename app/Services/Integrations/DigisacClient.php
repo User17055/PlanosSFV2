@@ -114,7 +114,8 @@ class DigisacClient
         return $matches[0] ?? null;
     }
 
-    public function messages(DigisacConnection $connection, string $contactId, int $page): array
+    /** @param  array<string, string>  $names  id => nome dos usuários do Digisac, para mostrar quem da equipe enviou */
+    public function messages(DigisacConnection $connection, string $contactId, int $page, array $names = []): array
     {
         $body = $this->request($connection, 'GET', 'messages', ['query' => json_encode([
             'where' => ['contactId' => $contactId, 'serviceId' => $connection->service_id, 'visible' => true],
@@ -131,6 +132,7 @@ class DigisacClient
             $messages[] = [
                 'id' => (string) ($message['id'] ?? ''), 'text' => (string) ($message['text'] ?? ''),
                 'type' => $message['type'], 'outgoing' => (bool) ($message['isFromMe'] ?? false),
+                'sender' => ($message['isFromMe'] ?? false) ? ($names[(string) ($message['userId'] ?? '')] ?? null) : null,
                 'at' => $message['timestamp'] ?? $message['createdAt'] ?? null,
                 'sent' => (bool) ($message['sent'] ?? false),
                 'file' => ($url = self::fileUrl($message['file'] ?? null))

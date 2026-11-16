@@ -87,6 +87,7 @@
 .chat-message.is-outgoing p{color:#fff}
 .chat-message small{display:block;color:var(--chat-muted);font-size:12px;line-height:1.5;text-align:right}
 .chat-message.is-outgoing small{color:#ffffffc7}
+.chat-message .chat-sender{display:block;margin-bottom:2px;color:#ffffffe6;font-size:12px;font-weight:600;line-height:1.4}
 .chat-message .chat-media{display:inline-block;margin-bottom:4px;padding:5px 10px;border-radius:9px;background:var(--chat-bg);color:var(--chat-muted);font-size:14px}
 .chat-message.is-outgoing .chat-media{background:#ffffff1f;color:#fff}
 /* Fotos, áudios, vídeos e documentos dentro do balão */

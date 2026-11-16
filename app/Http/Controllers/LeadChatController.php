@@ -93,7 +93,9 @@ class LeadChatController extends Controller
         $phone = DigisacClient::phone($lead->phone);
         abort_unless($phone, 422, 'O lead precisa de um telefone válido para conversar.');
         $contact = $client->contact($connection, $phone);
-        $result = $contact ? $client->messages($connection, (string) $contact['id'], (int) ($data['page'] ?? 1))
+        // Nomes da equipe como estão no Digisac; sem a lista, a conversa abre sem o nome de quem enviou.
+        $names = $contact ? rescue(fn () => Cache::remember('digisac-users-'.$connection->id, 600, fn () => $client->users($connection)), [], report: false) : [];
+        $result = $contact ? $client->messages($connection, (string) $contact['id'], (int) ($data['page'] ?? 1), $names)
             : ['messages' => [], 'has_more' => false];
         // Abrir a conversa também atualiza a foto guardada, no máximo uma vez por dia. Falha na foto nunca derruba a conversa.
         if ($contact && (! $lead->photo_synced_at || $lead->photo_synced_at->lt(now()->subDay()))) rescue(fn () => $photos->store($lead, $contact), report: false);

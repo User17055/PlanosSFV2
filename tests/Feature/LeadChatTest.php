@@ -233,6 +233,22 @@ class LeadChatTest extends TestCase
         $this->getJson(route('leads.chat.messages', $this->theirs))->assertForbidden();
     }
 
+    public function test_messages_from_the_team_show_who_sent_them_as_named_in_digisac(): void
+    {
+        $this->connection($this->ana);
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact()]]),
+            $this->base.'/api/v1/users*' => Http::response(['data' => [['id' => 'u-thais', 'name' => 'Recepção - Thaís'], ['id' => 'u-old', 'name' => 'Saiu', 'archivedAt' => '2026-01-01']]]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => [
+                $this->message(['id' => 'm3', 'isFromMe' => true, 'userId' => 'u-old']),
+                $this->message(['id' => 'm2', 'isFromMe' => true, 'userId' => 'u-thais']),
+                $this->message(['userId' => 'u-thais']),
+            ]]),
+        ]);
+        $this->actingAs($this->ana)->getJson(route('leads.chat.messages', $this->mine))->assertOk()
+            ->assertJsonPath('messages.0.sender', null)->assertJsonPath('messages.1.sender', 'Recepção - Thaís')->assertJsonPath('messages.2.sender', null);
+    }
+
     public function test_first_contact_can_be_messaged_by_phone_without_listing_unrelated_conversations(): void
     {
         $this->connection($this->ana);
