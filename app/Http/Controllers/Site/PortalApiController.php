@@ -263,7 +263,7 @@ class PortalApiController extends Controller
     // A confirmação do e-mail não bloqueia mais assinar nem pagar: ela vem por último e libera a ativação.
     private function verified(Request $r): void {}
     private function owns(Request $r,object $record): void { abort_unless((int)$record->customer_id===(int)$r->user()->customer_id,404); }
-    private function offered(int $id): ProductVersion { return ProductVersion::offered()->with('product')->findOrFail($id); }
+    private function offered(int $id): ProductVersion { return ProductVersion::currentOfferFor($id) ?? throw (new \Illuminate\Database\Eloquent\ModelNotFoundException)->setModel(ProductVersion::class,[$id]); }
 
     public function addPet(Request $r)
     {

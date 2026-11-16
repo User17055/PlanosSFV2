@@ -47,6 +47,7 @@ class ProposalController extends Controller
             $selectedCustomer ??= $selectedPet->customer;
         }
         if(!$request->filled('product_version_id') && $request->session()->has('sf_suggested_product_version_id')) $request->merge(['product_version_id'=>$request->session()->get('sf_suggested_product_version_id')]);
+        if($request->filled('product_version_id')) $request->merge(['product_version_id'=>ProductVersion::currentOfferFor((int)$request->input('product_version_id'))?->id ?? $request->input('product_version_id')]);
         $customers = $this->access->customerQuery($request->user())->with('pets')->orderBy('name')->get();
         $versions = ProductVersion::with(['product','benefitRules'])->preferredOffers()->get();
         $franchises = Franchise::where('active',true)->when($request->user()->role !== 'central_admin' && $request->user()->role !== 'customer',fn ($q)=>$q->whereIn('id',$this->access->franchiseIds($request->user())))->get();

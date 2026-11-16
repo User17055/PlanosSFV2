@@ -40,7 +40,11 @@ class CatalogController extends Controller
 
     public function offeredContract(ProductVersion $version, \App\Services\Contracts\ContractService $contracts)
     {
-        abort_unless($version->isOffered(),404);
+        if (!$version->isOffered()) {
+            $current=$version->currentOffer();
+            abort_unless($current,404);
+            return redirect()->route('sales.contract',$current);
+        }
         return $this->templatePdf($version,$contracts);
     }
 
