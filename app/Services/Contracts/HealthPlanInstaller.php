@@ -18,12 +18,6 @@ class HealthPlanInstaller
             $layout=json_decode(file_get_contents(resource_path('contracts/plano-'.$slug.'.json')),true,512,JSON_THROW_ON_ERROR);
             app(ContractTemplate::class)->validate($text);
             $product=Product::firstOrCreate(['code'=>$code],['name'=>$name,'category'=>'health_plan']);
-            $same=$product->versions()->where('contract_template',$text)->whereNotNull('published_at')->first();
-            if ($same && Fingerprint::sha256($same->contract_layout)===Fingerprint::sha256($layout)) return $same;
-            $version=$product->versions()->whereNull('published_at')->where('is_demo',false)->latest('version')->first();
-            $attributes=['name'=>'Plano '.$name,'price_cents'=>$price,'billing_cycle'=>'monthly','duration_months'=>12,'renewal_policy'=>'automatic','species'=>$slug==='economico-felino'?['cat']:['dog','cat'],'contract_template'=>$text,'contract_layout'=>$layout,'is_demo'=>false,'status'=>'draft','description'=>'Contrato original do Plano '.$name.' com preenchimento automático dos dados do tutor e do pet.'];
-            if ($version) { $version->update($attributes); $version->benefitRules()->delete(); }
-            else $version=$product->versions()->create($attributes+['version'=>1+(int)$product->versions()->max('version')]);
             $rules=[];
             $add=function($code,$name,$limit=null,$wait=0,$period='contract_year',$description=null,$manual=false) use (&$rules) {
                 $rules[]=['code'=>$code,'name'=>$name,'quantity_limit'=>$limit,'waiting_days'=>$wait,'period_type'=>$period,'description'=>$description,'coverage_type'=>'included','requires_authorization'=>$manual];
@@ -35,7 +29,8 @@ class HealthPlanInstaller
             // O contrato do Felino não cobre plantão (cláusula terceira).
             if ($slug!=='economico-felino') {
                 $add('PLANTAO','Consultas de plantão',2);
-                $discount('DESC_PLANTAO','Demais consultas de plantão',30);
+                // Consulta não tem carência, nem a de plantão com desconto (Ju, 16/11/2026).
+                $discount('DESC_PLANTAO','Demais consultas de plantão',30,0);
             }
             $add('VACINA','Vacinas conforme contrato',1,30,'calendar_month',$slug==='super-economico'?'Uma dose de cada vacina relacionada no contrato; no máximo uma por mês. Conferir histórico de doses.':'Todas as doses das vacinas relacionadas no contrato; no máximo uma por mês.',$slug==='super-economico');
             if (in_array($slug,['super-economico','economico-felino'],true)) {
@@ -48,13 +43,30 @@ class HealthPlanInstaller
                 $add('MEDICACAO','Medicação durante as consultas',null,60,'contract_year','Somente dipirona, enrofloxacina, penicilina e meloxican, conforme contrato.',true);
                 $add('INTERNAMENTO','Diárias de internamento',$slug==='prime'?30:15,60,'contract_year','Hospedagem, medicações e soro conforme coberturas e exclusões do contrato.',true);
                 $add('EXAMES_CLINICA','Exames realizados na clínica',null,0,'contract_year','Hemograma, urina tipo 1 e fezes direto na lâmina. O texto não especifica carência própria; conferir antes de autorizar.',true);
-                $surgery='Amputações, enucleações, esplenectomia, gastrotomia, imobilização simples, otohematoma e suturas em geral'.($slug==='essencial'?', tumores de pele':'').'. Não inclui anestesia nem cirurgias que exijam veterinários terceirizados.';
+                $surgery='Amputações, enucleações, esplenectomia, gastrotomia, imobilização simples, otohematoma e suturas em geral, tumores de pele. Não inclui anestesia nem cirurgias que exijam veterinários terceirizados.';
                 $add('CIRURGIAS','Cirurgias relacionadas no contrato',null,90,'contract_year',$surgery,true);
                 foreach([['DESC_UTI','UTI',$slug==='prime'?20:10],['DESC_BIOQ','Bioquímicos do rotor relacionados no contrato',$slug==='prime'?50:30],['DESC_CELULAS','Terapia com células tronco',$slug==='prime'?30:10],['DESC_ULTRA_ELETRO','Ultrassom e eletro',$slug==='prime'?20:10],['DESC_RAIOX','Raio-x',$slug==='prime'?50:30]] as [$c,$n,$d]) $discount($c,$n,$d,0,true);
             }
+            // Uma versão publicada só é reaproveitada se contrato, layout e regras forem os mesmos; senão vai para rascunho.
+            $published=$product->versions()->where('contract_template',$text)->whereNotNull('published_at')->latest('version')->get();
+            foreach($published as $same) {
+                if (Fingerprint::sha256($same->contract_layout)===Fingerprint::sha256($layout) && $this->sameRules($same,$rules)) return $same;
+            }
+            $version=$product->versions()->whereNull('published_at')->where('is_demo',false)->latest('version')->first();
+            $attributes=['name'=>'Plano '.$name,'price_cents'=>$price,'billing_cycle'=>'monthly','duration_months'=>12,'renewal_policy'=>'automatic','species'=>$slug==='economico-felino'?['cat']:['dog','cat'],'contract_template'=>$text,'contract_layout'=>$layout,'is_demo'=>false,'status'=>'draft','description'=>'Contrato original do Plano '.$name.' com preenchimento automático dos dados do tutor e do pet.'];
+            if ($version) { $version->update($attributes); $version->benefitRules()->delete(); }
+            else $version=$product->versions()->create($attributes+['version'=>1+(int)$product->versions()->max('version')]);
             foreach($rules as $rule) $version->benefitRules()->create($rule);
             return $version->fresh();
         });
+    }
+
+    private function sameRules(ProductVersion $version, array $rules): bool
+    {
+        $fields=['code','name','quantity_limit','waiting_days','period_type','description','coverage_type','requires_authorization','discount_basis_points'];
+        $norm=fn(array $rule)=>array_map(fn($field)=>isset($rule[$field])?(string)(is_bool($rule[$field])?(int)$rule[$field]:$rule[$field]):'',array_combine($fields,$fields));
+        $saved=$version->benefitRules()->orderBy('id')->get()->map(fn($rule)=>$norm($rule->only($fields)))->all();
+        return $saved===array_map($norm,$rules);
     }
 
     public function installAll(): array
