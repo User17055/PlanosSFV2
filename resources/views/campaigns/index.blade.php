@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Campanhas')
 @section('content')
-<div class="page-heading"><div><h1>Campanhas</h1><p>Mensalidades grátis depois da entrada. A campanha principal vale no site todo; nas vendas da equipe, o vendedor escolhe no início da contratação.</p></div></div>
+<div class="page-heading"><div><h1>Campanhas</h1><p>Mensalidades grátis e desconto nas seguintes, depois da entrada. A campanha principal vale no site todo; nas vendas da equipe, o vendedor escolhe no início da contratação.</p></div></div>
 
 <section class="card form-card campaign-card">
 <h2>Campanhas ativas</h2>
@@ -14,7 +14,7 @@
 <div class="campaign-actions">
 @if($campaign->whole_site)<form method="POST" action="{{ route('campaigns.not-principal',$campaign) }}">@csrf<button class="text-button" data-confirm="Tirar “{{ $campaign->name }}” do site todo? Quem contratar pelo site deixa de ganhar a campanha sozinho.">Deixar de ser principal</button></form>
 @else<form method="POST" action="{{ route('campaigns.principal',$campaign) }}">@csrf<button class="text-button" data-confirm="Tornar “{{ $campaign->name }}” a campanha principal? Ela passa a valer no site todo{{ $active->firstWhere('whole_site',true) ? ', no lugar de “'.$active->firstWhere('whole_site',true)->name.'”' : '' }}.">Tornar principal</button></form>@endif
-<form method="POST" action="{{ route('campaigns.archive',$campaign) }}">@csrf<button class="text-button text-danger" data-confirm="Arquivar “{{ $campaign->name }}”? Ela some das novas vendas. Quem já entrou nela continua com os meses grátis.">Arquivar</button></form>
+<form method="POST" action="{{ route('campaigns.archive',$campaign) }}">@csrf<button class="text-button text-danger" data-confirm="Arquivar “{{ $campaign->name }}”? Ela some das novas vendas. Quem já entrou nela continua com o que ganhou.">Arquivar</button></form>
 </div>
 </div>
 @empty<div class="analytics-empty">Nenhuma campanha ativa.</div>@endforelse
@@ -25,18 +25,18 @@
 </section>
 
 <section class="card section-gap">
-<div class="card-heading"><div><h2>Quem está isento</h2><p>Contratos com mensalidade grátis e quando começa a cobrança mensal.@if($chosen) <a class="text-link" href="{{ route('campaigns.index') }}">Ver de todas as campanhas</a>@endif</p></div></div>
-<div class="table-scroll"><table><thead><tr><th>Tutor e pet</th><th>Plano</th><th>Campanha</th><th>Veio pelo</th><th>Isenção</th><th>1ª mensalidade</th><th>Etapa</th><th></th></tr></thead><tbody>
+<div class="card-heading"><div><h2>Quem está em campanha</h2><p>Contratos com mensalidade grátis ou desconto e quando começa a cobrança mensal.@if($chosen) <a class="text-link" href="{{ route('campaigns.index') }}">Ver de todas as campanhas</a>@endif</p></div></div>
+<div class="table-scroll"><table><thead><tr><th>Tutor e pet</th><th>Plano</th><th>Campanha</th><th>Veio pelo</th><th>O que ganhou</th><th>1ª mensalidade</th><th>Etapa</th><th></th></tr></thead><tbody>
 @forelse($proposals as $proposal)@php $stage=$proposal->stage(); $first=$firstBill($proposal); $site=$proposal->creator?->role==='customer'; @endphp
 <tr><td><strong>{{ $proposal->customer->name }}</strong><small>{{ $proposal->pet->name }}</small></td>
 <td>{{ $proposal->productVersion->name }}</td>
 <td>{{ $proposal->campaign?->name ?? 'Campanha' }}</td>
 <td><strong>{{ $site ? 'Site' : 'Equipe' }}</strong>@unless($site)<small>{{ $proposal->creator?->name }}</small>@endunless</td>
-<td>{{ $proposal->free_months }} {{ $proposal->free_months===1 ? 'mensalidade' : 'mensalidades' }}</td>
+<td>{{ $proposal->campaignBenefit() }}</td>
 <td>{{ $first ? $first->format('d/m/Y') : 'Depois de assinar' }}</td>
 <td><span class="badge stage-badge stage-{{ $stage }}">{{ \App\Models\Proposal::STAGES[$stage] }}</span></td>
 <td><a class="table-arrow" href="{{ route('proposals.show',$proposal) }}" aria-label="Ver proposta de {{ $proposal->customer->name }}">@include('components.icon',['name'=>'chevron'])</a></td></tr>
-@empty<tr><td colspan="8"><div class="empty-state"><strong>Ninguém isento ainda.</strong><p>Quando uma venda entrar numa campanha, ela aparece aqui.</p></div></td></tr>@endforelse
+@empty<tr><td colspan="8"><div class="empty-state"><strong>Ninguém em campanha ainda.</strong><p>Quando uma venda entrar numa campanha, ela aparece aqui.</p></div></td></tr>@endforelse
 </tbody></table></div>
 {{ $proposals->links() }}
 </section>

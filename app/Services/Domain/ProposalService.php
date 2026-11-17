@@ -117,8 +117,10 @@ class ProposalService
                 'channel' => $channel, 'prefill_by' => $data['prefill_by'] ?? 'seller', 'signature_method' => $method,
                 'status' => 'awaiting_acceptance', 'price_cents' => $version->price_cents, 'snapshot' => $this->snapshot($pet, $version),
                 'requested_start_at' => $data['requested_start_at'] ?? null, 'expires_at' => now()->addHours((int) config('plans.proposal_validity_hours', 48)),
-                'campaign_id' => $campaign?->id, 'free_months' => $campaign?->free_months ?? 0] + $attributionValues);
-            Audit::record('proposal_created', $proposal, $actor, ['channel' => $channel] + ($campaign ? ['campaign_id' => $campaign->id, 'free_months' => $campaign->free_months] : []));
+                'campaign_id' => $campaign?->id, 'free_months' => $campaign?->free_months ?? 0,
+                'discount_percent' => $campaign?->discount_percent ?? 0, 'discount_months' => $campaign?->discount_months ?? 0] + $attributionValues);
+            Audit::record('proposal_created', $proposal, $actor, ['channel' => $channel] + ($campaign ? ['campaign_id' => $campaign->id, 'free_months' => $campaign->free_months,
+                'discount_percent' => $campaign->discount_percent, 'discount_months' => $campaign->discount_months] : []));
 
             return $proposal;
         }, 3);

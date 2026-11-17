@@ -28,11 +28,11 @@
       @if($amount)<tr><td style="padding:6px 18px 14px;font-size:13px;color:#7a8797;">Entrada</td><td align="right" style="padding:6px 18px 14px;font-size:15px;font-weight:bold;color:#0b1936;">{{ $amount }}</td></tr>@endif
     </table>
   </td></tr>
-  @if($freeMonths)
+  @if($benefit)
   <tr><td style="padding:14px 32px 4px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef6df;border:1px solid #cfe3a6;border-radius:12px;"><tr><td style="padding:16px 18px;">
       <p style="margin:0 0 4px;font-size:12px;letter-spacing:1.5px;color:#5b7f1f;font-weight:bold;">SUA PROMOÇÃO</p>
-      <p style="margin:0;font-size:15px;line-height:1.55;color:#0b1936;"><strong>{{ $campaign }}</strong>: {{ $freeMonths }} {{ $freeMonths === 1 ? 'mensalidade grátis' : 'mensalidades grátis' }} depois da entrada. Pague a entrada para garantir.</p>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:#0b1936;"><strong>{{ $campaign }}</strong>: {{ $benefit }}, contando a entrada como a 1ª. Pague a entrada para garantir.</p>
     </td></tr></table>
   </td></tr>
   @endif

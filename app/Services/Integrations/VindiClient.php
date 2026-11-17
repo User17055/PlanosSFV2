@@ -146,6 +146,20 @@ class VindiClient
         return $this->request()->post('product_items', $payload)->throw()->json('product_item') ?? [];
     }
 
+    /** O item com os descontos dele, para não criar o mesmo desconto duas vezes. */
+    public function productItem(string $id): array
+    {
+        $this->assertIdentifier($id);
+        return $this->request()->get('product_items/'.$id)->throw()->json('product_item') ?? [];
+    }
+
+    /** Desconto num item de assinatura; vale nos próximos `cycles` ciclos a partir de agora (especificação oficial, conferida em 17/11/2026). */
+    public function createDiscount(array $payload): array
+    {
+        $this->assertCreationEnabled();
+        return $this->request()->post('discounts', $payload)->throw()->json('discount') ?? [];
+    }
+
     public function cancelSubscription(string $id): array
     {
         $this->assertCreationEnabled();

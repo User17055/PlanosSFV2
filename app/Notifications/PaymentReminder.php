@@ -21,7 +21,7 @@ class PaymentReminder extends Notification
             ->view(['emails.payment-reminder', 'emails.payment-reminder-text'], [
                 'name' => explode(' ', trim($p->customer->name))[0], 'plan' => $p->productVersion->name, 'pet' => $p->pet->name,
                 'amount' => $entry ? 'R$ '.number_format($entry->amount_cents / 100, 2, ',', '.') : null,
-                'campaign' => $p->campaign?->name ?? 'Campanha São Francisco', 'freeMonths' => (int) $p->free_months,
+                'campaign' => $p->campaign?->name ?? 'Campanha São Francisco', 'benefit' => ($p->free_months || $p->discount_percent) ? $p->campaignBenefit() : null,
                 'url' => $this->url, 'site' => config('site_portal.public_url'),
             ]);
     }

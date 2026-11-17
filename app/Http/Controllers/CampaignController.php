@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\{Campaign, Proposal};
 use App\Services\Domain\{Audit, BillingSchedule};
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
-/** Campanhas de mensalidades grátis e os contratos que ganharam a isenção (só administração central). */
+/** Campanhas (mensalidades grátis e desconto nas seguintes) e os contratos que entraram nelas (só administração central). */
 class CampaignController extends Controller
 {
     public function index(Request $request, BillingSchedule $schedule)
     {
         $campaigns = Campaign::withCount(['proposals' => fn ($q) => $q->where('status', 'accepted')])->orderByDesc('starts_on')->orderByDesc('id')->get();
         $chosen = $request->integer('campanha') ?: null;
-        $proposals = Proposal::where('free_months', '>', 0)->when($chosen, fn ($q) => $q->where('campaign_id', $chosen))
+        $proposals = Proposal::where(fn ($q) => $q->where('free_months', '>', 0)->orWhere('discount_percent', '>', 0))->when($chosen, fn ($q) => $q->where('campaign_id', $chosen))
             ->with(['customer:id,name', 'pet:id,name', 'productVersion:id,name', 'campaign:id,name', 'creator:id,name,role', 'subscription.invoices'])
             ->orderByDesc('id')->paginate(30)->withQueryString();
         // Primeira mensalidade: a mesma conta da cobrança na Vindi (fechamento + meses grátis).
@@ -25,10 +26,20 @@ class CampaignController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:120',
-            'free_months' => 'required|integer|min:1|max:12',
+            'free_months' => 'required|integer|min:0|max:12',
+            'discount_percent' => 'nullable|integer|min:0|max:100',
+            'discount_months' => 'nullable|integer|min:0|max:12',
             'starts_on' => 'required|date_format:Y-m-d',
             'ends_on' => 'nullable|date_format:Y-m-d|after_or_equal:starts_on',
         ]);
+        $data['discount_percent'] = (int) ($data['discount_percent'] ?? 0);
+        $data['discount_months'] = $data['discount_percent'] > 0 ? (int) ($data['discount_months'] ?? 0) : 0;
+        if ($data['discount_percent'] > 0 && $data['discount_months'] < 1) {
+            throw ValidationException::withMessages(['discount_months' => 'Diga em quantas mensalidades vale o desconto.']);
+        }
+        if ($data['free_months'] < 1 && $data['discount_percent'] < 1) {
+            throw ValidationException::withMessages(['free_months' => 'A campanha precisa dar ao menos uma mensalidade grátis ou um desconto.']);
+        }
         return $data;
     }
 
@@ -43,14 +54,14 @@ class CampaignController extends Controller
     {
         $campaign = Campaign::create($this->validated($request) + ['whole_site' => false, 'active' => true]);
         if ($request->boolean('whole_site')) $this->makePrincipal($campaign);
-        Audit::record('campaign.created', $campaign, $request->user(), $campaign->only(['name', 'free_months', 'starts_on', 'ends_on', 'whole_site']), null, null);
+        Audit::record('campaign.created', $campaign, $request->user(), $campaign->only(['name', 'free_months', 'discount_percent', 'discount_months', 'starts_on', 'ends_on', 'whole_site']), null, null);
         return redirect()->route('campaigns.index')->with('success', 'Campanha criada.');
     }
 
     public function update(Request $request, Campaign $campaign)
     {
         $campaign->update($this->validated($request));
-        Audit::record('campaign.updated', $campaign, $request->user(), $campaign->only(['name', 'free_months', 'starts_on', 'ends_on', 'whole_site', 'active']), null, null);
+        Audit::record('campaign.updated', $campaign, $request->user(), $campaign->only(['name', 'free_months', 'discount_percent', 'discount_months', 'starts_on', 'ends_on', 'whole_site', 'active']), null, null);
         return redirect()->route('campaigns.index')->with('success', 'Campanha atualizada. Propostas já abertas mantêm o que foi oferecido.');
     }
 
@@ -72,7 +83,7 @@ class CampaignController extends Controller
     {
         $campaign->update(['active' => false, 'whole_site' => false]);
         Audit::record('campaign.archived', $campaign, $request->user(), ['active' => false], null, null);
-        return redirect()->route('campaigns.index')->with('success', '“'.$campaign->name.'” foi arquivada. Quem já entrou nela continua com os meses grátis.');
+        return redirect()->route('campaigns.index')->with('success', '“'.$campaign->name.'” foi arquivada. Quem já entrou nela continua com o que ganhou.');
     }
 
     public function restore(Request $request, Campaign $campaign)

@@ -89,9 +89,9 @@ class CampaignTest extends TestCase
         $campaign = Campaign::sole();
         $this->assertTrue($campaign->whole_site);
         $this->assertTrue($campaign->active);
-        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Quem está isento')->assertSee('Black Friday');
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Quem está em campanha')->assertSee('Black Friday');
         $this->propose($this->client);
-        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Tutor fictício')->assertSee('Site')->assertSee('1 mensalidade');
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()->assertSee('Tutor fictício')->assertSee('Site')->assertSee('2ª mensalidade grátis');
         $this->actingAs($this->admin)->get(route('dashboard'))->assertSee(route('campaigns.index'), false);
         $this->actingAs($this->seller)->get(route('campaigns.index'))->assertForbidden();
         $this->actingAs($this->admin)->post(route('campaigns.update', $campaign), ['name' => 'Black Friday', 'free_months' => 2, 'starts_on' => '2026-11-01', 'ends_on' => '2026-11-30'])->assertRedirect();
@@ -110,6 +110,26 @@ class CampaignTest extends TestCase
         $this->assertTrue($other->fresh()->active);
         $this->assertSame(2, $campaign->fresh()->free_months);
         $this->actingAs($this->seller)->post(route('campaigns.store'), ['name' => 'X', 'free_months' => 1, 'starts_on' => '2026-11-01'])->assertForbidden();
+    }
+
+    public function test_black_friday_flow_gives_the_second_free_and_thirty_percent_on_the_third(): void
+    {
+        $today = now('America/Sao_Paulo')->subDay()->toDateString();
+        $this->actingAs($this->admin)->post(route('campaigns.store'), ['name' => 'Black Friday', 'free_months' => 1, 'discount_percent' => 30, 'discount_months' => 1, 'starts_on' => $today])
+            ->assertRedirect(route('campaigns.index'));
+        $campaign = Campaign::where('name', 'Black Friday')->sole();
+        $this->assertSame('Black Friday · 2ª mensalidade grátis · 3ª com 30% de desconto', $campaign->label());
+        $this->get(route('campaigns.index'))->assertOk()->assertSee('30% de desconto')->assertSee('4ª em diante');
+        // A proposta guarda o fluxo do dia em que foi aberta.
+        $proposal = $this->propose($this->seller, ['campaign_id' => $campaign->id]);
+        $this->assertSame([1, 30, 1], [$proposal->free_months, $proposal->discount_percent, $proposal->discount_months]);
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertSee('2ª mensalidade grátis · 3ª com 30% de desconto');
+        // Desconto sem dizer em quantas mensalidades, ou campanha sem benefício nenhum, é recusado.
+        $this->post(route('campaigns.store'), ['name' => 'X', 'free_months' => 0, 'discount_percent' => 30, 'discount_months' => 0, 'starts_on' => $today])->assertSessionHasErrors('discount_months');
+        $this->post(route('campaigns.store'), ['name' => 'Y', 'free_months' => 0, 'discount_percent' => 0, 'starts_on' => $today])->assertSessionHasErrors('free_months');
+        $this->assertSame(1, Campaign::count());
+        $this->assertSame('2ª a 4ª mensalidades com 10% de desconto', Campaign::describe(0, 10, 3));
+        $this->assertSame('2ª e 3ª mensalidades grátis', Campaign::describe(2, 0, 0));
     }
 
     public function test_queue_lead_goes_to_who_pulled_the_conversation_in_digisac_only_once(): void

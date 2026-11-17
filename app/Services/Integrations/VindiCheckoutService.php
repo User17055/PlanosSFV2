@@ -179,7 +179,9 @@ class VindiCheckoutService
         $externalId=(string)$remote['id'];
         // O único item de uma assinatura recém-aberta é o deste pet; os próximos pets entram como outros itens.
         $items=collect($remote['product_items']??[]);
-        $this->link($subscription,$externalId,$items->count()===1?(string)$items->first()['id']:null,$account);
+        $itemId=$items->count()===1?(string)$items->first()['id']:null;
+        $this->campaignDiscount($subscription,$itemId);
+        $this->link($subscription,$externalId,$itemId,$account);
         return $externalId;
     }
 
@@ -230,9 +232,27 @@ class VindiCheckoutService
             ?? $this->client->createProductItem(['subscription_id'=>(int)$externalId,'product_id'=>$product,'quantity'=>1,
                 'pricing_schema'=>['price'=>number_format($subscription->price_cents/100,2,'.',''),'schema_type'=>'flat']]);
         if (!preg_match('/^[1-9][0-9]*$/D',(string)($item['id']??''))) throw new \RuntimeException('Invalid product item.');
+        $this->campaignDiscount($subscription,(string)$item['id']);
         $this->link($subscription,$externalId,(string)$item['id'],$account);
         Audit::record('subscription.vindi_item_added',$subscription,null,['vindi_subscription_id'=>$externalId,'vindi_product_item_id'=>(string)$item['id']]);
         return $externalId;
+    }
+
+    /**
+     * Desconto da campanha (ex.: 30% na 3ª mensalidade) no item deste pet. Vem antes de gravar o vínculo: se cair no meio,
+     * a nova tentativa acha a assinatura pelo código, relê o item e só cria o desconto que ainda não existe.
+     */
+    private function campaignDiscount(Subscription $subscription,?string $itemId): void
+    {
+        $percent=(int)$subscription->proposal->discount_percent;
+        $cycles=(int)$subscription->proposal->discount_months;
+        if ($percent<1 || $cycles<1) return;
+        if (!$itemId) throw new IntegrationPendingException('Assinatura Vindi sem o item do pet identificado; o desconto da campanha precisa ser lançado à mão.');
+        $exists=collect($this->client->productItem($itemId)['discounts']??[])->contains(fn($d)=>($d['discount_type']??null)==='percentage'
+            && (float)($d['percentage']??0)===(float)$percent && ($d['status']??'active')!=='deleted');
+        if ($exists) return;
+        $discount=$this->client->createDiscount(['product_item_id'=>(int)$itemId,'discount_type'=>'percentage','percentage'=>$percent,'cycles'=>$cycles]);
+        Audit::record('subscription.vindi_campaign_discount',$subscription,null,['vindi_product_item_id'=>$itemId,'vindi_discount_id'=>(string)($discount['id']??''),'percentage'=>$percent,'cycles'=>$cycles]);
     }
 
     private function planProduct(array $map): int

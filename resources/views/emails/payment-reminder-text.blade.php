@@ -7,9 +7,9 @@ Pet: {{ $pet }}
 @if($amount)
 Entrada: {{ $amount }}
 @endif
-@if($freeMonths)
+@if($benefit)
 
-Sua promoção: {{ $campaign }} - {{ $freeMonths }} {{ $freeMonths === 1 ? 'mensalidade grátis' : 'mensalidades grátis' }} depois da entrada. Pague a entrada para garantir.
+Sua promoção: {{ $campaign }} - {{ $benefit }}, contando a entrada como a 1ª. Pague a entrada para garantir.
 @endif
 
 Pagar a entrada:

@@ -195,3 +195,17 @@
     });
   });
 })();
+
+// Campanhas: o fluxo das mensalidades acompanha o que se digita (o mesmo desenho de campaigns/_flow).
+document.querySelectorAll('[data-campaign-flow]').forEach(flow => {
+  const form = flow.closest('form');
+  const value = (name, max) => Math.max(0, Math.min(max, parseInt(form.elements[name]?.value, 10) || 0));
+  const step = (number, text, tone = '') => `<li${tone ? ` class="${tone}"` : ''}><b>${number}</b>${text}</li>`;
+  form.addEventListener('input', () => {
+    const free = value('free_months', 12), percent = value('discount_percent', 100), off = percent ? value('discount_months', 12) : 0;
+    let html = step('1ª', 'Entrada cheia');
+    for (let n = 2; n < 2 + free; n++) html += step(`${n}ª`, 'Grátis', 'is-free');
+    for (let n = 2 + free; n < 2 + free + off; n++) html += step(`${n}ª`, `${percent}% de desconto`, 'is-discount');
+    flow.innerHTML = html + step(`${2 + free + off}ª em diante`, 'Preço normal');
+  });
+});

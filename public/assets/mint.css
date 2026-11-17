@@ -2255,9 +2255,16 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 /* Logo centralizada no menu lateral */
 .sidebar-brand{align-items:center}
 /* Campanhas */
-.campaign-row{display:grid;grid-template-columns:minmax(160px,2fr) 110px 150px 150px auto auto;gap:10px 14px;align-items:end;padding:14px 0;border-top:1px solid var(--line)}
+.campaign-row{display:grid;grid-template-columns:minmax(160px,2fr) repeat(3,minmax(92px,1fr)) repeat(2,140px) auto;gap:10px 14px;align-items:end;padding:14px 0;border-top:1px solid var(--line)}
+/* Fluxo das mensalidades da campanha, embaixo dos campos; a caixa de principal fica entre os dois. */
+.campaign-row .check-label{order:2;grid-column:1/-1}
+.campaign-flow{order:3;grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.campaign-flow li{display:flex;flex-direction:column;min-width:88px;padding:6px 10px;border-radius:10px;background:var(--panel-3);color:var(--text-2);font-size:12.5px;line-height:1.35}
+.campaign-flow b{color:var(--text);font-size:13px;font-weight:600}
+.campaign-flow .is-free{background:#e8f5df;color:#3f6b1d}
+.campaign-flow .is-discount{background:#fff1dc;color:#9a5300}
 .campaign-row .field{margin:0}
-.campaign-row .check-label{margin:0 0 10px;white-space:nowrap}
+.campaign-row .check-label{margin:0;white-space:nowrap}
 .campaign-row .button{margin-bottom:4px}
 .campaign-state{align-self:center;padding:3px 10px;border-radius:99px;background:var(--panel-3);color:var(--text-3);font-size:13px;white-space:nowrap}
 .campaign-state.is-on{background:#e8f5df;color:#3f6b1d}

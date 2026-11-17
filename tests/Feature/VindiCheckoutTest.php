@@ -29,6 +29,7 @@ class VindiCheckoutTest extends TestCase
     private array $outside=[];
     private array $items=[];
     private int $itemPosts=0;
+    private array $discounts=[];
     private ?string $nextBilling=null;
     private array $subscriptionBills=[];
     private array $remotePhones=[];
@@ -63,6 +64,12 @@ class VindiCheckoutTest extends TestCase
                 'next_billing_at'=>$this->nextBilling,'product_items'=>$this->items];
             $path=parse_url($request->url(),PHP_URL_PATH);
             if (preg_match('~/subscriptions/444$~',$path)) return Http::response(['subscription'=>$remote]);
+            if (preg_match('~/product_items/(\d+)$~',$path,$id)) return Http::response(['product_item'=>['id'=>(int)$id[1],'discounts'=>array_values(array_filter($this->discounts,fn($d)=>$d['product_item_id']===(int)$id[1]))]]);
+            if (str_ends_with($path,'/discounts')) {
+                $discount=['id'=>5000+count($this->discounts),'status'=>'active']+$request->data();
+                $this->discounts[]=$discount;
+                return Http::response(['discount'=>$discount]);
+            }
             if (str_ends_with($path,'/product_items')) {
                 $this->itemPosts++;
                 $item=['id'=>9001+count($this->items),'status'=>'active','product'=>['id'=>$request['product_id']],'pricing_schema'=>['price'=>$request['pricing_schema']['price']]];
@@ -147,6 +154,23 @@ class VindiCheckoutTest extends TestCase
         app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
         Http::assertSent(fn($request)=>$request->method()==='POST' && str_ends_with($request->url(),'/subscriptions')
             && str_starts_with((string)$request['start_at'],$start.'T00:00:00'));
+    }
+
+    public function test_black_friday_discount_goes_to_the_pet_item_once_even_when_retried(): void
+    {
+        // Black Friday: 2ª mensalidade grátis e 3ª com 30%. A proposta assinada é travada no modelo; a campanha vem gravada desde a abertura.
+        \Illuminate\Support\Facades\DB::table('proposals')->where('id',$this->subscription->proposal_id)->update(['free_months'=>1,'discount_percent'=>30,'discount_months'=>1]);
+        $this->actingAs($this->customerUser)->post(route('subscriptions.checkout',$this->subscription))->assertRedirect($this->paymentUrl);
+        $this->billStatus='paid';
+        app(\App\Services\Integrations\VindiReconciler::class)->reconcileSubscription($this->subscription->fresh());
+        $this->assertSame('444',$this->subscription->fresh()->vindi_subscription_id);
+        // A 1ª cobrança mensal é a 3ª mensalidade: o desconto vale só nela (1 ciclo), no item deste pet.
+        $this->assertCount(1,$this->discounts);
+        $this->assertSame(['product_item_id'=>9001,'discount_type'=>'percentage','percentage'=>30,'cycles'=>1],collect($this->discounts[0])->only(['product_item_id','discount_type','percentage','cycles'])->all());
+        // Nova tentativa depois de uma queda: acha o desconto no item e não lança outro.
+        Subscription::whereKey($this->subscription->id)->update(['vindi_subscription_id'=>null,'vindi_product_item_id'=>null]);
+        app(VindiCheckoutService::class)->startRecurring($this->subscription->fresh());
+        $this->assertSame(['444',1,1],[$this->subscription->fresh()->vindi_subscription_id,count($this->discounts),$this->subscriptionPosts]);
     }
 
     public function test_scheduled_reconciliation_confirms_paid_entry_without_webhook(): void
