@@ -31,7 +31,7 @@ class ProposalController extends Controller
             if (filled($filters['origem']??null)) $query->where('acquisition_source',$filters['origem']);
             if (filled($filters['etapa']??null)) $query->inStage($filters['etapa']);
         }
-        $proposals = $query->with(['customer','pet','productVersion.product','originatingFranchise','subscription.invoices'])->latest()->paginate(15)->withQueryString();
+        $proposals = $query->with(['customer','pet','productVersion.product','originatingFranchise','subscription.invoices','creator','linkOwner'])->latest()->paginate(15)->withQueryString();
         return view('proposals.index',compact('proposals'));
     }
 

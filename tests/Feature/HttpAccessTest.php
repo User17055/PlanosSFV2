@@ -27,6 +27,10 @@ class HttpAccessTest extends TestCase
         }
         $this->get(route('customers.show',Customer::firstOrFail()))->assertOk()->assertSee('Benefício disponível.');
         $this->get(route('proposals.show',Proposal::firstOrFail()))->assertOk();
+        // Quem enviou: a pessoa da equipe que criou; a proposta feita pelo próprio cliente no site não tem ninguém da equipe.
+        $byStaff=Proposal::whereHas('creator',fn($q)=>$q->where('role','!=','customer'))->with('creator')->firstOrFail();
+        $this->get(route('proposals.index'))->assertSee('Enviada por')->assertSee($byStaff->creator->name)->assertSee('O próprio tutor, pelo site');
+        $this->get(route('proposals.show',$byStaff))->assertSee('Enviada por '.$byStaff->creator->name);
     }
 
     public function test_customer_portal_public_catalog_and_registration_render(): void

@@ -104,6 +104,16 @@ class Proposal extends DomainModel
         return $this->belongsTo(User::class, 'link_owner_id');
     }
 
+    /** Quem da equipe mandou a proposta (a mesma regra da comissão): quem criou ou, no preenchimento pelo tutor, o dono do link. */
+    public function senderLabel(): string
+    {
+        if ($this->channel === 'legacy') return 'Base antiga';
+        foreach ([$this->creator, $this->linkOwner] as $user) {
+            if ($user && $user->role !== 'customer') return $user->name;
+        }
+        return 'O próprio tutor, pelo site';
+    }
+
     public function referrerCustomer()
     {
         return $this->belongsTo(Customer::class, 'referrer_customer_id');
