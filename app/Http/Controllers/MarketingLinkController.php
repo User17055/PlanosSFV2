@@ -79,22 +79,22 @@ class MarketingLinkController extends Controller
         }
         if(!$request->user() || $request->user()->role==='customer') $attribution->capture($request,$link);
         $request->session()->put('sf_skip_attribution_landing',true);
-        if($link->product_version_id) $request->session()->put('sf_suggested_product_version_id',$link->product_version_id);
+        $suggested=$link->productVersion?->currentOffer()?->id ?? $link->product_version_id;
+        if($suggested) $request->session()->put('sf_suggested_product_version_id',$suggested);
         if ($link->self_registration && $link->product_version_id && (!$request->user() || $request->user()->role==='customer')) {
             // Sem login, o cadastro é o mesmo de Planos → Contratar no site. A origem vai junto, para a venda continuar com quem mandou o link.
             $code=$link->productVersion?->product?->code;
             if (!$request->user() && config('site_portal.enabled') && $code) {
                 return redirect()->away(config('site_portal.public_url').'/contratar/'.rawurlencode($code).'?ref='.rawurlencode($attribution->handoff($request)));
             }
-            return redirect()->route($request->user() ? 'proposals.create' : 'register', ['product_version_id'=>$link->product_version_id]);
+            return redirect()->route($request->user() ? 'proposals.create' : 'register', ['product_version_id'=>$suggested]);
         }
-        return redirect()->route('sales',array_filter(['product_version_id'=>$link->product_version_id]));
+        return redirect()->route('sales',array_filter(['product_version_id'=>$suggested]));
     }
 
     public function contractPreview(Request $request,string $token,MarketingLinkService $links)
     {
-        $link=$this->previewLink($request,$token,$links);
-        $version=$link->productVersion;
+        [$link,$version]=$this->previewLink($request,$token,$links);
         $signerName='{{contratante_nome}}';
         $petName='{{pet_nome}}';
         $preview=true;
@@ -103,15 +103,17 @@ class MarketingLinkController extends Controller
 
     public function contractPreviewPdf(Request $request,string $token,MarketingLinkService $links,\App\Services\Contracts\ContractService $contracts)
     {
-        $link=$this->previewLink($request,$token,$links);
-        return response($contracts->templatePdf($link->productVersion),200,['Content-Type'=>'application/pdf','Content-Disposition'=>'inline; filename="contrato-para-conferencia.pdf"','Cache-Control'=>'private, no-store']);
+        [,$version]=$this->previewLink($request,$token,$links);
+        return response($contracts->templatePdf($version),200,['Content-Type'=>'application/pdf','Content-Disposition'=>'inline; filename="contrato-para-conferencia.pdf"','Cache-Control'=>'private, no-store']);
     }
 
-    private function previewLink(Request $request,string $token,MarketingLinkService $links): MarketingLink
+    /** O link e a versão do plano que está à venda hoje (um link antigo segue para a versão mais nova). */
+    private function previewLink(Request $request,string $token,MarketingLinkService $links): array
     {
         $link=$links->resolve($token);
         $links->authorize($link,$request->user());
-        abort_unless($link->self_registration && $link->productVersion?->isOffered(),422,'Este link não possui plano disponível para preenchimento.');
-        return $link;
+        $version=$link->self_registration ? $link->productVersion?->currentOffer() : null;
+        abort_unless($version,422,'Este link não possui plano disponível para preenchimento.');
+        return [$link,$version];
     }
 }

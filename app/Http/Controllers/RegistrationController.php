@@ -93,7 +93,7 @@ class RegistrationController extends Controller
 
     private function offeredVersion(int $id): ProductVersion
     {
-        $version = ProductVersion::with('product')->offered()->whereKey($id)->first();
+        $version = ProductVersion::currentOfferFor($id);
         abort_unless($version,422,'Este plano não está disponível. Escolha outro plano na página de contratação.');
         return $version;
     }
