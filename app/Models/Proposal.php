@@ -13,7 +13,7 @@ class Proposal extends DomainModel
         return ['snapshot' => 'array', 'acceptance_evidence' => 'array', 'expires_at' => 'datetime', 'accepted_at' => 'datetime', 'locked_at' => 'datetime', 'requested_start_at' => 'datetime', 'link_expires_at' => 'datetime', 'link_revoked_at' => 'datetime', 'attribution_snapshot' => 'array', 'first_touch_at' => 'datetime', 'last_touch_at' => 'datetime', 'marketing_link_id' => 'integer', 'link_owner_id' => 'integer', 'referrer_customer_id' => 'integer', 'first_touch_id' => 'integer', 'last_touch_id' => 'integer', 'campaign_id' => 'integer', 'free_months' => 'integer'];
     }
 
-    public const STAGES = ['assinar' => 'Falta assinar', 'pagar' => 'Assinado, falta pagar', 'ativar' => 'Pago, falta ativar', 'ativo' => 'Plano ativo', 'encerrada' => 'Encerrada'];
+    public const STAGES = ['assinar' => 'Falta assinar', 'pagar' => 'Assinado', 'ativar' => 'Pago, falta ativar', 'ativo' => 'Plano ativo', 'encerrada' => 'Encerrada'];
 
     /** Etapa da contratação para a equipe: assinar, pagar, ativar, ativo. Precisa de subscription.invoices carregado para não consultar por linha. */
     public function stage(): string

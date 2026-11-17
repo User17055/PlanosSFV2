@@ -1,4 +1,4 @@
-/* Natal na gestão da equipe, só na barra lateral e na logo: entra sozinho de 15/11 a 06/01 (layouts/app.blade.php). */
+/* Natal na gestão da equipe, só na barra lateral e na logo (com gorro): entra sozinho de 15/11 a 06/01 (layouts/app.blade.php). */
 :root{--xmas-green:#1f7a3a}
 
 /* Neve na barra lateral, que é escura: no conteúdo branco ela não apareceria e atrapalharia a leitura. */
@@ -11,12 +11,7 @@
 @keyframes xmas-fall-a{to{transform:translateY(200px)}}
 @keyframes xmas-fall-b{to{transform:translate(-26px,260px)}}
 
-/* Gorro de Papai Noel na cabeça do cachorro da logo. */
-.is-christmas .sidebar-brand{position:relative}
-.is-christmas .sidebar-brand::after{content:"";position:absolute;top:-12px;left:calc(50% - 51px);width:46px;height:34px;pointer-events:none;transform:rotate(-14deg);
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'%3E%3Cpath d='M8 37C10 20 26 6 46 6c8 0 12 8 12 18-4-6-10-8-14-4-2 6-3 11-4 17z' fill='%23d6202a'/%3E%3Cpath d='M30 12c6-3 12-4 16-2' stroke='%23ff6b6b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Crect x='3' y='33' width='42' height='11' rx='5.5' fill='%23fff' stroke='%23e3e3e3'/%3E%3Ccircle cx='58' cy='26' r='6' fill='%23fff' stroke='%23e3e3e3'/%3E%3C/svg%3E") center/contain no-repeat;
-  filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
-
+/* O gorro do Chico vem desenhado na própria logo: assets/brand/sao-francisco-logo-natal.png. */
 .is-christmas .sidebar-cta .button{background:var(--xmas-green);border-color:var(--xmas-green);color:#fff}
 
 @media (prefers-reduced-motion:reduce){.xmas-snow::before,.xmas-snow::after{animation:none}}
