@@ -61,5 +61,33 @@
         "docx_sha256": "eb1ff714bacf302db922854d7ede03a5a7e4308c77f231a37daa3d7a53b21264",
         "text_sha256": "a7c217cba1d85a674e5829c9a8280d68792b67a350fedb4f00b7b2cbea198215",
         "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Bioquímicos do hospital listados, como no Essencial e no Prime (16/11/2026)."
+    },
+    "1c51f98f88d547d96b671f9e708bd6d92e1749f0f355c8d79244c13ee981be33": {
+        "source": "PLANO PRIME.docx",
+        "source_sha256": "a15773521bf2f255891610297040d7e7f56972a0d48ddd16ec3bee582990210d",
+        "docx_sha256": "c184280198e4482dbbbc0b77d6ec19f7638a55b89713cec82244358678f8a452",
+        "text_sha256": "7070ad4a7ac15f004c62cd14ae24b535d289b6aabe71bf70a511821cbab7b639",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Removido o link de e-mail de um cliente antigo que ficou escondido no campo E-mail (09/11/2026). \"plano Master\" virou \"plano Prime\"; tumores de pele na lista de cirurgias; frase da morte do pet na cláusula sétima (16/11/2026). Sem carência para exames da clínica e descontos (17/11/2026)."
+    },
+    "0c436623ddc6b6b06096a005df305fb38a4de47bbe6c905653a560cf3f5c3d3d": {
+        "source": "PLANO SUPER ECONOMICO.docx",
+        "source_sha256": "150d4bcf1697556b8ea0d8e25f5fa3c3176eb57cc2081833277745f62ae73f71",
+        "docx_sha256": "8ac0aee2e7f66551d55143eca6402b1c096028e44090d76f197213f18b2a57cb",
+        "text_sha256": "c6d6b96100f5e87f74b3a62764af5057a2c604562cf419ec53f2182ee36a1c65",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). \"SEISENTOS\" corrigido para \"SEISCENTOS\" (16/11/2026). Descontos sem carência (17/11/2026)."
+    },
+    "0e919679ba2010bc6dacba9fd172ec370704af04ce97783303737e84d284848f": {
+        "source": "PLANO ECONOMICO.docx",
+        "source_sha256": "38b2449125d96378eff3b77d8b55d0118a83daca13e11e6f44dbdaca8c0ae576",
+        "docx_sha256": "2a349b2ca902b4fdadd05e6341776bad3953dbea55b8abdef331951e5c58141c",
+        "text_sha256": "6db7431b2f449a019e23ed73608b2e4b3520d641625b51de0b227dede5ea6f41",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Bioquímicos do hospital listados, como no Essencial e no Prime (16/11/2026). Descontos sem carência; desconto em cirurgias exceto castração, anestesia, especialista e terceirizado (17/11/2026)."
+    },
+    "d273999d141dd4b04c1b05468d6a0cfc9bbf1b9d1d5672bae63dc0ef58d52753": {
+        "source": "PLANO ESSENCIAL.docx",
+        "source_sha256": "95f725e8d61bc5ed8f4b849c52ba50a9a985242712f0615eaad3ae55ee4ff3ad",
+        "docx_sha256": "6fa6b6506eede4c60501304866fff7337b151369a3466ebb797613d8f86f8ba4",
+        "text_sha256": "fbe66f247e35c7713f1aae01a4b8a3b15e8115ddd7bb6fa05d5d4995c9b446ac",
+        "changes": "Removidos os descontos em ração e em produtos Franpet (28/10/2026). Sem carência para exames da clínica e descontos (17/11/2026)."
     }
 }

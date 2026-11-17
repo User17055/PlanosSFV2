@@ -33,7 +33,7 @@ class PortalApiController extends Controller
             'description'=>$v->description,'price_cents'=>$v->price_cents,'enrollment_fee_cents'=>$v->enrollment_fee_cents,
             'billing_cycle'=>$v->billing_cycle,'duration_months'=>$v->duration_months,'species'=>$v->species,
             'demo'=>$v->is_demo || $v->status==='local_preview','informational'=>$v->status==='draft',
-            'benefits'=>$v->benefitRules->map(fn($b)=>$b->only(['name','description','waiting_days','quantity_limit','period_type','coverage_type','discount_basis_points'])),
+            'benefits'=>$v->benefitRules->map(fn($b)=>['description'=>$b->publicDescription()]+$b->only(['name','waiting_days','quantity_limit','period_type','coverage_type','discount_basis_points'])),
         ])]);
     }
 
@@ -175,7 +175,7 @@ class PortalApiController extends Controller
                     'cancellation_status'=>$s->cancellationRequest?->status,'impediments'=>$result['impediments'],
                     'benefits'=>$s->productVersion->benefitRules->map(function($b) use($s,$eligibility) {
                         $state=$eligibility->benefit($s,$b);
-                        return ['name'=>$b->name,'description'=>$b->description,'eligible'=>$state['eligible'],'remaining'=>$state['remaining'],
+                        return ['name'=>$b->name,'description'=>$b->publicDescription(),'eligible'=>$state['eligible'],'remaining'=>$state['remaining'],
                             'available_from'=>$state['available_from'],'impediments'=>$state['impediments']];
                     })];
             }),
