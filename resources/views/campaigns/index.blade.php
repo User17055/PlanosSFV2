@@ -34,7 +34,7 @@
 <td><strong>{{ $site ? 'Site' : 'Equipe' }}</strong>@unless($site)<small>{{ $proposal->creator?->name }}</small>@endunless</td>
 <td>{{ $proposal->free_months }} {{ $proposal->free_months===1 ? 'mensalidade' : 'mensalidades' }}</td>
 <td>{{ $first ? $first->format('d/m/Y') : 'Depois de assinar' }}</td>
-<td><span class="badge {{ $stage==='ativo' ? 'badge-green' : ($stage==='encerrada' ? 'badge-gray' : 'badge-amber') }}"><span class="status-dot"></span>{{ \App\Models\Proposal::STAGES[$stage] }}</span></td>
+<td><span class="badge stage-badge stage-{{ $stage }}">{{ \App\Models\Proposal::STAGES[$stage] }}</span></td>
 <td><a class="table-arrow" href="{{ route('proposals.show',$proposal) }}" aria-label="Ver proposta de {{ $proposal->customer->name }}">@include('components.icon',['name'=>'chevron'])</a></td></tr>
 @empty<tr><td colspan="8"><div class="empty-state"><strong>Ninguém isento ainda.</strong><p>Quando uma venda entrar numa campanha, ela aparece aqui.</p></div></td></tr>@endforelse
 </tbody></table></div>

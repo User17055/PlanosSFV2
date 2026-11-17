@@ -1,4 +1,4 @@
-/* Natal na gestão da equipe, só na barra lateral e na logo (com gorro): entra sozinho de 15/11 a 06/01 (layouts/app.blade.php). */
+/* Natal na gestão da equipe, só na barra lateral: entra sozinho de 15/11 a 06/01 (layouts/app.blade.php). */
 :root{--xmas-green:#1f7a3a}
 
 /* Neve na barra lateral, que é escura: no conteúdo branco ela não apareceria e atrapalharia a leitura. */
@@ -11,7 +11,6 @@
 @keyframes xmas-fall-a{to{transform:translateY(200px)}}
 @keyframes xmas-fall-b{to{transform:translate(-26px,260px)}}
 
-/* O gorro do Chico vem desenhado na própria logo: assets/brand/sao-francisco-logo-natal.png. */
 .is-christmas .sidebar-cta .button{background:var(--xmas-green);border-color:var(--xmas-green);color:#fff}
 
 @media (prefers-reduced-motion:reduce){.xmas-snow::before,.xmas-snow::after{animation:none}}

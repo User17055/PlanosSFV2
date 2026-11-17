@@ -1714,6 +1714,12 @@ html:has(.auth-layout){scrollbar-gutter:auto}
 .area-hint{display:block;margin:0 0 8px;color:var(--text-3)}
 /* Leads: cabeçalho, filtros em texto e situação do recebimento. Sem caixas: só o que precisa chamar atenção tem cor. */
 .badge-blue{background:var(--info-soft);border-color:rgba(8,100,154,.35);color:var(--info-text)}
+.stage-badge{padding:4px 12px;border:0;font-weight:600}
+.stage-badge.stage-assinar{background:#fff1dc;color:#9a5300}
+.stage-badge.stage-pagar{background:#e3effa;color:#0b5988}
+.stage-badge.stage-ativar{background:#efe8fb;color:#6236a8}
+.stage-badge.stage-ativo{background:#dff3e4;color:#1d6f36}
+.stage-badge.stage-encerrada{background:#eef0f2;color:#5b6570}
 .lead-heading{align-items:center;flex-wrap:nowrap}
 .lead-heading>div:first-child{flex:1}
 .lead-heading-side{display:flex;flex:none;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 20px;max-width:420px}
