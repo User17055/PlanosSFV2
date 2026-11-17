@@ -337,16 +337,17 @@ fieldset .check-label{margin:8px 0}
 .conditional-box{margin-top:18px;padding:16px;border-radius:var(--radius);border:1px dashed var(--line-2);background:var(--panel-2)}
 .conditional-box .fine-print{margin-top:10px}
 [data-registration-explanation]{margin-top:16px;padding:12px 14px;border-radius:var(--radius);background:var(--info-soft);font-size:12.5px;color:var(--text-2)}
-.choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px}
 .choice-card,.plan-choice{position:relative;display:block;cursor:pointer;border-radius:var(--radius-lg);border:1px solid var(--line-2);background:#fff;transition:border-color .2s,background .2s,box-shadow .2s}
-.choice-card{padding:18px 16px 16px}
+.choice-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:12px;padding:14px 46px 14px 14px}
 .choice-card:hover,.plan-choice:hover{border-color:#aeb4b8;box-shadow:0 4px 12px -6px rgba(0,0,0,.18)}
 .choice-card>input,.plan-choice>input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 .choice-card:has(input:checked),.plan-choice:has(input:checked){border-color:var(--primary);background:#f5fbfa;box-shadow:0 0 0 1px var(--primary)}
 .choice-card:has(input:focus-visible),.plan-choice:has(input:focus-visible){outline:2px solid var(--primary);outline-offset:3px}
 .choice-mark{position:absolute;top:14px;right:14px;width:18px;height:18px;border-radius:50%;border:2px solid #b7bdc1;background:#fff;transition:border-color .2s,box-shadow .2s}
 input:checked+.choice-mark,input:checked+.plan-choice-top .choice-mark{border-color:var(--primary);box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 9px var(--primary)}
-.choice-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;margin-bottom:12px;border-radius:50%;background:var(--info-soft);color:var(--info-text)}
+.choice-card .choice-mark{top:50%;margin-top:-9px}
+.choice-icon{grid-row:span 2;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--info-soft);color:var(--info-text)}
 .choice-icon .icon{width:18px;height:18px}
 .choice-card strong{display:block;font-size:15px;font-weight:500;color:var(--text)}
 .choice-card small{display:block;margin-top:3px;color:var(--text-3)}
@@ -359,10 +360,10 @@ input:checked+.choice-mark,input:checked+.plan-choice-top .choice-mark{border-co
 .plan-choice-top h3{font-size:17px}
 .plan-choice-price{text-align:right;font-size:19px;font-weight:500;color:var(--text);white-space:nowrap}
 .plan-choice-price small{display:block;font-size:13px;font-weight:400;color:var(--text-3)}
-.plan-choice-rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 18px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.plan-choice-rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px 16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .plan-choice-rules>span{display:flex;flex-direction:column;gap:2px;position:relative;font-size:14px;color:var(--text)}
 .plan-choice-rules small{color:var(--text-3)}
-.review-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:18px;border-radius:var(--radius-lg);overflow:hidden;background:var(--panel-2);border:1px solid var(--line)}
+.review-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:18px;border-radius:var(--radius-lg);overflow:hidden;background:var(--panel-2);border:1px solid var(--line)}
 .review-summary>div{display:flex;flex-direction:column;gap:2px;padding:13px 16px;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
 .review-summary small{font-size:12px;font-weight:600;color:var(--text-3)}
 .review-summary strong{font-size:15px;font-weight:500;color:var(--text);overflow-wrap:anywhere}
@@ -866,8 +867,16 @@ td form .text-button{margin-top:6px}
   .analytics-strip>div:nth-child(n+3){border-top:1px solid var(--line)}
   .form-grid,.report-filters{grid-template-columns:minmax(0,1fr)}
   .employee-search{grid-template-columns:minmax(0,1fr)}
-  .wizard-steps{grid-template-columns:minmax(0,1fr);gap:8px}
-  .wizard-step{padding:10px 14px}
+  /* No celular as etapas ficam numa linha: só o número, e o nome da etapa atual. */
+  .wizard-steps{display:flex;gap:8px}
+  .wizard-step{flex:none;padding:8px 10px}
+  .wizard-step.active{flex:1;min-width:0}
+  .wizard-step:not(.active)>div,.wizard-step small{display:none}
+  .plan-choice{padding:16px}
+  /* Voltar/Cancelar e o botão principal lado a lado, o principal ocupando o resto. */
+  .wizard-panel .form-actions{flex-wrap:nowrap}
+  .wizard-panel .form-actions>.button{padding-left:14px;padding-right:14px}
+  .wizard-panel .form-actions>.button-primary{flex:1;justify-content:center}
   .integration-grid,.activation-checks,.subscription-details{grid-template-columns:minmax(0,1fr)}
   .finance-record-grid{grid-template-columns:minmax(0,1fr)}
   .finance-record-heading{flex-direction:column}
