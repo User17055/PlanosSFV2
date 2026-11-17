@@ -277,7 +277,8 @@ class ContractService
             $period = ['calendar_month' => 'mês-calendário', 'monthly_cycle' => 'ciclo mensal da vigência', 'contract_year' => 'ano contratual', 'lifetime' => 'toda a vigência', 'rolling_window' => 'janela móvel'][($benefit['period_type'] ?? '')] ?? ($benefit['period_type'] ?? 'não definido');
             $limit = isset($benefit['quantity_limit']) ? $benefit['quantity_limit'].' '.($benefit['unit'] ?? 'procedimento(s)') : 'sem limite numérico';
             $details = ['Limite: '.$limit.' por '.$period.'.', 'Carência: '.($benefit['waiting_days'] ?? 0).' dia(s).'];
-            if (!empty($benefit['description'])) $details[] = $benefit['description'];
+            $public = \App\Models\BenefitRule::splitDescription($benefit['description'] ?? null)[0];
+            if ($public) $details[] = $public;
             if (($benefit['coverage_type'] ?? 'included') === 'discount') $details[] = 'Desconto: '.number_format(((int)($benefit['discount_basis_points'] ?? 0))/100, 2, ',', '.').'%.';
             else $details[] = 'Cobertura incluída no produto.';
             if (!empty($benefit['copay_cents'])) $details[] = 'Coparticipação: R$ '.number_format($benefit['copay_cents']/100, 2, ',', '.').'.';
