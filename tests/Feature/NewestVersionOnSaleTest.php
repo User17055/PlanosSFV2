@@ -48,6 +48,9 @@ class NewestVersionOnSaleTest extends TestCase
             ->assertSee('value="'.$v2->id.'" checked',false)
             ->assertDontSee('name="product_version_id" value="'.$this->v1->id.'"',false);
         $this->actingAs($this->admin)->get(route('attribution_links.index'))->assertOk()->assertDontSee('Plano · v1');
+        // Planos e pacotes mostra só a versão nova, e um rascunho seguinte continua lá para publicar.
+        ProductVersion::create(['product_id'=>$v2->product_id,'version'=>3,'name'=>'Plano','price_cents'=>10000,'billing_cycle'=>'monthly','species'=>['dog'],'contract_template'=>'Rascunho.']);
+        $this->get(route('catalog.index'))->assertOk()->assertSee('versão 2')->assertSee('versão 3')->assertDontSee('versão 1');
         auth()->logout();
 
         // Link criado antes da publicação segue para a versão nova.

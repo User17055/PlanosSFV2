@@ -12,8 +12,10 @@ class CatalogController extends Controller
     public function index(Request $request)
     {
         $realPlans=ProductVersion::where('is_demo',false)->whereNotNull('contract_layout')->exists();
-        $products=Product::query()->when($realPlans && !$request->boolean('demonstracao'),fn($q)=>$q->whereHas('versions',fn($v)=>$v->where('is_demo',false)))
-            ->with(['versions'=>fn($v)=>$v->when($realPlans && !$request->boolean('demonstracao'),fn($v)=>$v->where('is_demo',false))->with('benefitRules')])->orderBy('name')->get();
+        // Só a versão à venda (ou agendada) e os rascunhos: as anteriores e a base antiga ficam nos contratos de quem assinou.
+        $current=fn($v)=>$v->when($realPlans && !$request->boolean('demonstracao'),fn($v)=>$v->where('is_demo',false))
+            ->where(fn($q)=>$q->offered()->orWhere('status','draft')->orWhere('offer_starts_at','>',now()));
+        $products=Product::query()->whereHas('versions',$current)->with(['versions'=>fn($v)=>$current($v)->with('benefitRules')])->orderBy('name')->get();
         return view('catalog.index',compact('products'));
     }
 
