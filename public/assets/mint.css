@@ -367,10 +367,11 @@ input:checked+.choice-mark,input:checked+.plan-choice-top .choice-mark{border-co
 .review-summary small{font-size:12px;font-weight:600;color:var(--text-3)}
 .review-summary strong{font-size:15px;font-weight:500;color:var(--text);overflow-wrap:anywhere}
 .wizard-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
-.wizard-step{position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius-lg);background:#fff;box-shadow:var(--panel-shadow);border-bottom:3px solid transparent;color:var(--text-3);font-size:15px;font-weight:500;transition:border-color .25s,color .25s}
+.wizard-step{position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius-lg);background:#fff;box-shadow:var(--panel-shadow);color:var(--text-3);font-size:15px;font-weight:500;transition:color .25s}
 .wizard-step>span{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:50%;background:var(--panel-3);color:var(--text-3);font-weight:600;transition:inherit}
 .wizard-step small{display:block;font-size:13px;font-weight:400;color:var(--text-3)}
-.wizard-step.active{color:var(--text);border-bottom-color:var(--primary)}
+/* Etapa atual marcada pelo número azul, sem a linha embaixo (pedido de 17/11/2026). */
+.wizard-step.active{color:var(--text)}
 .wizard-step.active>span{background:var(--primary);color:#fff}
 .wizard-step.complete{color:var(--text-2)}
 .wizard-step.complete>span{background:var(--primary-soft);color:var(--primary-text)}
