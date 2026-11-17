@@ -31,6 +31,12 @@ Tokens ficam cifrados com `APP_KEY`, ocultos na serialização e nunca são devo
 
 ## Validação
 
+## Lista de conversas e bolinha (17/11/2026)
+
+A tarefa `leads:digisac-chat` roda a cada minuto com a conexão do administrador. Numa consulta só, ela lê os 100 contatos com mensagem mais recente (`GET contacts` com `order: lastMessageAt DESC` e `include: lastMessage`) e guarda nos leads com o mesmo telefone a última mensagem e as não lidas (`chat_*`). Um lead que nunca foi conferido é buscado um por um, até 30 por rodada. A lista mostra a conversa mais recente em cima, com a hora e a última mensagem, como no WhatsApp.
+
+A bolinha verde na lista e a do botão de chat acendem quando o cliente escreveu depois da última resposta de um atendente (a do robô não conta), ninguém leu no Digisac e o atendente do lead ainda não abriu a conversa aqui. Um administrador que só acompanha a conversa não apaga a bolinha. Nota interna nunca vira prévia. Ao clicar numa foto da conversa, ela abre por cima da tela, sem baixar.
+
 `tests/Feature/LeadChatTest.php` cobre isolamento de usuários/unidades, fila, transferência, permissões por cargo, filtros da API, destinatário e remetente definidos no servidor, token cifrado, ausência de token em formulários, configuração individual e envio sem repetição após falhas.
 
 Os testes utilizam respostas simuladas da API. A homologação com `saofranciscopet.digisac.chat` depende do cadastro das credenciais reais em **Conexão**.

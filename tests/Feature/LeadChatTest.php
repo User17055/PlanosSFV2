@@ -84,15 +84,46 @@ class LeadChatTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_chat_button_shows_the_red_dot_only_while_a_lead_is_waiting(): void
+    public function test_chat_button_dot_and_list_show_only_client_messages_nobody_read(): void
     {
-        $this->actingAs($this->ana)->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot aria-hidden', false)->assertSee('há leads esperando atendimento');
-        Lead::query()->update(['status' => 'contacted']);
-        $this->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot hidden', false)->assertDontSee('há leads esperando atendimento');
-        // Quem atende só conta o que pode ver: lead esperando com outra pessoa não acende a bolinha.
-        $this->theirs->update(['status' => 'new']);
-        $this->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot hidden', false);
-        $this->actingAs($this->admin)->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot aria-hidden', false);
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-17 15:00:00', 'UTC'));
+        $this->connection($this->admin, 'token-do-admin');
+        $contact = $this->contact() + ['lastMessageAt' => '2026-11-17T13:05:00.000Z', 'unread' => 2,
+            'lastMessage' => ['type' => 'chat', 'text' => 'Quero saber o preço', 'isFromMe' => false, 'visible' => true]];
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => function () use (&$contact) { return Http::response(['data' => [$contact]]); },
+            $this->base.'/api/v1/users*' => Http::response(['data' => []]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => []]),
+        ]);
+        // Lead esperando sem mensagem não acende mais a bolinha.
+        $this->actingAs($this->ana)->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot hidden', false);
+
+        $this->artisan('leads:digisac-chat')->assertSuccessful();
+        $this->assertSame(2, $this->mine->fresh()->chat_unread);
+        $this->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot aria-hidden', false)->assertSee('há mensagem nova de cliente');
+        $this->get(route('leads.chat.index'))->assertOk()->assertSee('Quero saber o preço')->assertSee('10:05')->assertSee('is-unread')->assertSee('Mensagem nova');
+        // A bolinha é de quem atende: o administrador sem leads não vê.
+        $this->actingAs($this->admin)->get(route('leads.index'))->assertOk()->assertSee('data-chat-dot hidden', false);
+        // Administrador abrindo a conversa da Ana não apaga a bolinha dela; a Ana abrindo, apaga.
+        $this->getJson(route('leads.chat.messages', $this->mine))->assertOk();
+        $this->actingAs($this->ana)->get(route('leads.index'))->assertSee('data-chat-dot aria-hidden', false);
+        $this->getJson(route('leads.chat.messages', $this->mine))->assertOk();
+        $this->get(route('leads.index'))->assertSee('data-chat-dot hidden', false);
+        $this->get(route('leads.chat.index'))->assertSee('Quero saber o preço')->assertDontSee('is-unread');
+        $this->actingAs($this->bia)->get(route('leads.index'))->assertSee('data-chat-dot aria-hidden', false);
+
+        // Resposta automática do robô não conta como resposta; a de um atendente zera, e a mensagem aparece com ✓.
+        $contact['lastMessage'] = ['type' => 'chat', 'text' => 'Já te respondo!', 'isFromMe' => true, 'isFromBot' => true, 'visible' => true];
+        $this->artisan('leads:digisac-chat')->assertSuccessful();
+        $this->get(route('leads.index'))->assertSee('data-chat-dot aria-hidden', false);
+        $contact['lastMessage'] = ['type' => 'image', 'text' => '', 'isFromMe' => true, 'isFromBot' => false, 'visible' => true];
+        $this->artisan('leads:digisac-chat')->assertSuccessful();
+        $this->get(route('leads.index'))->assertSee('data-chat-dot hidden', false);
+        $this->get(route('leads.chat.index'))->assertSee('✓ 📷 Foto');
+        // Nota interna nunca vira prévia.
+        $contact['lastMessage'] = ['type' => 'chat', 'text' => 'Nota só da equipe', 'isFromMe' => true, 'isComment' => true, 'visible' => true];
+        $this->artisan('leads:digisac-chat')->assertSuccessful();
+        $this->get(route('leads.chat.index'))->assertDontSee('Nota só da equipe');
     }
 
     public function test_each_person_lists_their_leads_and_only_administrators_list_everyone(): void

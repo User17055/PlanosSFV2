@@ -19,7 +19,45 @@ class Lead extends DomainModel
 
     protected function casts(): array
     {
-        return ['extra' => 'array', 'contacted_at' => 'datetime', 'photo_synced_at' => 'datetime'];
+        return ['extra' => 'array', 'contacted_at' => 'datetime', 'photo_synced_at' => 'datetime',
+            'chat_last' => 'array', 'chat_last_at' => 'datetime', 'chat_read_at' => 'datetime', 'chat_synced_at' => 'datetime', 'chat_unread' => 'integer'];
+    }
+
+    /** O cliente mandou mensagem depois da última resposta da equipe, e ninguém leu no Digisac nem abriu a conversa aqui. */
+    public function scopeChatUnread($query)
+    {
+        return $query->where('chat_unread', '>', 0)->where(fn ($w) => $w->whereNull('chat_read_at')->orWhereColumn('chat_read_at', '<', 'chat_last_at'));
+    }
+
+    public function chatUnread(): bool
+    {
+        return $this->chat_unread > 0 && (! $this->chat_read_at || $this->chat_read_at->lt($this->chat_last_at));
+    }
+
+    /** A última mensagem como no WhatsApp: o texto, ou o tipo do anexo; ✓ quando foi a equipe que mandou. */
+    public function chatPreview(): ?string
+    {
+        $last = $this->chat_last;
+        if (! $last) return null;
+        $text = trim((string) ($last['text'] ?? ''));
+        $type = (string) ($last['type'] ?? 'chat');
+        [$icon, $name] = ['image' => ['📷', 'Foto'], 'audio' => ['🎤', 'Áudio'], 'ptt' => ['🎤', 'Áudio'], 'video' => ['🎥', 'Vídeo'], 'document' => ['📄', 'Documento'],
+            'sticker' => ['💟', 'Figurinha'], 'call_log' => ['📞', 'Ligação']][$type] ?? ['', ''];
+        $body = $type === 'reaction' ? 'Reagiu '.$text : trim($icon.' '.($text !== '' ? $text : $name));
+        return (($last['outgoing'] ?? false) ? '✓ ' : '').$body;
+    }
+
+    /** Hoje mostra a hora; ontem, "Ontem"; antes, o dia. */
+    public function chatTime(): ?string
+    {
+        $at = $this->chat_last_at?->timezone('America/Sao_Paulo');
+        if (! $at) return null;
+        $today = now('America/Sao_Paulo');
+        return match (true) {
+            $at->isSameDay($today) => $at->format('H:i'),
+            $at->isSameDay($today->copy()->subDay()) => 'Ontem',
+            default => $at->format($at->year === $today->year ? 'd/m' : 'd/m/y'),
+        };
     }
 
     protected static function booted(): void

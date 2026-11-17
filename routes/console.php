@@ -137,6 +137,10 @@ Artisan::command('leads:digisac-assign',function(\App\Services\Integrations\Lead
     $this->info($assign->run().' lead(s) marcados com quem puxou no Digisac.');
 })->purpose('Lead da fila fica com quem puxou a conversa no Digisac');
 Schedule::command('leads:digisac-assign')->everyTwoMinutes()->withoutOverlapping();
+Artisan::command('leads:digisac-chat',function(\App\Services\Integrations\LeadChatSummary $summary) {
+    $this->info($summary->run().' lead(s) com a última mensagem atualizada.');
+})->purpose('Última mensagem e não lidas de cada lead, para a lista do chat');
+Schedule::command('leads:digisac-chat')->everyMinute()->withoutOverlapping();
 Artisan::command('proposals:payment-reminders {--ensaio : Só lista quem receberia}',function(\App\Services\Domain\PaymentReminders $reminders) {
     $due=$reminders->due();
     foreach($due as $p) $this->line('· proposta '.$p->id.' (assinada em '.$p->accepted_at->timezone('America/Sao_Paulo')->format('d/m').')');

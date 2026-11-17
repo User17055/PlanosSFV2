@@ -13,7 +13,9 @@ class StaffCounts
     {
         $access = app(AccessService::class);
         $leads = in_array($user->role, ['central_admin', 'manager', 'sales', 'operator', 'attendant'], true)
-            ? ['leads_new' => $access->scope(Lead::visibleTo($user)->where('status', 'new'), $user)->count()] : [];
+            ? ['leads_new' => $access->scope(Lead::visibleTo($user)->where('status', 'new'), $user)->count(),
+                // Bolinha do botão de chat: cliente de um lead da pessoa mandou mensagem que ninguém leu.
+                'chat_unread' => Lead::where('handled_by', $user->id)->chatUnread()->count()] : [];
         return $leads + Cache::remember('staff-counts:'.$user->id, 60, function () use ($user, $access) {
             $out = [];
             if (in_array($user->role, ['central_admin', 'manager', 'sales'], true)) {

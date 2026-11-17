@@ -110,6 +110,18 @@
     }
   }
 
+  // Foto abre por cima da conversa, sem baixar. Ctrl+clique continua abrindo em outra aba.
+  const viewer = document.createElement('dialog');
+  viewer.className = 'chat-viewer';
+  viewer.setAttribute('aria-label', 'Imagem da conversa');
+  viewer.innerHTML = '<button type="button" class="chat-viewer-close" aria-label="Fechar imagem">×</button><img alt="">';
+  document.body.append(viewer);
+  const viewerImage = viewer.querySelector('img');
+  viewer.addEventListener('click', event => { if (event.target !== viewerImage) viewer.close(); });
+  // Esc fecha só a foto, não a janela do chat inteira.
+  viewer.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); viewer.close(); } });
+  viewer.addEventListener('close', () => viewerImage.removeAttribute('src'));
+
   // O link do Digisac é temporário: se vencer, o balão é refeito com o link novo na próxima atualização.
   function media(message, bubble) {
     const url = message.file?.url;
@@ -136,6 +148,13 @@
       image.addEventListener('load', () => { if (atBottom) history.scrollTop = history.scrollHeight; });
       image.src = url;
       link.append(image);
+      link.addEventListener('click', event => {
+        if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        viewerImage.src = url;
+        viewerImage.alt = image.alt;
+        viewer.showModal();
+      });
       return link;
     }
     if (['audio', 'ptt', 'video'].includes(message.type)) {
@@ -432,4 +451,22 @@
   window.addEventListener('pagehide', () => { freeze(); });
   window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
   load();
+})();
+
+// A lista de conversas acompanha as mensagens que chegam (o Digisac é lido a cada minuto), sem recarregar a página.
+(() => {
+  const list = document.querySelector('.chat-lead-list');
+  if (!list) return;
+  setInterval(async () => {
+    if (document.hidden || document.documentElement.dataset.chatPaused === 'true') return;
+    try {
+      const response = await fetch(location.href, { cache: 'no-store', credentials: 'same-origin' });
+      if (!response.ok || response.redirected) return;
+      const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('.chat-lead-list');
+      if (!fresh || fresh.innerHTML === list.innerHTML) return;
+      const top = list.scrollTop;
+      list.replaceChildren(...fresh.childNodes);
+      list.scrollTop = top;
+    } catch (_) { /* Sem conexão: tenta de novo na próxima volta. */ }
+  }, 20000);
 })();
