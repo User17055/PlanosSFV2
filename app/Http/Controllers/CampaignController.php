@@ -12,7 +12,7 @@ class CampaignController extends Controller
 {
     public function index(Request $request, BillingSchedule $schedule)
     {
-        $campaigns = Campaign::withCount(['proposals' => fn ($q) => $q->where('status', 'accepted')])->orderByDesc('starts_on')->orderByDesc('id')->get();
+        $campaigns = Campaign::withCount(['proposals' => fn ($q) => $q->where('status', 'accepted'), 'proposals as all_proposals_count'])->orderByDesc('starts_on')->orderByDesc('id')->get();
         $chosen = $request->integer('campanha') ?: null;
         $proposals = Proposal::where(fn ($q) => $q->where('free_months', '>', 0)->orWhere('discount_percent', '>', 0))->when($chosen, fn ($q) => $q->where('campaign_id', $chosen))
             ->with(['customer:id,name', 'pet:id,name', 'productVersion:id,name', 'campaign:id,name', 'creator:id,name,role', 'subscription.invoices'])

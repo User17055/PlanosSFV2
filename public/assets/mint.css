@@ -2419,3 +2419,16 @@ body.theme-dash .dash-v2 .dash-panel h2{margin:0;font-family:var(--font);font-si
 @media(max-width:860px){.dash-row{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:560px){.dash-kpi{padding:14px 14px 46px}body.theme-dash .dash-kpi-value{font-size:24px}.dash-kpi-label{font-size:13px}.dash-kpi-sub{font-size:12px}body.theme-dash .dash-panel{padding:16px}.dash-donut{grid-template-columns:minmax(0,1fr)}.dash-donut svg{max-width:190px;margin:0 auto}.dash-stats>div{flex:1 1 40%;min-width:0}.dash-stats dd{font-size:19px}}
 @media(max-width:480px){.dash-kpis{grid-template-columns:minmax(0,1fr);gap:12px}.dash-kpi{padding-bottom:40px}body.theme-dash .dash-kpi-value{font-size:26px}.dash-kpi-spark{height:36px}}
+/* Campanhas: resumo de cada uma, com a edição recolhida em "Editar" */
+.campaign-now{margin:12px 0 4px;padding:10px 14px;border-radius:10px;background:#e8f5df;color:#3f6b1d;font-size:14px}
+.campaign-now.is-off{background:var(--panel-3);color:var(--text-2)}
+.campaign-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px 16px;margin-bottom:10px}
+.campaign-head h3{margin:0;font-size:16px;font-weight:600;color:var(--text)}
+.campaign-head small{display:block;margin-top:2px;color:var(--text-3);font-size:13px}
+.campaign-item>.campaign-flow{margin-bottom:10px}
+.campaign-actions{align-items:center}
+.campaign-edit>summary{cursor:pointer}
+.campaign-edit[open]{flex-basis:100%}
+.campaign-item:has(.campaign-edit[open])>.campaign-flow{display:none}
+.campaign-filter{margin:0 0 14px}
+.nowrap{white-space:nowrap}

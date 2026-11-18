@@ -112,6 +112,20 @@ class CampaignTest extends TestCase
         $this->actingAs($this->seller)->post(route('campaigns.store'), ['name' => 'X', 'free_months' => 1, 'starts_on' => '2026-11-01'])->assertForbidden();
     }
 
+    public function test_campaigns_list_puts_the_principal_first_then_current_upcoming_and_ended(): void
+    {
+        $day = fn (int $days) => now('America/Sao_Paulo')->addDays($days)->toDateString();
+        $this->campaign(['name' => 'Encerrada', 'whole_site' => false, 'starts_on' => $day(-10), 'ends_on' => $day(-2)]);
+        $this->campaign(['name' => 'Principal', 'starts_on' => $day(-1)]);
+        $this->campaign(['name' => 'Vigente', 'whole_site' => false, 'starts_on' => $day(0)]);
+        $this->campaign(['name' => 'Futura', 'whole_site' => false, 'starts_on' => $day(5), 'ends_on' => $day(20)]);
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertOk()
+            ->assertSee('No site agora: <strong>Principal</strong>', false)
+            ->assertSeeInOrder(['<h3>Principal</h3>', '<h3>Vigente</h3>', '<h3>Futura</h3>', '<h3>Encerrada</h3>'], false);
+        Campaign::query()->update(['whole_site' => false]);
+        $this->actingAs($this->admin)->get(route('campaigns.index'))->assertSee('Nenhuma campanha valendo no site agora');
+    }
+
     public function test_black_friday_flow_gives_the_second_free_and_thirty_percent_on_the_third(): void
     {
         $today = now('America/Sao_Paulo')->subDay()->toDateString();
