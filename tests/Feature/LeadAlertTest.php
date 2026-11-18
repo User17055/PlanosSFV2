@@ -65,7 +65,7 @@ class LeadAlertTest extends TestCase
 
     public function test_outside_the_window_or_without_topic_nothing_is_sent(): void
     {
-        $this->at('2026-11-18 17:30'); // quarta, entre o estágio e a noite
+        $this->at('2026-11-18 17:30'); // quarta, entre as 17h e as 18h
         $this->sendLead('18911110000')->assertCreated();
         config(['services.leads.alert.topic' => null]);
         $this->at('2026-11-18 20:00');
