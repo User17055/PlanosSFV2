@@ -139,7 +139,7 @@ class LeadChatTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_administrator_reads_any_conversation_with_their_own_token_but_never_replies(): void
+    public function test_administrator_reads_and_replies_in_any_conversation_and_the_lead_stays_with_its_attendant(): void
     {
         $manager = $this->user('Gestora', 'manager');
         $this->getJson(route('leads.chat.messages', $this->theirs))->assertUnauthorized();
@@ -157,12 +157,14 @@ class LeadChatTest extends TestCase
         foreach ([[$this->admin, 'token-do-admin'], [$manager, 'token-da-gestora']] as [$boss, $token]) {
             $this->actingAs($boss)->getJson(route('leads.chat.messages', $this->theirs))->assertOk()->assertJsonPath('messages.0.text', 'Mensagem do cliente');
             Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'Bearer '.$token));
-            $this->get(route('leads.chat.show', $this->theirs))->assertOk()->assertSee('Você está acompanhando esta conversa')->assertSee('Com Bia')->assertDontSee('data-chat-compose', false);
-            $this->postJson(route('leads.chat.send', $this->theirs), $this->payload())->assertForbidden();
-            // Lead da fila continua precisando ser assumido antes de abrir a conversa.
-            $this->getJson(route('leads.chat.messages', $this->queue))->assertForbidden();
+            // Pedido de 18/11: quem vê a conversa responde, com o próprio nome no Digisac, e o lead continua com a Bia.
+            $this->get(route('leads.chat.show', $this->theirs))->assertOk()->assertSee('Com Bia')->assertSee('data-chat-compose', false)->assertSee('Este lead está com Bia');
+            $this->postJson(route('leads.chat.send', $this->theirs), $this->payload())->assertOk();
+            Http::assertSent(fn ($request) => $request->method() === 'POST' && $request->hasHeader('Authorization', 'Bearer '.$token) && $request['userId'] === 'remote-'.$boss->id);
+            $this->assertSame($this->bia->id, $this->theirs->fresh()->handled_by);
+            // Lead disponível também abre a conversa sem assumir antes.
+            $this->getJson(route('leads.chat.messages', $this->queue))->assertOk();
         }
-        Http::assertNotSent(fn ($request) => $request->method() === 'POST');
         Http::assertNotSent(fn ($request) => $request->hasHeader('Authorization', 'Bearer token-da-bia'));
 
         // Gestão só enxerga a própria unidade.
@@ -187,17 +189,39 @@ class LeadChatTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_queue_requires_explicit_claim_and_two_people_cannot_claim_the_same_lead(): void
+    public function test_automatic_refresh_reuses_the_contact_so_new_messages_arrive_faster(): void
     {
-        $this->actingAs($this->ana)->get(route('leads.chat.show', $this->queue))->assertOk()->assertSee('Assumir e abrir conversa');
-        $this->getJson(route('leads.chat.messages', $this->queue))->assertForbidden();
-        $this->postJson(route('leads.chat.send', $this->queue), $this->payload())->assertForbidden();
+        $this->connection($this->ana);
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact()]]),
+            $this->base.'/api/v1/users*' => Http::response(['data' => []]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => [$this->message()]]),
+        ]);
+        $this->actingAs($this->ana)->getJson(route('leads.chat.messages', $this->mine))->assertOk();
+        $this->getJson(route('leads.chat.messages', ['lead' => $this->mine, 'poll' => 1]))->assertOk()->assertJsonPath('messages.0.text', 'Mensagem do cliente');
+        $this->postJson(route('leads.chat.send', $this->mine), $this->payload())->assertOk();
+        $this->assertSame(1, collect(Http::recorded())->filter(fn ($pair) => str_contains($pair[0]->url(), '/contacts'))->count(), 'O contato é procurado uma vez só.');
+    }
+
+    public function test_queue_lead_is_written_directly_and_the_first_message_claims_it(): void
+    {
+        // Pedido de 18/11: como no WhatsApp, o lead disponível abre com o campo de mensagem; quem escreve primeiro fica com ele.
+        $this->connection($this->admin, 'token-do-admin');
+        $this->ana->update(['digisac_user_id' => 'remote-ana']);
+        Http::fake([
+            $this->base.'/api/v1/contacts*' => Http::response(['data' => [$this->contact()]]),
+            $this->base.'/api/v1/messages*' => Http::response(['data' => []]),
+        ]);
+        $this->actingAs($this->ana)->get(route('leads.chat.show', $this->queue))->assertOk()->assertSee('data-chat-compose', false)->assertSee('ao enviar a primeira mensagem, ele fica com você');
+        $this->getJson(route('leads.chat.messages', $this->queue))->assertOk();
         $this->assertNull($this->queue->fresh()->handled_by);
-        $this->post(route('leads.chat.claim', $this->queue))->assertRedirect(route('leads.chat.show', $this->queue));
+        $this->postJson(route('leads.chat.send', $this->queue), $this->payload())->assertOk();
         $this->assertSame($this->ana->id, $this->queue->fresh()->handled_by);
-        $this->actingAs($this->bia)->post(route('leads.chat.claim', $this->queue))->assertForbidden();
+        $this->assertSame('contacted', $this->queue->fresh()->status);
+        // Quem chegou depois já não vê o lead: nem escreve nem assume.
+        $this->actingAs($this->bia)->postJson(route('leads.chat.send', $this->queue), $this->payload())->assertForbidden();
+        $this->post(route('leads.chat.claim', $this->queue))->assertForbidden();
         $this->assertSame($this->ana->id, $this->queue->fresh()->handled_by);
-        Http::assertNothingSent();
     }
 
     public function test_history_is_filtered_in_both_directions_without_exposing_raw_api_data(): void

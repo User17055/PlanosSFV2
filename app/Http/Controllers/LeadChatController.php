@@ -21,11 +21,17 @@ class LeadChatController extends Controller
         abort_unless(Lead::whereKey($lead->id)->where('handled_by', $request->user()->id)->exists(), 403, 'Assuma o lead disponível para abrir a conversa. Leads de outras pessoas não podem ser acessados.');
     }
 
-    /** Ler é dos administradores e do atendente do lead; responder fica só com o atendente (owned). Lead da fila precisa ser assumido antes. */
+    /** Ler e responder é de quem vê o lead: o seu, um disponível e, na gestão ou com cargo de "todas as conversas", o de qualquer um (pedido de 18/11). */
     private function readable(Request $request, Lead $lead, AccessService $access): void
     {
         $access->franchise($request->user(), (int) $lead->originating_franchise_id);
-        abort_unless(Lead::visibleTo($request->user())->whereKey($lead->id)->whereNotNull('handled_by')->exists(), 403, 'Assuma o lead disponível para abrir a conversa. Leads de outras pessoas não podem ser acessados.');
+        abort_unless(Lead::visibleTo($request->user())->whereKey($lead->id)->exists(), 403, 'Este lead está com outra pessoa. Leads de outras pessoas não podem ser acessados.');
+    }
+
+    /** O id do contato no Digisac não muda: guardado, a atualização automática e o envio fazem uma consulta a menos. */
+    private function contactKey(DigisacConnection $connection, string $phone): string
+    {
+        return 'digisac-contact:'.$connection->id.':'.$phone;
     }
 
     /** A conexão da pessoa; sem ela, a do administrador central, para a equipe atender com um token só. */
@@ -90,14 +96,18 @@ class LeadChatController extends Controller
     public function messages(Request $request, Lead $lead, AccessService $access, DigisacClient $client, LeadPhotoSync $photos)
     {
         $this->readable($request, $lead, $access);
-        $data = $request->validate(['page' => 'nullable|integer|min:1|max:10000']);
+        $data = $request->validate(['page' => 'nullable|integer|min:1|max:10000', 'poll' => 'nullable|boolean']);
         $connection = $this->connection($request);
         $phone = DigisacClient::phone($lead->phone);
         abort_unless($phone, 422, 'O lead precisa de um telefone válido para conversar.');
-        $contact = $client->contact($connection, $phone);
+        // Na atualização automática (a cada poucos segundos) o contato já achado é reaproveitado: a mensagem nova chega mais rápido.
+        $contactId = $request->boolean('poll') ? Cache::get($this->contactKey($connection, $phone)) : null;
+        $contact = $contactId ? null : $client->contact($connection, $phone);
+        if ($contact) Cache::put($this->contactKey($connection, $phone), (string) $contact['id'], now()->addMinutes(30));
+        $contactId ??= isset($contact['id']) ? (string) $contact['id'] : null;
         // Nomes da equipe como estão no Digisac; sem a lista, a conversa abre sem o nome de quem enviou.
-        $names = $contact ? rescue(fn () => Cache::remember('digisac-users-'.$connection->id, 600, fn () => $client->users($connection)), [], report: false) : [];
-        $result = $contact ? $client->messages($connection, (string) $contact['id'], (int) ($data['page'] ?? 1), $names)
+        $names = $contactId ? rescue(fn () => Cache::remember('digisac-users-'.$connection->id, 600, fn () => $client->users($connection)), [], report: false) : [];
+        $result = $contactId ? $client->messages($connection, $contactId, (int) ($data['page'] ?? 1), $names)
             : ['messages' => [], 'has_more' => false];
         // Abrir a conversa também atualiza a foto guardada, no máximo uma vez por dia. Falha na foto nunca derruba a conversa.
         if ($contact && (! $lead->photo_synced_at || $lead->photo_synced_at->lt(now()->subDay()))) rescue(fn () => $photos->store($lead, $contact), report: false);
@@ -128,7 +138,7 @@ class LeadChatController extends Controller
 
     public function send(Request $request, Lead $lead, AccessService $access, DigisacClient $client)
     {
-        $this->owned($request, $lead, $access);
+        $this->readable($request, $lead, $access);
         $data = $request->validate(['text' => 'nullable|string|max:4096|required_without:file', 'request_id' => 'required|uuid',
             'file' => 'nullable|array:data,name', 'file.data' => 'required_with:file|string|max:7000000', 'file.name' => 'required_with:file|string|max:120']);
         $text = trim($data['text'] ?? '');
@@ -142,14 +152,16 @@ class LeadChatController extends Controller
         abort_unless($phone, 422, 'O lead precisa de um telefone válido para conversar.');
         $key ='digisac:send:'.$request->user()->id.':'.$lead->id.':'.$data['request_id'];
         if (Cache::get($key) === 'sent') return response()->json(['sent' => true]);
-        $contact = $client->contact($connection, $phone);
-        $this->owned($request, $lead, $access);
+        // Lead disponível: quem manda a primeira mensagem fica com ele. Lead de outra pessoa continua com ela.
+        Lead::whereKey($lead->id)->whereNull('handled_by')->update(['handled_by' => $request->user()->id]);
+        $contactId = Cache::get($this->contactKey($connection, $phone)) ?? $client->contact($connection, $phone)['id'] ?? null;
+        $this->readable($request, $lead, $access);
         // Reserva antes de enviar. Uma falha de rede pode ocorrer depois da entrega remota.
         abort_unless(Cache::add($key, 'pending', now()->addDay()), 409, 'Este envio já foi iniciado. Confira a conversa antes de tentar novamente.');
-        $client->send($connection, isset($contact['id']) ? (string) $contact['id'] : null, $phone, $text, $file, $sender);
+        $client->send($connection, $contactId !== null ? (string) $contactId : null, $phone, $text, $file, $sender);
         Cache::put($key, 'sent', now()->addDay());
         $lead->refresh();
-        Lead::whereKey($lead->id)->where('handled_by', $request->user()->id)->update([
+        Lead::whereKey($lead->id)->update([
             'contacted_at' => $lead->contacted_at ?? now(), 'status' => $lead->status === 'new' ? 'contacted' : $lead->status,
         ]);
         return response()->json(['sent' => true]);

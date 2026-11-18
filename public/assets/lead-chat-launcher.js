@@ -26,6 +26,9 @@
     launcher.setAttribute('aria-expanded', 'true');
     notify();
   };
+  // A janela começa a carregar quando o mouse chega no botão (ou ele recebe foco/toque): no clique, ela já está pronta.
+  const warm = () => { if (!frame.hasAttribute('src')) frame.src = launcher.href; };
+  for (const type of ['pointerenter', 'focus', 'touchstart']) launcher.addEventListener(type, warm, { once: true, passive: true });
   const plainClick = event => !(event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey);
   launcher.addEventListener('click', event => {
     if (!plainClick(event)) return;

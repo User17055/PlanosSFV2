@@ -12,7 +12,6 @@
   const form = root.querySelector('[data-chat-compose]');
   const textarea = form?.querySelector('textarea');
   const sendButton = form?.querySelector('button[type="submit"]');
-  const sendLabel = form?.querySelector('[data-send-label]');
   const fileInput = form?.querySelector('[data-chat-file]');
   const attachBox = form?.querySelector('[data-chat-attachment]');
   const attachName = form?.querySelector('[data-chat-attachment-name]');
@@ -24,8 +23,15 @@
   const nodes = new Map();
   const MAX_FILE = 5 * 1024 * 1024;
   const mediaLabel = { image: 'Imagem', audio: 'Áudio', ptt: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha' };
-  let page = 1, loading = false, sending = false, stopped = false, timer;
-  let requestId = null, requestText = null, lastSendError = '', idleAt = Date.now();
+  let page = 1, loading = false, stopped = false, timer, queue = Promise.resolve();
+  let lastSendError = '', idleAt = Date.now();
+  // Como no WhatsApp: relógio enquanto sai, ✓ quando saiu, ! quando falhou.
+  const TICKS = {
+    sending: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.8V8l2.1 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    sent: '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.6l3 3 7-7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    failed: '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="currentColor"/><path d="M8 4.5v4.2M8 11.2v.1" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  };
+  const kindOf = file => /^(image|audio|video)\//.exec(file.type)?.[1] || 'document';
   let attachment = null, recorder = null, recordTimer = null, avatarUrl = '', atBottom = true;
   const paused = () => document.documentElement.dataset.chatPaused === 'true';
 
@@ -193,10 +199,24 @@
       bubble.append(text);
     }
     const time = document.createElement('small');
-    time.textContent = (date?.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) || '')
-      + (message.outgoing ? (message.sent ? ' ✓' : ' · Aguardando confirmação') : '');
-    if (message.outgoing) time.title = message.sent ? 'Enviada' : 'Aguardando confirmação';
+    time.textContent = date?.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }) || '';
+    if (message.outgoing) {
+      const state = message.local || (message.sent ? 'sent' : 'sending');
+      const tick = document.createElement('span');
+      tick.className = `chat-tick is-${state}`;
+      tick.innerHTML = TICKS[state];
+      time.title = { sending: 'Enviando', sent: 'Enviada', failed: 'Não enviada' }[state];
+      time.append(tick);
+    }
     bubble.append(time);
+    if (message.local === 'failed') {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'chat-retry';
+      retry.dataset.chatRetry = message.id;
+      retry.textContent = 'Não enviada · Tentar de novo';
+      bubble.append(retry);
+    }
     return bubble;
   }
 
@@ -219,7 +239,7 @@
         previousDate = day;
       }
       // Reaproveita o balão que não mudou: a foto não pisca e o áudio tocando não para a cada atualização.
-      const signature = [message.type, message.text, message.outgoing, message.sent, message.at, message.file ? message.file.name : '-', message.sender || ''].join('|');
+      const signature = [message.type, message.text, message.outgoing, message.sent, message.local || '', message.at, message.file ? message.file.name : '-', message.sender || ''].join('|');
       let bubble = nodes.get(message.id);
       if (!bubble || bubble.dataset.signature !== signature || bubble.dataset.stale) {
         bubble = bubbleFor(message, date);
@@ -238,7 +258,41 @@
 
   function schedule() {
     clearTimeout(timer);
-    if (!stopped && !paused()) timer = setTimeout(() => load(), 10000);
+    if (!stopped && !paused()) timer = setTimeout(() => load(), 4000);
+  }
+
+  // A mensagem que saiu daqui dá lugar à do Digisac assim que ela aparece (mesmo texto, ou o mesmo tipo de arquivo).
+  function settle(arrived) {
+    for (const [id, local] of messages) {
+      if (local.local !== 'sent') continue;
+      const twin = arrived.some(message => message.outgoing && (dateOf(message.at)?.getTime() || 0) >= local.at - 120000
+        && (local.type === 'chat' ? message.text.trim() === local.text : message.type === local.type || (local.type === 'audio' && message.type === 'ptt')));
+      if (twin || Date.now() - local.sentAt > 120000) {
+        if (local.file?.url) URL.revokeObjectURL(local.file.url);
+        messages.delete(id);
+      }
+    }
+  }
+
+  async function deliver(local) {
+    if (stopped) return;
+    local.local = 'sending';
+    render();
+    try {
+      const body = { text: local.text, request_id: local.requestId };
+      if (local.blob) body.file = { name: local.blob.name, data: await base64(local.blob) };
+      await api(root.dataset.sendUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      local.local = 'sent';
+      local.sentAt = Date.now();
+      lastSendError = '';
+      root.querySelector('[data-chat-claim-note]')?.remove();
+    } catch (failure) {
+      local.local = 'failed';
+      lastSendError = failure.message;
+      showError(failure.message);
+    }
+    render();
+    if (local.local === 'sent' && !stopped) load(false, true);
   }
 
   async function load(previous = false, manual = false) {
@@ -254,15 +308,17 @@
     try {
       const url = new URL(root.dataset.messagesUrl, location.href);
       url.searchParams.set('page', previous ? page + 1 : 1);
+      if (!previous && !manual) url.searchParams.set('poll', '1');
       const data = await api(url);
       if (stopped || paused()) return;
       for (const message of data.messages) if (message.id) messages.set(message.id, message);
+      if (!previous) settle(data.messages);
       if (previous) page++;
       if (previous || page === 1) older.hidden = !data.has_more;
       render();
       showAvatar(data.avatar);
       status.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-      if (!sending && !lastSendError) showError('');
+      if (!lastSendError) showError('');
     } catch (failure) {
       showError(failure.message);
       if (!stopped) status.textContent = 'Falha na atualização';
@@ -342,7 +398,7 @@
 
   recordButton?.addEventListener('click', async () => {
     if (recorder) { await stopRecording(true); textarea.focus(); return; }
-    if (sending || stopped) return;
+    if (stopped) return;
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -390,6 +446,10 @@
   history.addEventListener('scroll', () => { atBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 100; }, { passive: true });
   refresh.addEventListener('click', () => { idleAt = Date.now(); load(false, true); });
   older.addEventListener('click', () => load(true, true));
+  list.addEventListener('click', event => {
+    const local = messages.get(event.target.closest('[data-chat-retry]')?.dataset.chatRetry);
+    if (local) { showError(''); queue = queue.then(() => deliver(local)); }
+  });
   root.addEventListener('pointerdown', () => { idleAt = Date.now(); });
   root.addEventListener('keydown', () => { idleAt = Date.now(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { idleAt = Date.now(); load(); } });
@@ -409,7 +469,7 @@
   textarea?.addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
-      if (!sending && !stopped) form.requestSubmit();
+      if (!stopped) form.requestSubmit();
     }
   });
   form?.addEventListener('submit', async event => {
@@ -417,40 +477,25 @@
     if (recorder) await stopRecording(true);
     const text = textarea.value.trim();
     const file = attachment;
-    if (sending || stopped || (!text && !file)) return;
-    sending = true;
-    for (const control of [sendButton, fileInput, recordButton]) if (control) control.disabled = true;
-    textarea.readOnly = true;
-    sendLabel.textContent = 'Enviando…';
-    lastSendError = '';
+    if (stopped || (!text && !file)) return;
+    // Como no WhatsApp: a mensagem aparece na hora e o campo fica livre para a próxima; os envios seguem em fila, um de cada vez.
+    textarea.value = '';
+    setAttachment(null);
+    fitTextarea();
     showError('');
-    // Mantém a chave após falhas de rede: clicar novamente não duplica o mesmo envio.
-    const key = text + '|' + (file ? `${file.name}:${file.size}:${file.lastModified}` : '');
-    if (!requestId || requestText !== key) { requestId = crypto.randomUUID(); requestText = key; }
-    try {
-      const body = { text, request_id: requestId };
-      if (file) body.file = { name: file.name, data: await base64(file) };
-      await api(root.dataset.sendUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      textarea.value = '';
-      setAttachment(null);
-      fitTextarea();
-      requestId = requestText = null;
-      status.textContent = 'Mensagem enviada. Atualizando conversa…';
-    } catch (failure) {
-      lastSendError = failure.message;
-      showError(failure.message);
-    } finally {
-      sending = false;
-      for (const control of [sendButton, fileInput, recordButton]) if (control) control.disabled = stopped;
-      textarea.readOnly = false;
-      sendLabel.textContent = 'Enviar';
-      if (!stopped) textarea.focus();
-    }
-    if (!textarea.value && !attachment && !stopped) await load(false, true);
+    lastSendError = '';
+    const local = { id: 'local-' + crypto.randomUUID(), requestId: crypto.randomUUID(), local: 'sending', outgoing: true, at: Date.now(), text,
+      type: file ? kindOf(file) : 'chat', blob: file, file: file ? { url: URL.createObjectURL(file), name: file.name } : null };
+    messages.set(local.id, local);
+    atBottom = true;
+    render();
+    history.scrollTop = history.scrollHeight;
+    textarea.focus();
+    queue = queue.then(() => deliver(local));
   });
   window.addEventListener('pagehide', () => { freeze(); });
   window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
-  load();
+  load(false, true);
 })();
 
 // A lista de conversas acompanha as mensagens que chegam (o Digisac é lido a cada minuto), sem recarregar a página.
