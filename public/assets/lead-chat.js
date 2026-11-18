@@ -25,11 +25,11 @@
   const mediaLabel = { image: 'Imagem', audio: 'Áudio', ptt: 'Áudio', video: 'Vídeo', document: 'Documento', sticker: 'Figurinha' };
   let page = 1, loading = false, stopped = false, timer, queue = Promise.resolve();
   let lastSendError = '', idleAt = Date.now();
-  // Como no WhatsApp: relógio enquanto sai, ✓ quando saiu, ! quando falhou.
+  // Como no WhatsApp: relógio enquanto sai, visto quando saiu, alerta quando falhou. Ícones do Boxicons 2.1.4 (MIT), sem alteração.
   const TICKS = {
-    sending: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.8V8l2.1 1.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
-    sent: '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.6l3 3 7-7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    failed: '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="currentColor"/><path d="M8 4.5v4.2M8 11.2v.1" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    sending: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M13 7h-2v5.414l3.293 3.293 1.414-1.414L13 11.586z"/></svg>',
+    sent: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9.707-9.707-1.414-1.414z"/></svg>',
+    failed: '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M11.953 2C6.465 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.493 2 11.953 2zM13 17h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
   };
   const kindOf = file => /^(image|audio|video)\//.exec(file.type)?.[1] || 'document';
   let attachment = null, recorder = null, recordTimer = null, avatarUrl = '', atBottom = true;
@@ -120,7 +120,7 @@
   const viewer = document.createElement('dialog');
   viewer.className = 'chat-viewer';
   viewer.setAttribute('aria-label', 'Imagem da conversa');
-  viewer.innerHTML = '<button type="button" class="chat-viewer-close" aria-label="Fechar imagem">×</button><img alt="">';
+  viewer.innerHTML = '<button type="button" class="chat-viewer-close" aria-label="Fechar imagem"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="m16.192 6.344-4.243 4.242-4.242-4.242-1.414 1.414L10.535 12l-4.242 4.242 1.414 1.414 4.242-4.242 4.243 4.242 1.414-1.414L13.364 12l4.242-4.242z"/></svg></button><img alt="">';
   document.body.append(viewer);
   const viewerImage = viewer.querySelector('img');
   viewer.addEventListener('click', event => { if (event.target !== viewerImage) viewer.close(); });
