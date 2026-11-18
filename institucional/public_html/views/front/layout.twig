@@ -237,7 +237,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <input type="text" id="nome" required><br>
 
     <label for="telefone" style="font-size: 14px;">Telefone:</label><br>
-    <input type="tel" id="telefone" pattern="^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$" placeholder="(99) 99999-9999" required><br>
+    <input type="tel" id="telefone" autocomplete="tel-national" placeholder="(99) 99999-9999" required><br>
 
     <label for="interesse" style="font-size: 14px;">Tema de Interesse:</label><br>
     <select id="interesse" required>
@@ -270,18 +270,65 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 </footer>
 <script>
+  // Só os dígitos com DDD, sem o +55 e sem o 0 da operadora. Doze ou treze dígitos começando com 55 só podem ser o código do país.
+  function digitosTelefone(valor) {
+    let digitos = valor.replace(/\D/g, "");
+    if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) digitos = digitos.slice(2);
+    if ((digitos.length === 11 || digitos.length === 12) && digitos.startsWith("0")) digitos = digitos.slice(1);
+    return digitos;
+  }
+
+  function formatarTelefone(digitos) {
+    if (digitos.length <= 2) return digitos ? "(" + digitos : "";
+    const ddd = "(" + digitos.slice(0, 2) + ") ";
+    const resto = digitos.slice(2);
+    if (resto.length <= 4) return ddd + resto;
+    const corte = resto.length === 9 ? 5 : 4;
+    return ddd + resto.slice(0, corte) + "-" + resto.slice(corte);
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("form-whats");
+    const campoTelefone = document.getElementById("telefone");
+
+    // Vale o mesmo que o sistema de leads aceita: DDD + número, escrito do jeito que a pessoa quiser.
+    function conferirTelefone() {
+      const tamanho = digitosTelefone(campoTelefone.value).length;
+      campoTelefone.setCustomValidity(campoTelefone.value.trim() && tamanho !== 10 && tamanho !== 11 ? "Informe o celular com DDD, por exemplo (18) 99999-9999." : "");
+    }
+
+    // A máscara só age enquanto a pessoa digita no fim do campo; número colado com +55 se arruma ao sair do campo.
+    campoTelefone.addEventListener("input", function (event) {
+      const valor = campoTelefone.value;
+      const noFim = campoTelefone.selectionStart === valor.length;
+      if (noFim && !valor.includes("+") && !(event.inputType || "").startsWith("delete")) {
+        const digitos = valor.replace(/\D/g, "");
+        if (digitos.length <= 11) campoTelefone.value = formatarTelefone(digitos);
+      }
+      conferirTelefone();
+    });
+
+    campoTelefone.addEventListener("blur", function () {
+      const digitos = digitosTelefone(campoTelefone.value);
+      if (digitos.length === 10 || digitos.length === 11) campoTelefone.value = formatarTelefone(digitos);
+      conferirTelefone();
+    });
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
 
       const nome = document.getElementById("nome").value.trim();
-      const telefone = document.getElementById("telefone").value.trim();
+      const telefone = formatarTelefone(digitosTelefone(campoTelefone.value));
       const interesse = document.getElementById("interesse").value;
 
       if (!nome || !telefone || !interesse) {
         alert("Preencha todos os campos e selecione um tema de interesse.");
+        return;
+      }
+      const tamanho = digitosTelefone(campoTelefone.value).length;
+      if (tamanho !== 10 && tamanho !== 11) {
+        conferirTelefone();
+        campoTelefone.reportValidity();
         return;
       }
 
