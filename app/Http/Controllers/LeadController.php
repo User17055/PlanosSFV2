@@ -172,7 +172,7 @@ class LeadController extends Controller
         $status = $input['situacao'] ?? null;
         $q = trim((string) ($input['q'] ?? ''));
         $user = $request->user();
-        $seesAll = in_array($user->role, Lead::SEE_ALL, true);
+        $seesAll = $user->seesAllLeads();
         $query = $access->scope(Lead::visibleTo($user), $user)->with('handler');
         if ($q !== '') {
             $like = '%'.addcslashes($q, '%_\\').'%';
@@ -215,7 +215,7 @@ class LeadController extends Controller
         $dimensions = $this->dimensions();
         $chosen = array_filter(Arr::only($input, array_keys($dimensions)));
         $matches = $this->matcher($chosen);
-        $seesAll = in_array($request->user()->role, Lead::SEE_ALL, true);
+        $seesAll = $request->user()->seesAllLeads();
         $real = fn () => $access->scope(Lead::visibleTo($request->user()), $request->user())->where('source', '!=', 'teste')->with('handler:id,name');
         // shortcut: soma os leads do período em memória; troque por consultas agrupadas se um período passar de ~20 mil leads.
         $between = fn ($from, $to) => $real()->whereBetween('created_at', [$from->copy()->utc(), $to->copy()->endOfDay()->utc()])

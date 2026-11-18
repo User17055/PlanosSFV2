@@ -20,6 +20,8 @@ class JobRole extends DomainModel
         'dashboard.general' => ['Ver também os planos e pacotes gerais (carteira toda, com a base antiga)', ['dashboard']],
         'leads.view' => ['Ver lista, painel e chat dos seus leads', ['leads.index', 'leads.dashboard', 'leads.chat.index', 'leads.chat.show', 'leads.chat.messages', 'leads.chat.photo', 'leads.chat.connection', 'leads.chat.connection.save', 'leads.chat.connection.destroy']],
         'leads.update' => ['Mudar a situação do lead e atender pelo chat', ['leads.update', 'leads.chat.claim', 'leads.chat.send']],
+        // Como a gestão: a lista e o chat com os leads de todos (aba Todas). Responder continua só com quem atende o lead.
+        'leads.all' => ['Ver os leads e as conversas de toda a equipe (aba Todas do chat)', ['leads.index']],
         'leads.assign' => ['Escolher com quem o lead fica', ['leads.assign']],
         'leads.destroy' => ['Apagar lead de teste', ['leads.destroy']],
         'customers.view' => ['Ver tutores e pets', ['customers.index', 'customers.show', 'pets.photo']],

@@ -89,7 +89,7 @@ class Lead extends DomainModel
     /** Fora os administradores, cada pessoa vê os seus leads e a fila: os que ainda não são de ninguém. */
     public function scopeVisibleTo($query, User $user)
     {
-        return in_array($user->role, self::SEE_ALL, true) ? $query : $query->where(fn ($w) => $w->whereNull('handled_by')->orWhere('handled_by', $user->id));
+        return $user->seesAllLeads() ? $query : $query->where(fn ($w) => $w->whereNull('handled_by')->orWhere('handled_by', $user->id));
     }
 
     /** O Pluga pode mandar o id numérico da campanha, que não diz nada na tela; o fim do número ainda separa uma campanha da outra. */

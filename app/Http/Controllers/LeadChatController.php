@@ -49,7 +49,7 @@ class LeadChatController extends Controller
             $access->franchise($request->user(), (int) $lead->originating_franchise_id);
         }
         $queue = $request->boolean('fila');
-        $seesAll = in_array($request->user()->role, Lead::SEE_ALL, true);
+        $seesAll = $request->user()->seesAllLeads();
         $all = $seesAll && ! $queue && $request->boolean('todas');
         $query = $this->available($request, $access)->with('handler:id,name')
             ->when($queue, fn ($q) => $q->whereNull('handled_by'))

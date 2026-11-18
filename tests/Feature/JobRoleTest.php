@@ -172,6 +172,23 @@ class JobRoleTest extends TestCase
         $this->actingAs($marketing->fresh())->get(route('dashboard'))->assertSee('Planos gerais');
     }
 
+    public function test_role_can_see_every_conversation_but_never_the_old_base(): void
+    {
+        $this->saveRole(['dashboard.view', 'leads.view', 'leads.update', 'leads.all', 'proposals.view'], 'operator', 'Marketing')->assertRedirect(route('employees.roles.index'));
+        $this->saveEmployee(['job_role_id' => JobRole::firstWhere('name', 'Marketing')->id])->assertRedirect(route('employees.index'));
+        $marketing = User::firstWhere('email', 'rita@example.test');
+        \App\Models\Lead::create(['originating_franchise_id' => $this->unit->id, 'name' => 'Lead Da Vendedora', 'phone' => '5518999990000', 'campaign' => 'Outubro', 'handled_by' => $this->admin->id]);
+        $this->actingAs($marketing)->get(route('leads.chat.index', ['todas' => 1]))->assertOk()->assertSee('Lead Da Vendedora')->assertSee('Todas');
+        $this->actingAs($marketing)->get(route('leads.index'))->assertSee('Lead Da Vendedora')->assertDontSee('lead-assign', false);
+        // Sem os planos gerais, contrato da base antiga fica fechado mesmo pelo endereço.
+        try {
+            app(\App\Services\AccessService::class)->record($marketing, (new \App\Models\Proposal)->forceFill(['channel' => 'legacy']));
+            $this->fail('Contrato da base antiga abriu para quem só vê os planos novos.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
+    }
+
     public function test_only_central_admin_manages_roles_and_the_screens_open(): void
     {
         $this->actingAs($this->admin)->get(route('employees.roles.index'))->assertOk()->assertSee('Nenhum cargo criado');

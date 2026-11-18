@@ -50,6 +50,9 @@ class AccessService
             abort_unless((int) $record->customer_id === (int) $user->customer_id, 403, 'Registro de outro titular.');
             return;
         }
+        // Quem só vê os planos novos não abre contrato da base antiga, nem digitando o número no endereço.
+        $legacy = ($record instanceof \App\Models\Proposal && $record->channel === 'legacy') || ($record instanceof \App\Models\Subscription && $record->imported_at);
+        abort_if($legacy && ! $user->seesGeneralPlans(), 403, 'Contrato da base antiga.');
         if ($user->role !== 'central_admin') {
             $id = $record->originating_franchise_id ?? $record->servicing_franchise_id;
             abort_unless(in_array((int) $id, $this->franchiseIds($user), true), 403, 'Registro de outra unidade.');
