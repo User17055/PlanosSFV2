@@ -81,8 +81,6 @@
     const previous = lastLead;
     if (html !== lastHtml) {
       lastHtml = html;
-      const nav = doc.querySelector('.nav-shortcuts');
-      if (nav) document.querySelector('.nav-shortcuts')?.replaceWith(nav);
       swap(fresh);
     }
     // A bolinha do botão de chat acompanha as mensagens novas de clientes sem precisar recarregar, mesmo sem lead novo na lista.

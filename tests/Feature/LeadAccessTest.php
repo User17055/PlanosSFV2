@@ -58,7 +58,7 @@ class LeadAccessTest extends TestCase
         $this->lead();
         $this->lead(['name' => 'João Souza', 'external_id' => 'x2', 'status' => 'contacted']);
         $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('Maria da Silva')->assertDontSee('João Souza')->assertSee('class="dash-lead"', false);
-        $this->actingAs($this->attendant)->get(route('leads.index'))->assertOk()->assertSee('nav-shortcuts', false)->assertSee('<b class="nav-count">1</b>', false)->assertDontSee('Falta pagar');
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertOk()->assertDontSee('nav-shortcuts', false)->assertDontSee('Falta pagar');
     }
 
     public function test_lead_dashboard_shows_origin_and_conversion_without_test_leads(): void
@@ -78,9 +78,9 @@ class LeadAccessTest extends TestCase
     {
         $this->lead(['name' => 'Antigo Novo', 'external_id' => 'a1']);
         $this->lead(['name' => 'Recente Chamado', 'external_id' => 'a2', 'status' => 'contacted']);
-        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSeeInOrder(['Antigo Novo', 'Recente Chamado'])->assertSee('<b class="nav-count">1</b>', false);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSeeInOrder(['Antigo Novo', 'Recente Chamado']);
         $this->lead(['name' => 'Chegou Agora', 'external_id' => 'a3']);
-        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('<b class="nav-count">2</b>', false);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('Chegou Agora');
     }
 
     public function test_panel_lists_who_waits_longest_and_compares_with_the_previous_period(): void
@@ -183,7 +183,7 @@ class LeadAccessTest extends TestCase
     {
         $bia = $this->teammate('Bia Vendas');
         $lead = $this->lead(['name' => 'Lead Da Fila', 'external_id' => 'q1']);
-        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('<b class="nav-count">1</b>', false);
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertSee('Lead Da Fila');
 
         // Olhar ou devolver para "Esperando" não pega o lead.
         $this->actingAs($bia)->post(route('leads.update', $lead), ['status' => 'new'])->assertRedirect();
