@@ -39,6 +39,23 @@ return [
     'leads' => [
         'token' => env('LEADS_WEBHOOK_TOKEN'),
         'franchise_code' => env('LEADS_FRANCHISE_CODE', 'CENTRAL'),
+        // Aviso de lead novo no celular pelo ntfy (app gratuito). Sem tópico, nada é enviado. O tópico funciona como senha:
+        // quem o conhece lê os avisos, por isso fica só no .env.
+        'alert' => [
+            'server' => env('LEADS_NTFY_SERVER', 'https://ntfy.sh'),
+            'topic' => env('LEADS_NTFY_TOPIC'),
+            // Horas de aviso por dia da semana (1 = segunda … 7 = domingo), no horário de São Paulo, como [início, fim).
+            // A noite das 18h às 5h fica 18–24 num dia e 0–5 no seguinte.
+            'hours' => [
+                1 => [[0, 5], [11, 17], [18, 24]],
+                2 => [[0, 5], [11, 17], [18, 24]],
+                3 => [[0, 5], [11, 17], [18, 24]],
+                4 => [[0, 5], [11, 17], [18, 24]],
+                5 => [[0, 5], [11, 17], [18, 24]],
+                6 => [[0, 5], [14, 24]],
+                7 => [[0, 24]],
+            ],
+        ],
     ],
 
 ];

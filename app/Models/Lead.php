@@ -63,6 +63,8 @@ class Lead extends DomainModel
     protected static function booted(): void
     {
         static::deleted(fn (Lead $lead) => $lead->photo_path && \Illuminate\Support\Facades\Storage::disk('local')->delete($lead->photo_path));
+        // Avisa no celular depois de responder: o Pluga e o site não esperam o ntfy.
+        static::created(fn (Lead $lead) => \Illuminate\Support\defer(fn () => \App\Services\Integrations\LeadAlert::send($lead)));
     }
 
     /** A data da consulta vai no endereço para o navegador trocar a foto quando ela muda. */

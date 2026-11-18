@@ -21,7 +21,7 @@ Formulário no Facebook → Automação no Pluga → POST /webhooks/leads/{token
                                Painel em /leads/painel
 ```
 
-O recebimento é síncrono: não usa fila, `event` nem observer. A lista aberta busca novidades a cada 20 segundos e pausa após 1 hora sem uso. Não há aviso por e-mail nem push, então o lead novo só aparece para quem está com o sistema aberto.
+O recebimento é síncrono e não usa fila. A lista aberta busca novidades a cada 20 segundos e pausa após 1 hora sem uso. Fora dela, o único aviso é o do celular pelo ntfy, descrito em "Aviso de lead novo no celular".
 
 ## Configuração no Pluga
 
@@ -138,6 +138,20 @@ A busca da lista procura em todos os leads, por nome, telefone ou e-mail, mesmo 
 O botão verde do site institucional (`views/front/layout.twig`) abre um formulário com nome, telefone e tema. Quando o tema é "Plano de Saúde", o navegador avisa `POST /whatsapp/lead` sem atrasar a abertura do WhatsApp; os outros temas não viram lead. O site lê a origem do cookie `sf_origem` (preenchido por `js/origem.js` a partir de `gclid`, `utm_source` ou do site de onde a pessoa veio) e chama `POST /api/site/v1/leads` com a chave do site, limitado a 5 envios por minuto por IP.
 
 A linha mostra a logo do Google, do Instagram ou do Facebook conforme o cookie. Sem essa informação, como em quem digitou o endereço, o lead conta como Google orgânico, por decisão do negócio; por isso, esse número pode incluir visitas que não vieram do Google. Se a gestão estiver fora do ar, a conversa abre mesmo assim e o site registra só o código do erro no log, sem dados da pessoa.
+
+## Aviso de lead novo no celular
+
+Cada lead novo, do anúncio ou do site, pode gerar um aviso no celular e no computador pelo [ntfy](https://ntfy.sh), um aplicativo gratuito para Android e iPhone que também funciona no navegador. O aviso só avisa: não escolhe responsável nem muda a situação do lead.
+
+| Item | Valor |
+| --- | --- |
+| Ligar | `LEADS_NTFY_TOPIC` no `.env` com um nome difícil de adivinhar; sem ele, nada é enviado |
+| Servidor | `LEADS_NTFY_SERVER`, padrão `https://ntfy.sh` (grátis, sem conta, até 250 avisos por dia) |
+| Horários | `services.leads.alert.hours` em `config/services.php`, por dia da semana, no horário de São Paulo. Hoje: segunda a sexta das 11h às 17h e das 18h às 5h; sábado a partir das 14h; domingo o dia todo |
+| Conteúdo | Título "Lead novo · Site" ou "Lead novo · Anúncio" ("Lead de teste" para o teste do Facebook), número do lead, rede e campanha. Tocar abre `/leads` |
+| Quem recebe | Quem assinar o tópico no aplicativo |
+
+O nome do tópico funciona como senha: quem o conhece lê os avisos. Por isso o aviso não leva nome, telefone, e-mail nem pet, e o tópico fica só no `.env`. O envio acontece depois da resposta ao Pluga ou ao site, com limite de 5 segundos; se o ntfy falhar, o lead fica gravado e o log registra só o número do lead e o tipo do erro. Reenvio duplicado não gera aviso. Código em `app/Services/Integrations/LeadAlert.php` e testes em `tests/Feature/LeadAlertTest.php`.
 
 ## Acesso
 
