@@ -16,6 +16,8 @@ class JobRole extends DomainModel
     public const OPTIONS = [
         'dashboard.view' => ['Ver painel, com valores de vendas e recebimentos', ['dashboard', 'dashboard.map', 'dashboard.neighborhoods', 'simplesvet.retry']],
         'dashboard.export' => ['Exportar resumo', ['dashboard.export']],
+        // Sem esta opção, a visão geral mostra só os planos e pacotes novos (vendidos pelo sistema). A rota é a do painel, que continua de dashboard.view.
+        'dashboard.general' => ['Ver também os planos e pacotes gerais (carteira toda, com a base antiga)', ['dashboard']],
         'leads.view' => ['Ver lista, painel e chat dos seus leads', ['leads.index', 'leads.dashboard', 'leads.chat.index', 'leads.chat.show', 'leads.chat.messages', 'leads.chat.photo', 'leads.chat.connection', 'leads.chat.connection.save', 'leads.chat.connection.destroy']],
         'leads.update' => ['Mudar a situação do lead e atender pelo chat', ['leads.update', 'leads.chat.claim', 'leads.chat.send']],
         'leads.assign' => ['Escolher com quem o lead fica', ['leads.assign']],
@@ -82,7 +84,8 @@ class JobRole extends DomainModel
 
     public static function optionOf(string $route): ?string
     {
-        self::$optionByRoute ??= collect(self::OPTIONS)->flatMap(fn ($option, $key) => array_fill_keys($option[1], $key))->all();
+        // A rota fica com a primeira opção que a cita: as seguintes só a usam para saber os níveis (ex.: dashboard.general).
+        self::$optionByRoute ??= collect(self::OPTIONS)->reduce(fn ($map, $option, $key) => $map + array_fill_keys($option[1], $key), []);
         return self::$optionByRoute[$route] ?? null;
     }
 

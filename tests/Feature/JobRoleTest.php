@@ -154,6 +154,24 @@ class JobRoleTest extends TestCase
         $this->assertDatabaseMissing('job_roles', ['id' => $role->id]);
     }
 
+    public function test_role_without_general_plans_sees_only_new_plans_on_the_dashboard(): void
+    {
+        $this->saveRole(['dashboard.view', 'leads.view', 'leads.update', 'proposals.view'], 'operator', 'Marketing')->assertRedirect(route('employees.roles.index'));
+        $this->saveEmployee(['job_role_id' => JobRole::firstWhere('name', 'Marketing')->id])->assertRedirect(route('employees.index'));
+        $marketing = User::firstWhere('email', 'rita@example.test');
+        $this->assertSame('operator', $marketing->role);
+        $this->assertSame('dashboard.view', JobRole::optionOf('dashboard'), 'A opção dos planos gerais não pode tomar a rota do painel.');
+        // Pedir os planos gerais pelo endereço não adianta: o filtro volta para os novos.
+        $this->actingAs($marketing)->get(route('dashboard', ['planos' => 'gerais|all']))->assertOk()
+            ->assertSee('Pacotes novos')->assertDontSee('Planos gerais')->assertSee('<option value="novos|all" selected', false);
+        $this->actingAs($marketing)->get(route('proposals.index'))->assertOk();
+        $this->actingAs($marketing)->get(route('leads.chat.index'))->assertOk();
+        $this->actingAs($marketing)->get(route('customers.index'))->assertRedirect();
+        // Com a opção, o mesmo cargo volta a ver os gerais.
+        $this->saveRole(['dashboard.view', 'dashboard.general'], 'operator', 'Marketing', JobRole::firstWhere('name', 'Marketing'))->assertRedirect();
+        $this->actingAs($marketing->fresh())->get(route('dashboard'))->assertSee('Planos gerais');
+    }
+
     public function test_only_central_admin_manages_roles_and_the_screens_open(): void
     {
         $this->actingAs($this->admin)->get(route('employees.roles.index'))->assertOk()->assertSee('Nenhum cargo criado');

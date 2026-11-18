@@ -51,6 +51,12 @@ class User extends Authenticatable
         return ! isset(self::AREAS[$area]) || $this->areas === null || in_array($area, $this->areas, true);
     }
 
+    /** Planos gerais (carteira toda, com a base antiga) na visão geral: sem cargo, todos veem; com cargo, só se ele liberar. */
+    public function seesGeneralPlans(): bool
+    {
+        return ! $this->job_role_id || (bool) $this->jobRole?->allows('dashboard.general');
+    }
+
     public function jobRole()
     {
         return $this->belongsTo(JobRole::class);
