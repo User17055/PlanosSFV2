@@ -5,7 +5,7 @@
 $topics=collect(\App\Models\JobRole::OPTIONS)->map(fn($option,$key)=>['key'=>$key,'label'=>$option[0],'roles'=>\App\Models\JobRole::rolesOf($key)])->groupBy(fn($option)=>explode('.',$option['key'])[0]);
 $checked=old('permissions',$jobRole->permissions ?? []);
 @endphp
-<a class="back-link" href="{{ route('employees.roles.index') }}">← Cargos e permissões</a>
+<a class="back-link" href="{{ route('employees.roles.index') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Cargos e permissões</a>
 <div class="page-heading"><div><h1>{{ $jobRole->exists?'Editar cargo':'Novo cargo' }}</h1></div></div>
 <form method="POST" action="{{ $jobRole->exists?route('employees.roles.update',$jobRole):route('employees.roles.store') }}" class="form-layout">@csrf
 <section class="card form-card"><h2>Dados do cargo</h2><div class="form-grid">

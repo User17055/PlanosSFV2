@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Modelo do contrato')
 @section('content')
-<a class="back-link" href="{{ route('catalog.index') }}">← Planos e pacotes</a>
+<a class="back-link" href="{{ route('catalog.index') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Planos e pacotes</a>
 <div class="page-heading"><div><h1>Modelo do contrato</h1><p>{{ $version->name }} · versão {{ $version->version }}</p></div></div>
 <p>Este é o texto utilizado na geração do contrato. Os campos entre chaves recebem os dados do tutor e do pet de cada contratação, inclusive na identificação da assinatura.</p>
 @if($version->contract_layout)

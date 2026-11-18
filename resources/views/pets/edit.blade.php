@@ -2,7 +2,7 @@
 @section('title','Atualizar pet')
 @section('content')
 @php $isCustomer=auth()->user()->role==='customer'; $returnUrl=$isCustomer?route('portal'):route('customers.show',$pet->customer_id); @endphp
-@unless($isCustomer)<a class="back-link" href="{{ $returnUrl }}">← Voltar ao perfil</a>@endunless
+@unless($isCustomer)<a class="back-link" href="{{ $returnUrl }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Voltar ao perfil</a>@endunless
 <div class="page-heading"><div><h1>Dados de {{ $pet->name }}</h1></div></div>
 <form class="form-layout form-layout-focused" method="POST" action="{{ route('pets.update',$pet) }}">
 @csrf

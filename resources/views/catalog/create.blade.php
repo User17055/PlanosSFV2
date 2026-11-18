@@ -6,7 +6,7 @@ $editing=isset($version);
 $benefits=old('benefits',$editing ? $version->benefitRules->map(fn($rule)=>$rule->only(['code','name','waiting_days','quantity_limit','period_type']))->toArray() : [['code'=>'','name'=>'','waiting_days'=>0,'quantity_limit'=>'','period_type'=>'contract_year']]);
 $selectedSpecies=old('species',$editing?$version->species:['dog','cat']);
 @endphp
-<a class="back-link" href="{{ route('catalog.index') }}">← Planos e pacotes</a>
+<a class="back-link" href="{{ route('catalog.index') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Planos e pacotes</a>
 <div class="page-heading"><div><h1>{{ $editing?'Editar plano ou pacote':'Novo plano ou pacote' }}</h1><p>Preencha os dados, o preço e as coberturas abaixo.</p></div></div>
 <form method="POST" action="{{ $editing?route('catalog.update',$version):route('catalog.store') }}" class="form-layout">
 @csrf

@@ -30,11 +30,11 @@
             @if($petContracts->isNotEmpty())
             <div class="workspace-pet-summary"><strong>Planos e pacotes deste pet</strong>
                 @foreach($liveContracts->where('pet_id',$pet->id) as $petContract)<div><a class="text-link" href="#assinatura-{{ $petContract->id }}">{{ $petContract->productVersion->name }} · {{ $petContract->category==='package'?'Pacote':'Plano de Saúde' }}</a> @include('components.status',['status'=>$petContract->status])</div>@endforeach
-                @if($petContracts->contains(fn($contract)=>$contract->isTerminal()))<a class="text-link" href="#assinatura-{{ $petContracts->first(fn($contract)=>$contract->isTerminal())->id }}">Ver contratos encerrados deste pet →</a>@endif
+                @if($petContracts->contains(fn($contract)=>$contract->isTerminal()))<a class="text-link" href="#assinatura-{{ $petContracts->first(fn($contract)=>$contract->isTerminal())->id }}">Ver contratos encerrados deste pet @include('components.bx',['name'=>'bx-right-arrow-alt','size'=>18])</a>@endif
             </div>
             @else<p class="fine-print">Nenhum contrato disponível para este pet no seu acesso.</p>@endif
             @if($canEdit)
-            @if(($petCurrent || $petProposal) && auth()->user()->canUse('proposals.create'))<p class="profile-pet-new-product"><a class="text-link" href="{{ route('proposals.create',['customer_id'=>$customer->id,'pet_id'=>$pet->id]) }}">Ver opções para outra contratação →</a></p>@endif
+            @if(($petCurrent || $petProposal) && auth()->user()->canUse('proposals.create'))<p class="profile-pet-new-product"><a class="text-link" href="{{ route('proposals.create',['customer_id'=>$customer->id,'pet_id'=>$pet->id]) }}">Ver opções para outra contratação @include('components.bx',['name'=>'bx-right-arrow-alt','size'=>18])</a></p>@endif
             <details id="editar-pet-{{ $pet->id }}" class="workspace-details" @if($errors->getBag($petBag)->any() || request('edit')==='pet-'.$pet->id) open @endif>
                 <summary>@include('components.icon',['name'=>'edit']) Editar dados de {{ $pet->name }}</summary>
                 <form method="POST" action="{{ route('pets.update',$pet) }}">

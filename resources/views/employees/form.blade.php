@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title',$employee->exists?'Editar funcionário':'Cadastrar funcionário')
 @section('content')
-<a class="back-link" href="{{ route('employees.index') }}">← Funcionários</a>
+<a class="back-link" href="{{ route('employees.index') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Funcionários</a>
 <div class="page-heading"><div><h1>{{ $employee->exists?'Editar funcionário':'Novo funcionário' }}</h1></div></div>
 <form method="POST" action="{{ $employee->exists?route('employees.update',$employee):route('employees.store') }}" class="form-layout">@csrf
 <section class="card form-card"><h2>Dados do funcionário</h2><div class="form-grid">
@@ -24,6 +24,6 @@
 <fieldset class="section-gap" data-area-picker data-without-job-role @disabled($isSelf)><legend>O que pode abrir</legend><input type="hidden" name="areas_shown" value="1"><small class="area-hint">{{ $isSelf ? 'Outro administrador deve alterar o que você pode abrir.' : 'Desmarque as telas que essa pessoa não deve ver.' }}</small>@error('areas')<small class="field-error area-hint" role="alert">{{ $message }}</small>@enderror
 @foreach(\App\Models\User::AREAS as $areaKey=>[$areaLabel,,$areaRoles])<label class="check-label" data-roles="{{ implode(' ',$areaRoles) }}"><input type="checkbox" name="areas[]" value="{{ $areaKey }}" @checked(in_array($areaKey,$checkedAreas))><span>{{ $areaLabel }}</span></label>@endforeach</fieldset>
 <script>(function(s){function f(){document.querySelectorAll('[data-area-picker] [data-roles]').forEach(function(l){l.hidden=l.dataset.roles.split(' ').indexOf(s.value)<0})}s.addEventListener('change',f);f()})(document.querySelector('select[name=role]'));(function(s){function f(){document.querySelectorAll('[data-without-job-role]').forEach(function(e){e.hidden=!!s.value})}s.addEventListener('change',f);f()})(document.querySelector('select[name=job_role_id]'))</script><div class="form-actions"><a class="button button-secondary" href="{{ route('employees.index') }}">Voltar</a><button class="button button-primary">Salvar funcionário</button></div></section>
-<aside><div class="info-card"><h3>Vendas e comissões no mesmo cadastro.</h3><p>O perfil de vendas acompanha suas próprias comissões. Gestores e financeiro consultam as unidades autorizadas. A administração central gerencia a equipe.</p><hr><p>As comissões seguem as regras de cada plano e são liberadas pelo primeiro pagamento confirmado.</p><a class="text-link" href="{{ route('commissions.index') }}">Consultar regras e comissões →</a></div></aside>
+<aside><div class="info-card"><h3>Vendas e comissões no mesmo cadastro.</h3><p>O perfil de vendas acompanha suas próprias comissões. Gestores e financeiro consultam as unidades autorizadas. A administração central gerencia a equipe.</p><hr><p>As comissões seguem as regras de cada plano e são liberadas pelo primeiro pagamento confirmado.</p><a class="text-link" href="{{ route('commissions.index') }}">Consultar regras e comissões @include('components.bx',['name'=>'bx-right-arrow-alt','size'=>18])</a></div></aside>
 </form>
 @endsection

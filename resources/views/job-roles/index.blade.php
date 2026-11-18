@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Cargos e permissões')
 @section('content')
-<a class="back-link" href="{{ route('employees.index') }}">← Funcionários</a>
+<a class="back-link" href="{{ route('employees.index') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Funcionários</a>
 <div class="page-heading"><div><h1>Cargos e permissões</h1><p>Crie um cargo, escolha o que ele pode ver e fazer e atribua aos funcionários.</p></div><a class="button button-primary" href="{{ route('employees.roles.create') }}">@include('components.icon',['name'=>'plus']) Novo cargo</a></div>
 <section class="card"><div class="table-scroll"><table><thead><tr><th>Cargo</th><th>Nível de acesso</th><th>Tópicos liberados</th><th>Funcionários</th><th></th></tr></thead><tbody>
 @forelse($jobRoles as $jobRole)

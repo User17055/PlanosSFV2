@@ -6,7 +6,7 @@ $isCustomer=auth()->user()->role==='customer';
 $returnUrl=auth()->user()->role==='customer'?route('portal'):route('customers.show',$customer);
 $currentAddress=$formattedAddress ?? (is_array($customer->address)?collect($customer->address)->filter(fn($value)=>is_scalar($value))->join(', '):(string)$customer->address);
 @endphp
-@unless($isCustomer)<a class="back-link" href="{{ $returnUrl }}">← Voltar ao perfil</a>@endunless
+@unless($isCustomer)<a class="back-link" href="{{ $returnUrl }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Voltar ao perfil</a>@endunless
 <div class="page-heading"><div><h1>{{ auth()->user()->role==='customer'?'Meus dados':'Dados do tutor' }}</h1><p>{{ auth()->user()->role==='customer'?'Mantenha seus dados de contato atualizados.':'Atualize as informações de contato de '.$customer->name.'.' }}</p></div></div>
 <form class="form-layout {{ $isCustomer?'form-layout-focused':'' }}" method="POST" action="{{ route('customers.update',$customer) }}">
 @csrf

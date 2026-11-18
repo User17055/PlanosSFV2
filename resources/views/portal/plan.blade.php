@@ -13,7 +13,7 @@ $contractedAt=$subscription->proposal?->accepted_at ?? $subscription->created_at
 $endedAt=$subscription->cancelled_at ?? $subscription->ends_at;
 $petPlans=$customer->subscriptions->where('pet_id',$pet->id)->sortByDesc('id')->values();
 @endphp
-<a class="back-link" href="{{ route('portal.pet',$pet) }}">← {{ $pet->name }}</a>
+<a class="back-link" href="{{ route('portal.pet',$pet) }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18]){{ $pet->name }}</a>
 <section class="portal-hero plan-hero-nav">
 <div class="portal-hero-text">
 <span class="portal-hero-eyebrow">Plano de {{ $pet->name }}</span>
@@ -65,7 +65,7 @@ $description=$rule->coverage_type==='discount' ? (str_starts_with($rule->name,'A
 <section class="portal-section" aria-labelledby="plan-others-title"><h2 class="portal-section-title" id="plan-others-title">Planos de {{ $pet->name }}</h2>
 <div class="card plan-section">
 <ul class="plan-timeline">@foreach($petPlans as $other)
-<li class="{{ $other->id===$subscription->id?'is-current':'' }}"><div><a href="{{ route('portal.plan',[$pet,$other]) }}">{{ $other->productVersion->name }}</a><small>{{ $date($other->effective_start_at ?? $other->created_at) }} → {{ $other->isTerminal() ? $date($other->cancelled_at ?? $other->ends_at) : ($other->ends_at ? $date($other->ends_at) : 'em andamento') }}</small></div>@include('components.status',['status'=>$other->status])</li>
+<li class="{{ $other->id===$subscription->id?'is-current':'' }}"><div><a href="{{ route('portal.plan',[$pet,$other]) }}">{{ $other->productVersion->name }}</a><small>{{ $date($other->effective_start_at ?? $other->created_at) }} @include('components.bx',['name'=>'bx-right-arrow-alt','size'=>18]) {{ $other->isTerminal() ? $date($other->cancelled_at ?? $other->ends_at) : ($other->ends_at ? $date($other->ends_at) : 'em andamento') }}</small></div>@include('components.status',['status'=>$other->status])</li>
 @endforeach</ul>
 </div></section>
 

@@ -8,7 +8,7 @@ $state=data_get($financialState,'status','pending');
 $openTotal=$openInvoices->sum(fn($invoice)=>$invoice->outstanding_cents);
 $next=$openInvoices->first();
 @endphp
-<div class="page-heading"><div><h1>Faturas</h1><p>Acompanhe o que está em aberto e o histórico dos seus pagamentos.</p></div><div class="page-actions"><a class="button button-secondary" href="{{ route('portal') }}">← Meu cuidado</a></div></div>
+<div class="page-heading"><div><h1>Faturas</h1><p>Acompanhe o que está em aberto e o histórico dos seus pagamentos.</p></div><div class="page-actions"><a class="button button-secondary" href="{{ route('portal') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Meu cuidado</a></div></div>
 @if($state==='blocked')<div class="alert alert-danger portal-todo">@include('components.icon',['name'=>'alert'])<div><strong>Há {{ $money(data_get($financialState,'overdue_cents',0)) }} em pagamentos vencidos</strong><p>Enquanto isso, os benefícios dos seus pets ficam bloqueados. Pague a fatura em aberto para liberar.</p></div></div>@endif
 <div class="portal-invoice-summary">
 <div class="card"><small>Em aberto</small><strong>{{ $openInvoices->isEmpty()?'Tudo pago':$money($openTotal) }}</strong></div>

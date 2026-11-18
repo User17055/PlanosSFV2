@@ -3,9 +3,9 @@
     <p class="pager-info">{{ $paginator->firstItem() ?? 0 }}–{{ $paginator->lastItem() ?? 0 }} de {{ number_format($paginator->total(),0,',','.') }}</p>
     <ul class="pager-list">
         @if ($paginator->onFirstPage())
-            <li><span class="pager-link is-disabled" aria-disabled="true" aria-label="Página anterior">‹</span></li>
+            <li><span class="pager-link is-disabled" aria-disabled="true" aria-label="Página anterior">@include('components.bx',['name'=>'bx-chevron-left','size'=>20])</span></li>
         @else
-            <li><a class="pager-link" href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="Página anterior">‹</a></li>
+            <li><a class="pager-link" href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="Página anterior">@include('components.bx',['name'=>'bx-chevron-left','size'=>20])</a></li>
         @endif
         @foreach ($elements as $element)
             @if (is_string($element))
@@ -22,9 +22,9 @@
             @endif
         @endforeach
         @if ($paginator->hasMorePages())
-            <li><a class="pager-link" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="Próxima página">›</a></li>
+            <li><a class="pager-link" href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="Próxima página">@include('components.bx',['name'=>'bx-chevron-right','size'=>20])</a></li>
         @else
-            <li><span class="pager-link is-disabled" aria-disabled="true" aria-label="Próxima página">›</span></li>
+            <li><span class="pager-link is-disabled" aria-disabled="true" aria-label="Próxima página">@include('components.bx',['name'=>'bx-chevron-right','size'=>20])</span></li>
         @endif
     </ul>
 </nav>

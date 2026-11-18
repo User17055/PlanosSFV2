@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Novo tutor e pet')
 @section('content')
-<a href="{{ route('customers.index') }}" class="back-link">← Cadastros</a>
+<a href="{{ route('customers.index') }}" class="back-link">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Cadastros</a>
 <div class="page-heading"><div><h1>Novo tutor e pet</h1><p>Preencha os dados do tutor e do pet. Os campos com * são obrigatórios.</p></div></div>
 <p class="fine-print">O tutor já está cadastrado? <a class="text-link" href="{{ route('customers.index') }}">Localize a ficha existente</a> para adicionar outro pet.</p>
 <form method="POST" action="{{ route('customers.store') }}" class="workspace-stack">

@@ -20,7 +20,7 @@ elseif($errors->getBag('petCreate')->any() || str_starts_with((string)request('e
 $cancelErrorId=$errors->any()?old('profile_cancel_subscription_id'):null;
 if($cancelErrorId && $liveContracts->contains('id',(int)$cancelErrorId)){$initialPanel='contratos';$profileHasErrors=true;}
 @endphp
-<a class="back-link" href="{{ route('customers.index') }}">← Voltar para tutores e pets</a>
+<a class="back-link" href="{{ route('customers.index') }}">@include('components.bx',['name'=>'bx-arrow-back','size'=>18])Voltar para tutores e pets</a>
 <div data-customer-profile data-profile-initial="{{ $initialPanel }}" data-profile-errors="{{ $profileHasErrors?'true':'false' }}">
 <header class="customer-profile-hero">
     <span class="customer-profile-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($customer->name,0,1)) }}</span>
@@ -30,7 +30,7 @@ if($cancelErrorId && $liveContracts->contains('id',(int)$cancelErrorId)){$initia
         @if($customer->pets->isEmpty())<a class="button button-primary" href="#novo-pet">@include('components.icon',['name'=>'plus']) Adicionar primeiro pet</a>
         @else<a class="button button-primary" href="#pets">@include('components.icon',['name'=>'heart']) Contratar para um pet</a><a class="button button-secondary" href="#novo-pet">@include('components.icon',['name'=>'plus']) Adicionar pet</a>@endif
     @endif
-    <a class="text-link" href="#tutor">Ver dados do tutor →</a></div>
+    <a class="text-link" href="#tutor">Ver dados do tutor @include('components.bx',['name'=>'bx-right-arrow-alt','size'=>18])</a></div>
 </header>
 @if($state==='blocked')<div class="alert alert-danger profile-critical" role="status">@include('components.icon',['name'=>'alert'])<div><strong>Serviços e benefícios bloqueados por pendência financeira.</strong><p>O bloqueio abrange os pets deste tutor em toda a rede. A regularização precisa ser confirmada antes do atendimento.</p></div>@if($canFinance)<a class="button button-secondary button-small" href="#financeiro">Ver pagamentos</a>@endif</div>@endif
 <nav class="customer-profile-tabs" data-profile-tabs aria-label="Seções da ficha">
