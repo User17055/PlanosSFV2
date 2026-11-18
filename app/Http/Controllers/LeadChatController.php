@@ -64,6 +64,7 @@ class LeadChatController extends Controller
             // Como no WhatsApp: a conversa com mensagem mais recente em cima; lead sem conversa no fim.
             'leads' => $query->orderByRaw('chat_last_at is null')->orderByDesc('chat_last_at')->orderByDesc('updated_at')->orderByDesc('id')->paginate(100)->withQueryString(),
             'selected' => $lead, 'queue' => $queue, 'all' => $all, 'seesAll' => $seesAll, 'search' => $search,
+            'queueCount' => $this->available($request, $access)->whereNull('handled_by')->count(),
             'connection' => $this->active($request),
         ])->header('Cache-Control', 'private, no-store');
     }

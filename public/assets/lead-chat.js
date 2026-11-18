@@ -462,7 +462,10 @@
     try {
       const response = await fetch(location.href, { cache: 'no-store', credentials: 'same-origin' });
       if (!response.ok || response.redirected) return;
-      const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('.chat-lead-list');
+      const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const count = doc.querySelector('[data-queue-count]');
+      if (count) document.querySelector('[data-queue-count]')?.replaceWith(count);
+      const fresh = doc.querySelector('.chat-lead-list');
       if (!fresh || fresh.innerHTML === list.innerHTML) return;
       const top = list.scrollTop;
       list.replaceChildren(...fresh.childNodes);

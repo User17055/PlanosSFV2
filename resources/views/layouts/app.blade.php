@@ -14,7 +14,7 @@ $roleLabel=['central_admin'=>'Administração central','manager'=>'Gestão da un
 $userName=auth()->user()->name ?? 'Equipe São Francisco';
 $homeRoute=route(['customer'=>'portal','attendant'=>'leads.index'][$currentRole] ?? 'dashboard');
 $counts=$currentRole==='customer' ? [] : app(\App\Services\Reports\StaffCounts::class)->for(auth()->user());
-$navBadges=$currentRole==='customer' && auth()->user()->customer_id ? ['portal.invoices'=>\App\Models\Invoice::where('customer_id',auth()->user()->customer_id)->whereNotIn('status',['paid','cancelled','refunded'])->get()->filter(fn($invoice)=>$invoice->outstanding_cents>0)->count()] : [];
+$navBadges=$currentRole==='customer' && auth()->user()->customer_id ? ['portal.invoices'=>\App\Models\Invoice::where('customer_id',auth()->user()->customer_id)->whereNotIn('status',['paid','cancelled','refunded'])->get()->filter(fn($invoice)=>$invoice->outstanding_cents>0)->count()] : (isset($counts['leads_available']) && $canOpen('leads.index') ? ['leads.index'=>$counts['leads_available']] : []);
 @endphp
 <header class="topbar"><div class="topbar-left">@if($currentRole!=='customer')<a href="{{ $homeRoute }}" class="topbar-brand"><img class="brand-logo" src="{{ asset('assets/brand/sao-francisco-logo.png') }}" alt="São Francisco — serviços veterinários" width="178" height="127"></a>@endif<button class="icon-button menu-toggle" type="button" data-sidebar-toggle aria-controls="sidebar" aria-label="Abrir menu">@include('components.icon',['name'=>'menu'])</button><span class="branch-name">{{ $currentRole==='customer'?'Portal do tutor':data_get(auth()->user(),'franchise.name','Gestão da rede') }}<small>{{ $currentRole==='customer'?'São Francisco · Planos e pacotes':'São Francisco · Administração' }}</small></span></div>
 <div class="topbar-right">@if(!in_array($currentRole,['customer','attendant']))<a class="topbar-portal" href="{{ route('sales') }}" target="_blank" rel="noopener">Ver site @include('components.icon',['name'=>'external'])</a>@endif
@@ -31,7 +31,7 @@ $navBadges=$currentRole==='customer' && auth()->user()->customer_id ? ['portal.i
 @foreach($navGroups as [$groupLabel,$groupItems])
 <div class="nav-group">@if($groupLabel)<div class="nav-group-label">{{ $groupLabel }}</div>@endif
 @foreach($groupItems as [$navRoute,$navIcon,$navLabel])
-<a href="{{ route($navRoute) }}" @if($navRoute===$activeRoute) aria-current="page" @endif class="nav-link {{ $navRoute===$activeRoute ? 'active' : '' }}">@include('components.icon',['name'=>$navIcon])<span>{{ $navLabel }}</span>@if($navRoute==='integrations.index')<i class="nav-dot" aria-hidden="true"></i>@endif @if(($navBadges[$navRoute] ?? 0)>0)<b class="nav-badge" aria-label="{{ $navBadges[$navRoute] }} em aberto">{{ $navBadges[$navRoute] }}</b>@endif</a>
+<a href="{{ route($navRoute) }}" @if($navRoute===$activeRoute) aria-current="page" @endif class="nav-link {{ $navRoute===$activeRoute ? 'active' : '' }}">@include('components.icon',['name'=>$navIcon])<span>{{ $navLabel }}</span>@if($navRoute==='integrations.index')<i class="nav-dot" aria-hidden="true"></i>@endif @isset($navBadges[$navRoute])<b class="nav-badge" data-nav-badge="{{ $navRoute }}" aria-label="{{ $navBadges[$navRoute] }} {{ $navRoute==='leads.index' ? 'disponíveis' : 'em aberto' }}" @if(!$navBadges[$navRoute]) hidden @endif>{{ $navBadges[$navRoute] }}</b>@endisset</a>
 @endforeach
 </div>
 @endforeach

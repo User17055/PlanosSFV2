@@ -86,6 +86,8 @@
     // A bolinha do botão de chat acompanha as mensagens novas de clientes sem precisar recarregar, mesmo sem lead novo na lista.
     const dot = doc.querySelector('[data-chat-dot]');
     if (dot) document.querySelector('[data-chat-dot]')?.toggleAttribute('hidden', dot.hidden);
+    // O número vermelho de disponíveis no menu também.
+    doc.querySelectorAll('[data-nav-badge]').forEach(badge => document.querySelector(`[data-nav-badge="${badge.dataset.navBadge}"]`)?.replaceWith(badge));
     if (arrived) {
       if (previous) root.querySelectorAll('[data-lead-id]').forEach(row => { if (Number(row.dataset.leadId) > previous) row.classList.add('lead-row-fresh'); });
       const name = root.querySelector(`[data-lead-id="${newest}"] strong`)?.textContent;

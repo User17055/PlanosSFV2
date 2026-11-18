@@ -148,6 +148,18 @@ class LeadAccessTest extends TestCase
         $this->actingAs($this->attendant)->get(route('leads.index', ['de' => 'ontem']))->assertSessionHasErrors('de');
     }
 
+    public function test_available_lead_turns_menu_and_chat_tab_red_until_someone_takes_it(): void
+    {
+        $lead = $this->lead();
+        $this->actingAs($this->attendant)->get(route('leads.index'))->assertOk()
+            // A bolinha do botão do chat continua só para mensagem de cliente (pedido de 17/11).
+            ->assertSee('data-nav-badge="leads.index" aria-label="1 disponíveis"', false)->assertSee('data-chat-dot hidden', false);
+        $this->actingAs($this->attendant)->get(route('leads.chat.index'))->assertOk()->assertSee('data-queue-count aria-label="1 disponíveis"', false);
+        $lead->update(['handled_by' => $this->teammate('Bia Vendas', 'sales')->id]);
+        $this->actingAs($this->attendant)->get(route('leads.index'))
+            ->assertSee('aria-label="0 disponíveis"', false);
+    }
+
     private function teammate(string $name, string $role = 'attendant'): User
     {
         $user = User::create(['name' => $name, 'email' => mb_strtolower(strtok($name, ' ')).'@example.test', 'password' => 'Example123!!!', 'role' => $role, 'active' => true, 'franchise_id' => $this->unit->id]);
