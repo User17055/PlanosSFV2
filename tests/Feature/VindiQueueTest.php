@@ -25,20 +25,41 @@ class VindiQueueTest extends TestCase
         $job = (new ProcessVindiWebhookJob(1))->withFakeQueueInteractions();
         $this->assertInstanceOf(RateLimited::class, $job->middleware()[0]);
         $processed = 0;
-        foreach (range(1, 100) as $i) {
+        foreach (range(1, 50) as $i) {
             (new RateLimited('vindi'))->handle($job, function () use (&$processed) { $processed++; });
         }
-        $this->assertSame(100, $processed);
+        $this->assertSame(50, $processed);
         $job->assertNotReleased();
 
         (new RateLimited('vindi'))->handle($job, function () use (&$processed) { $processed++; });
-        $this->assertSame(100, $processed);
+        $this->assertSame(50, $processed);
         $job->assertReleased();
 
         // Quem espera a vez não vira falha: a desistência depende do prazo e dos erros de verdade.
         $this->assertFalse(property_exists($job, 'tries'));
         $this->assertSame(5, $job->maxExceptions);
         $this->assertGreaterThan(now()->addHours(5)->getTimestamp(), $job->retryUntil()->getTimestamp());
+    }
+
+    public function test_payment_notice_skips_ahead_of_the_half_hourly_reconciliation(): void
+    {
+        // O aviso fica na fila vindi, a primeira que o processador atende; a rodada em lote vai para a default, a última.
+        $webhook = new ProcessVindiWebhookJob(1);
+        $reconcile = new \App\Jobs\ReconcileVindiSubscriptionJob(1);
+        $this->assertSame(['vindi', 'default'], [$webhook->queue, $reconcile->queue]);
+        // E cada um tem a sua cota de consultas: a rodada gastar a dela não atrasa o pagamento.
+        RateLimiter::clear(md5('vindi-lote'));
+        RateLimiter::clear(md5('vindi'));
+        $lote = $reconcile->withFakeQueueInteractions();
+        foreach (range(1, 51) as $i) {
+            (new RateLimited('vindi-lote'))->handle($lote, fn () => null);
+        }
+        $lote->assertReleased();
+        $paid = $webhook->withFakeQueueInteractions();
+        $ran = false;
+        $paid->middleware()[0]->handle($paid, function () use (&$ran) { $ran = true; });
+        $this->assertTrue($ran, 'O aviso de pagamento não espera a cota da conferência em lote.');
+        $paid->assertNotReleased();
     }
 
     public function test_failure_logs_the_real_cause_without_customer_data(): void

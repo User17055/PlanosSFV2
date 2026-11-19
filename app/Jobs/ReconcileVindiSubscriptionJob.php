@@ -24,7 +24,8 @@ class ReconcileVindiSubscriptionJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(public int $subscriptionId)
     {
-        $this->onQueue('vindi');
+        // Rodada em lote vai para o fim da fila (default): o aviso de pagamento, na fila vindi, passa na frente.
+        $this->onQueue('default');
     }
 
     public function retryUntil(): \DateTimeInterface
@@ -34,7 +35,7 @@ class ReconcileVindiSubscriptionJob implements ShouldQueue, ShouldBeUnique
 
     public function middleware(): array
     {
-        return [new RateLimited('vindi')];
+        return [new RateLimited('vindi-lote')];
     }
 
     public function uniqueId(): string

@@ -21,7 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // A Vindi aceita 120 consultas por minuto e manda um lote de avisos de uma vez na cobrança diária. A folga é da conciliação e do checkout.
-        RateLimiter::for('vindi', fn () => Limit::perMinute(100));
+        // A Vindi aceita 120 consultas por minuto. Metade é do tempo real (aviso de pagamento, cadastro), metade da conferência em lote,
+        // para o pagamento de um cliente nunca esperar a rodada de 30 em 30 minutos. Juntos, os mesmos 100 por minuto de antes.
+        RateLimiter::for('vindi', fn () => Limit::perMinute(50));
+        RateLimiter::for('vindi-lote', fn () => Limit::perMinute(50));
     }
 }
