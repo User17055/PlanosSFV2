@@ -16,7 +16,7 @@ $waiting=$count('awaiting_rate')+$count('held');
 @endphp
 <div class="page-heading"><div><h1>{{ $isSales ? 'Minhas comissões' : 'Comissões' }}</h1><p>Paga sobre a 1ª mensalidade confirmada. Se ela for estornada, a comissão volta.</p></div></div>
 
-<div class="metrics-grid">
+<div class="metrics-grid commission-metrics">
 <div class="metric-card"><div class="metric-top"><span>A pagar</span><span class="metric-icon tone-ochre">@include('components.icon',['name'=>'wallet'])</span></div><div class="metric-value">{{ $money($sum('payable')) }}</div><span class="metric-detail"><span class="small-dot ochre"></span>{{ $count('payable') }} liberada(s){{ $waiting ? ' · '.$waiting.' aguardando regra' : '' }}</span></div>
 <div class="metric-card"><div class="metric-top"><span>Pagas</span><span class="metric-icon tone-green">@include('components.icon',['name'=>'check'])</span></div><div class="metric-value">{{ $money($sum('paid')) }}</div><span class="metric-detail"><span class="small-dot green"></span>{{ $count('paid') }} paga(s)</span></div>
 <div class="metric-card"><div class="metric-top"><span>Clientes em dia</span><span class="metric-icon tone-blue">@include('components.icon',['name'=>'heart'])</span></div><div class="metric-value">{{ $teamQuality===null ? '—' : $teamQuality.'%' }}</div><span class="metric-detail"><span class="small-dot blue"></span>{{ $people->sum('on_time') }} de {{ $people->sum('sold') }} vendas seguem pagando</span></div>

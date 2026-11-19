@@ -238,6 +238,10 @@ details:not([open])>summary.card-heading{margin-bottom:-22px;border-bottom:0}
 .text-link:hover{color:var(--primary-hover)}
 .text-link .icon{width:15px;height:15px}
 button.text-link{background:none;border:0;padding:0}
+/* Comissões: valores em reais cabem no cartão sem virar "R$ 73…". */
+.commission-metrics .metric-card{grid-template-columns:44px minmax(0,1fr);column-gap:12px}
+.commission-metrics .metric-icon{width:44px;height:44px}
+html body.admin-body .commission-metrics .metric-value{font-size:28px}
 td>button.text-link{display:flex;margin-top:4px}
 td a:not(.button):not(.text-link):not(.table-arrow):not(.icon-button):hover strong,.finance-record-identity a:hover{color:var(--primary-text);text-decoration:underline;text-underline-offset:3px}
 
