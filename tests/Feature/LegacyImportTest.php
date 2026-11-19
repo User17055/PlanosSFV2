@@ -197,6 +197,18 @@ class LegacyImportTest extends TestCase
         $this->assertSame(4, \App\Models\VindiCancellation::count());
     }
 
+    public function test_old_contract_note_explains_the_value_without_touching_the_frozen_contract(): void
+    {
+        app(LegacyImport::class)->run($this->data(), $this->admin, true);
+        $plan = Subscription::where('vindi_product_item_id', '9001')->sole();
+        // A observação fica fora da trava do contrato (modelo e banco): grava, e plano e valor continuam os mesmos.
+        $plan->update(['legacy_note' => 'Somado ao plano: 2 banhos + taxa']);
+        $this->assertSame([5200, $plan->product_version_id], [$plan->fresh()->price_cents, $plan->fresh()->product_version_id]);
+        $this->actingAs($this->admin)->get(route('customers.show', $plan->customer_id))->assertOk()->assertSee('Somado ao plano: 2 banhos + taxa');
+        $this->expectException(\App\Services\Domain\DomainException::class);
+        $plan->fresh()->update(['price_cents' => 9900]);
+    }
+
     public function test_only_central_admin_and_unit_managers_choose_pets(): void
     {
         app(LegacyImport::class)->run($this->data(), $this->admin, true);

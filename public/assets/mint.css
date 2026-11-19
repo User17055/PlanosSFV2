@@ -2428,3 +2428,5 @@ body.theme-dash .dash-v2 .dash-panel h2{margin:0;font-family:var(--font);font-si
 .nowrap{white-space:nowrap}
 /* Ícones do Boxicons: no meio do texto ficam na altura da letra */
 .bx{flex-shrink:0;vertical-align:-.22em}
+/* Contrato antigo: o que a planilha da equipe diz que está somado ao plano */
+.contract-legacy-note{margin:4px 0 0;color:var(--text-2);font-size:13px}
