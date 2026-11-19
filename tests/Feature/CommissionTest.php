@@ -272,7 +272,7 @@ class CommissionTest extends TestCase
         $unassignedCommission = Commission::where('beneficiary_type', 'unassigned')->sole();
 
         $this->actingAs($this->seller)->get(route('commissions.index'))->assertOk()
-            ->assertSee('Minhas comissões')->assertSee('Equipe que fez a proposta')->assertDontSee('Contratação direta pelo site');
+            ->assertSee('Minhas comissões')->assertSee('Meu resumo')->assertDontSee('Trocar</button>', false)->assertDontSee('Contratação direta pelo site');
         $this->actingAs($this->seller)->post(route('commissions.pay', $sellerCommission), ['payout_reference' => 'PIX 1'])->assertForbidden();
         $this->actingAs($this->staff('Recepção A', 'operator', $this->a))->get(route('commissions.index'))->assertForbidden();
         $this->actingAs($this->client)->get(route('commissions.index'))->assertForbidden();
@@ -290,5 +290,45 @@ class CommissionTest extends TestCase
         $this->actingAs($this->staff('Gestão A', 'manager', $this->a))->post(route('commissions.rates'), ['rates' => [$this->version->product_id => 12]])->assertForbidden();
         $this->actingAs($this->admin)->post(route('commissions.rates'), ['rates' => [$this->version->product_id => '12.5']])->assertRedirect();
         $this->assertSame(1250, CommissionRate::where('product_id', $this->version->product_id)->latest('id')->value('rate_basis_points'));
+    }
+
+    public function test_admin_changes_who_made_the_sale_and_the_unpaid_commission_follows(): void
+    {
+        $proposal = $this->proposalBy($this->seller, 'link');
+        $this->settle($this->initial($this->signed($proposal)));
+        $closer = $this->staff('Vendedora Bia', 'sales', $this->a);
+        $commission = Commission::sole();
+
+        $this->actingAs($this->seller)->post(route('proposals.seller', $proposal), ['seller_id' => $closer->id])->assertForbidden();
+        $this->actingAs($this->admin)->get(route('commissions.index'))->assertOk()->assertSee('seller-'.$proposal->id)->assertSee('100% em dia');
+        $this->actingAs($this->admin)->get(route('proposals.show', $proposal))->assertOk()->assertSee('seller-'.$proposal->id);
+        $this->actingAs($this->admin)->post(route('proposals.seller', $proposal), ['seller_id' => $closer->id])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame($closer->id, $proposal->fresh()->created_by);
+        $this->assertSame('Vendedora Bia', $proposal->fresh()->senderLabel());
+        $commission->refresh();
+        $this->assertSame([$closer->id, $closer->id, 'Vendedora Bia', 'payable', 1499],
+            [$commission->beneficiary_user_id, $commission->sold_by_id, $commission->beneficiary_name, $commission->status, $commission->amount_cents]);
+        $this->assertTrue(AuditLog::where('action', 'proposal.seller_changed')->where('entity_id', $proposal->id)->where('data->antes', $this->seller->id)->exists());
+        $this->assertTrue(AuditLog::where('action', 'commission.transferred')->where('entity_id', $commission->id)->exists());
+
+        // Comissão já paga não muda de dono: o acerto é feito por fora antes.
+        app(CommissionService::class)->markPaid($commission, $this->admin, 'PIX 1');
+        $this->actingAs($this->admin)->post(route('proposals.seller', $proposal), ['seller_id' => $this->seller->id])->assertSessionHasErrors('operation');
+        $this->assertSame($closer->id, $commission->fresh()->beneficiary_user_id);
+        $this->assertSame($closer->id, $proposal->fresh()->created_by);
+    }
+
+    public function test_sale_without_staff_gets_a_commission_once_the_admin_names_who_made_it(): void
+    {
+        $proposal = $this->proposalBy($this->client, 'site');
+        $this->settle($this->initial($this->signed($proposal)));
+        $this->assertSame('not_applicable', Commission::sole()->status);
+
+        $this->actingAs($this->admin)->post(route('proposals.seller', $proposal), ['seller_id' => $this->finance->id])->assertSessionHasErrors('operation');
+        $this->actingAs($this->admin)->post(route('proposals.seller', $proposal), ['seller_id' => $this->seller->id])->assertSessionHasNoErrors();
+        $commission = Commission::sole();
+        $this->assertSame(['seller', $this->seller->id, 'seller_proposal', 'payable', 1499, 1000],
+            [$commission->beneficiary_type, $commission->beneficiary_user_id, $commission->rule, $commission->status, $commission->amount_cents, $commission->rate_basis_points]);
     }
 }

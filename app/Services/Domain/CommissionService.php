@@ -137,6 +137,46 @@ class CommissionService
         });
     }
 
+    /**
+     * A administração diz quem fez a venda (ex.: um mandou o link e outro fechou). Vale para a lista, o painel
+     * e a comissão, que vai junto enquanto não foi paga. Quem fez antes fica na auditoria.
+     */
+    public function changeSeller(Proposal $proposal, User $seller, User $actor): void
+    {
+        if (! $actor->active || ! in_array($actor->role, ['central_admin', 'manager'], true)) {
+            throw new DomainException('FORBIDDEN', 'Somente a administração troca quem fez a venda.', 403);
+        }
+        if ($proposal->channel === 'legacy') {
+            throw new DomainException('LEGACY_PROPOSAL', 'Contrato da base antiga não tem vendedor nem comissão.', 422);
+        }
+        if (! $seller->active || ! in_array($seller->role, ['central_admin', 'manager', 'sales'], true) || ! $seller->hasFranchise($proposal->originating_franchise_id)) {
+            throw new DomainException('SELLER_INVALID', 'Escolha alguém ativo da equipe desta unidade.', 422);
+        }
+
+        DB::transaction(function () use ($proposal, $seller, $actor) {
+            $commission = Commission::where('proposal_id', $proposal->id)->lockForUpdate()->first();
+            if ($commission?->status === 'paid') {
+                throw new DomainException('COMMISSION_ALREADY_PAID', "A comissão já foi paga para {$commission->beneficiary_name}. Acerte o valor com ela antes de trocar.", 422);
+            }
+            $before = $proposal->creator;
+            $proposal->update(['created_by' => $seller->id]);
+            Audit::record('proposal.seller_changed', $proposal, $actor, ['antes' => $before?->id, 'antes_nome' => $before?->name, 'depois' => $seller->id, 'depois_nome' => $seller->name]);
+            if (! $commission) return;
+
+            $changes = ['sold_by_id' => $seller->id, 'beneficiary_type' => 'seller', 'beneficiary_user_id' => $seller->id, 'beneficiary_name' => $seller->name, 'rule' => 'seller_proposal'];
+            // Venda que estava sem responsável passa a ter regra: calcula agora, com a regra do dia do pagamento.
+            if ($commission->status === 'not_applicable') {
+                $rate = $this->rateFor($commission->product_id, $commission->earned_at);
+                $changes += ['commission_rate_id' => $rate?->id, 'rate_basis_points' => $rate?->rate_basis_points, 'calculation_type' => $rate?->calculation_type,
+                    'fixed_amount_cents' => $rate?->fixed_amount_cents, 'amount_cents' => $rate ? $this->amountFor($rate, (int) $commission->base_cents) : 0,
+                    'status' => $rate ? 'payable' : 'awaiting_rate'];
+            }
+            $antes = $commission->only(['beneficiary_user_id', 'beneficiary_name', 'status', 'amount_cents']);
+            $commission->update($changes);
+            Audit::record('commission.transferred', $commission, $actor, ['antes' => $antes, 'depois' => $commission->only(['beneficiary_user_id', 'beneficiary_name', 'status', 'amount_cents'])]);
+        });
+    }
+
     public function markPaid(Commission $commission, User $actor, string $reference): Commission
     {
         if (! $actor->active || ! in_array($actor->role, ['central_admin', 'finance'], true)

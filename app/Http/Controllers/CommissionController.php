@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Commission;
 use App\Models\Franchise;
 use App\Models\Product;
+use App\Models\Proposal;
+use App\Models\User;
 use App\Services\AccessService;
-use App\Services\Attribution\TrackingSanitizer;
 use App\Services\Domain\CommissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -35,15 +36,23 @@ class CommissionController extends Controller
         elseif (ctype_digit((string) ($filters['beneficiary'] ?? ''))) $base->where('beneficiary_user_id', (int) $filters['beneficiary']);
 
         $totals = (clone $base)->selectRaw('status, COUNT(*) as total, COALESCE(SUM(amount_cents),0) as amount')->groupBy('status')->get()->keyBy('status');
-        // Total por funcionário no período (sem estornadas e sem as vendas sem responsável).
-        $people = (clone $base)->whereNotIn('status', ['reversed', 'not_applicable'])->whereNotNull('beneficiary_user_id')
-            ->selectRaw("beneficiary_user_id, MAX(beneficiary_name) as name, COUNT(*) as contracts, COALESCE(SUM(amount_cents),0) as total,
-                COALESCE(SUM(CASE WHEN status = 'payable' THEN amount_cents ELSE 0 END),0) as payable, COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_cents ELSE 0 END),0) as paid,
-                SUM(CASE WHEN status IN ('awaiting_rate','held') THEN 1 ELSE 0 END) as waiting")
-            ->groupBy('beneficiary_user_id')->orderByDesc('total')->get();
+        // Por funcionário no período: valores sem as estornadas; a qualidade conta todas as vendas e olha como o plano está hoje.
+        $people = (clone $base)->where('status', '!=', 'not_applicable')->whereNotNull('beneficiary_user_id')->with('subscription:id,status')
+            ->get(['id', 'subscription_id', 'beneficiary_user_id', 'beneficiary_name', 'amount_cents', 'status'])
+            ->groupBy('beneficiary_user_id')->map(function ($sales) {
+                $kept = $sales->where('status', '!=', 'reversed');
+                $left = $sales->filter(fn ($c) => $c->status === 'reversed' || in_array($c->subscription?->status, ['cancelled', 'ended'], true))->count();
+                $late = $kept->where('subscription.status', 'suspended')->count();
+
+                return (object) ['beneficiary_user_id' => $sales->first()->beneficiary_user_id, 'name' => $sales->first()->beneficiary_name,
+                    'sold' => $sales->count(), 'total' => $kept->sum('amount_cents'),
+                    'payable' => $kept->where('status', 'payable')->sum('amount_cents'), 'paid' => $kept->where('status', 'paid')->sum('amount_cents'),
+                    'waiting' => $kept->whereIn('status', ['awaiting_rate', 'held'])->count(), 'left' => $left,
+                    'late' => $late, 'on_time' => $sales->count() - $late - $left]; // em dia: nem em atraso nem cancelou
+            })->sortByDesc('total')->values();
         $list = clone $base;
         if (! empty($filters['status'])) $list->where('status', $filters['status']);
-        $rows = $list->with(['subscription.customer', 'subscription.pet', 'productVersion', 'originatingFranchise', 'soldBy', 'payer'])
+        $rows = $list->with(['subscription.customer', 'subscription.pet', 'productVersion'])
             ->orderByDesc('earned_at')->orderByDesc('id')->paginate(20)->withQueryString();
 
         $beneficiaries = $user->role === 'sales' ? collect() : $commissions->query($user)->select('beneficiary_type', 'beneficiary_user_id', 'beneficiary_name')
@@ -55,8 +64,9 @@ class CommissionController extends Controller
         return view('commissions.index', [
             'rows' => $rows, 'totals' => $totals, 'filters' => $filters, 'people' => $people, 'beneficiaries' => $beneficiaries, 'franchises' => $franchises,
             'rates' => $user->role === 'central_admin' ? $commissions->currentRates() : collect(),
-            'sourceLabels' => TrackingSanitizer::sourceLabels(),
             'canPay' => in_array($user->role, ['central_admin', 'finance'], true) && $user->canUse('commissions.pay'),
+            'staff' => in_array($user->role, ['central_admin', 'manager'], true) && $user->canUse('proposals.seller')
+                ? User::where('active', true)->whereIn('role', ['central_admin', 'manager', 'sales'])->orderBy('name')->get(['id', 'name']) : collect(),
         ]);
     }
 
@@ -67,6 +77,15 @@ class CommissionController extends Controller
         $commissions->markPaid($commission, $request->user(), $data['payout_reference']);
 
         return back()->with('success', 'Pagamento da comissão registrado.');
+    }
+
+    public function seller(Request $request, Proposal $proposal, CommissionService $commissions, AccessService $access)
+    {
+        $access->record($request->user(), $proposal);
+        $seller = User::findOrFail($request->validate(['seller_id' => 'required|integer'])['seller_id']);
+        $commissions->changeSeller($proposal, $seller, $request->user());
+
+        return back()->with('success', "A venda da proposta {$proposal->number} agora é de {$seller->name}.");
     }
 
     public function rates(Request $request, CommissionService $commissions)

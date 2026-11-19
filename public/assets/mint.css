@@ -237,6 +237,8 @@ details:not([open])>summary.card-heading{margin-bottom:-22px;border-bottom:0}
 .text-link{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--primary-text);transition:color .2s}
 .text-link:hover{color:var(--primary-hover)}
 .text-link .icon{width:15px;height:15px}
+button.text-link{background:none;border:0;padding:0}
+td>button.text-link{display:flex;margin-top:4px}
 td a:not(.button):not(.text-link):not(.table-arrow):not(.icon-button):hover strong,.finance-record-identity a:hover{color:var(--primary-text);text-decoration:underline;text-underline-offset:3px}
 
 /* ---------- avisos e selos ---------- */

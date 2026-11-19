@@ -148,6 +148,7 @@ Route::middleware(['auth','active'])->group(function () {
         Route::post('/financeiro/{invoice}/confirmar',[FinanceController::class,'confirm'])->middleware('role:central_admin,finance')->name('finance.confirm');
         Route::get('/comissoes',[\App\Http\Controllers\CommissionController::class,'index'])->middleware('role:central_admin,manager,finance,sales')->name('commissions.index');
         Route::post('/comissoes/percentuais',[\App\Http\Controllers\CommissionController::class,'rates'])->middleware('role:central_admin')->name('commissions.rates');
+        Route::post('/propostas/{proposal}/vendedor',[\App\Http\Controllers\CommissionController::class,'seller'])->middleware(['role:central_admin,manager','throttle:30,1'])->name('proposals.seller');
         Route::post('/comissoes/{commission}/pagar',[\App\Http\Controllers\CommissionController::class,'pay'])->middleware(['role:central_admin,finance','throttle:30,1'])->name('commissions.pay');
         Route::get('/integracoes',[IntegrationController::class,'index'])->middleware('role:central_admin')->name('integrations.index');
         Route::post('/integracoes/{event}/reprocessar',[IntegrationController::class,'retry'])->middleware('role:central_admin')->name('integrations.retry');

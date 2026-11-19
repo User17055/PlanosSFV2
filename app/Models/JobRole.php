@@ -34,6 +34,7 @@ class JobRole extends DomainModel
         'proposals.cancel' => ['Cancelar proposta', ['proposals.cancel']],
         'proposals.validate' => ['Validar documentos', ['contracts.validate']],
         'proposals.cancel_subscription' => ['Cancelar plano contratado', ['subscriptions.cancel']],
+        'proposals.seller' => ['Trocar quem fez a venda (a comissão ainda não paga vai junto)', ['proposals.seller']],
         'finance.view' => ['Ver faturas e pagamentos', ['finance.index']],
         'finance.confirm' => ['Confirmar recebimento', ['finance.confirm']],
         'commissions.view' => ['Ver comissões', ['commissions.index']],
