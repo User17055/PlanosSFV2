@@ -163,13 +163,13 @@ class JobRoleTest extends TestCase
         $this->assertSame('dashboard.view', JobRole::optionOf('dashboard'), 'A opção dos planos gerais não pode tomar a rota do painel.');
         // Pedir os planos gerais pelo endereço não adianta: o filtro volta para os novos.
         $this->actingAs($marketing)->get(route('dashboard', ['planos' => 'gerais|all']))->assertOk()
-            ->assertSee('Pacotes novos')->assertDontSee('Planos gerais')->assertSee('<option value="novos|all" selected', false);
+            ->assertSee('Pacotes vendidos no sistema')->assertDontSee('value="gerais|health_plan"', false)->assertSee('<option value="novos|all" selected', false);
         $this->actingAs($marketing)->get(route('proposals.index'))->assertOk();
         $this->actingAs($marketing)->get(route('leads.chat.index'))->assertOk();
         $this->actingAs($marketing)->get(route('customers.index'))->assertRedirect();
         // Com a opção, o mesmo cargo volta a ver os gerais.
         $this->saveRole(['dashboard.view', 'dashboard.general'], 'operator', 'Marketing', JobRole::firstWhere('name', 'Marketing'))->assertRedirect();
-        $this->actingAs($marketing->fresh())->get(route('dashboard'))->assertSee('Planos gerais');
+        $this->actingAs($marketing->fresh())->get(route('dashboard'))->assertSee('value="gerais|health_plan"', false);
     }
 
     public function test_role_can_see_every_conversation_but_never_the_old_base(): void

@@ -303,6 +303,12 @@ class DashboardAnalyticsTest extends TestCase
         $general=$this->report($this->admin);
         $this->assertSame([2,20000,1,1],[$general['summary']['active_count'],$general['summary']['mrr_cents'],$general['summary']['sold_count'],$general['summary']['proposals_count']]);
         $this->assertSame(10000,$general['summary']['active_ticket_cents']);
+        // Ativo é o que não foi cancelado: o plano em atraso sai de "em dia", mas continua nos planos ativos, tutores e pets.
+        Subscription::whereKey($old->id)->update(['status'=>'suspended']);
+        $late=$this->report($this->admin)['summary'];
+        $this->assertSame([2,1,1,20000],[$late['portfolio_count'],$late['active_count'],$late['suspended_count'],$late['portfolio_mrr_cents']]);
+        $this->assertSame([Subscription::whereIn('status',['active','suspended'])->distinct()->count('customer_id'),Subscription::whereIn('status',['active','suspended'])->distinct()->count('pet_id')],[$late['tutors_count'],$late['pets_count']]);
+        Subscription::whereKey($old->id)->update(['status'=>'active']);
         $new=$this->report($this->admin,['base'=>'novos']);
         $this->assertSame([1,10000,1],[$new['summary']['active_count'],$new['summary']['mrr_cents'],$new['summary']['sold_count']]);
         // Período de um mês: os 12 meses até ele. A base antiga já estava lá no começo; o plano novo entrou em outubro.
@@ -314,16 +320,17 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertSame([0,1],[$new['growth']['start']['active'],end($new['growth']['months'])['active']]);
         // O crescimento segue o período escolhido no filtro.
         $this->assertCount(3,$this->report($this->admin,['date_from'=>'2026-08-01'])['growth']['months']);
-        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<option value="gerais|health_plan" selected>Planos gerais</option>',false)
-            ->assertSeeInOrder(['>Geral<','>Planos gerais<','>Pacotes gerais<','>Planos novos<','>Pacotes novos<'],false)->assertDontSee('name="category"',false)->assertSee('Crescimento dos planos gerais')->assertSee('Receita mensal');
-        $this->get(route('dashboard',['base'=>'novos']))->assertOk()->assertSee('Crescimento dos planos novos')->assertSee('Contratos fechados');
+        $this->actingAs($this->admin)->get(route('dashboard'))->assertOk()->assertSee('<option value="gerais|health_plan" selected>Planos de saúde</option>',false)
+            ->assertSeeInOrder(['>Tudo (planos e pacotes)<','>Planos de saúde<','>Pacotes de banho<','>Planos vendidos no sistema<','>Pacotes vendidos no sistema<'],false)->assertDontSee('name="category"',false)
+            ->assertSee('Planos ativos mês a mês')->assertSee('Mensalidades por mês')->assertSee('Tutores com plano')->assertSee('Pets com plano')->assertSee('O que significa cada número');
+        $this->get(route('dashboard',['base'=>'novos']))->assertOk()->assertSee('só os vendidos no sistema')->assertSee('Vendas no período');
         // Um filtro só na tela: cada opção vira a carteira (gerais ou novos) e o tipo.
         $service=app(DashboardService::class);
         foreach(['gerais|package'=>['gerais','package'],'novos|health_plan'=>['novos','health_plan'],'gerais|all'=>['gerais','all']] as $choice=>$expected) {
             $chosen=$service->filters($this->admin,['planos'=>$choice]);
             $this->assertSame($expected,[$chosen['base'],$chosen['category']],$choice);
         }
-        $this->get(route('dashboard',['planos'=>'novos|package']))->assertOk()->assertSee('<option value="novos|package" selected>Pacotes novos</option>',false)->assertSee('Pacotes ativos');
+        $this->get(route('dashboard',['planos'=>'novos|package']))->assertOk()->assertSee('<option value="novos|package" selected>Pacotes vendidos no sistema</option>',false)->assertSee('Pacotes ativos');
         $this->get(route('dashboard'))->assertSee('Planos ativos')->assertDontSee('Pacotes ativos');
         $this->get(route('dashboard',['base'=>'todos']))->assertSessionHasErrors('base');
     }

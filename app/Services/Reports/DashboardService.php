@@ -210,6 +210,9 @@ class DashboardService
         $earned=$this->during(clone $commissionBase,'earned_at',$bounds);
         $paidCommissions=$this->during(clone $commissionBase,'paid_at',$bounds)->where(fn($q)=>$q->where('status','paid')->orWhere(fn($q)=>$q->where('status','reversed')->where('clawback',true)));
         $active=$allActive->filter(fn($s)=>$this->matches((array)$s->customer?->address,$filters));
+        // Plano ativo é o que não foi cancelado: em dia ou em atraso (suspenso por mensalidade vencida), como no gráfico de crescimento.
+        $late=$load((clone $subscriptions)->where('status','suspended'))->filter(fn($s)=>$this->matches((array)$s->customer?->address,$filters));
+        $inPortfolio=$active->concat($late);
         $summary=[
             'sold_count'=>(clone $sold)->count(),'sold_cents'=>(int)(clone $sold)->sum('price_cents'),
             'received_cents'=>(int)$this->during(clone $payments,'paid_at',$bounds)->sum('amount_cents'),
@@ -222,6 +225,8 @@ class DashboardService
             'clawback_cents'=>(int)(clone $commissionBase)->where('status','reversed')->where('clawback',true)->sum('amount_cents'),
             'active_count'=>$active->count(),'customers'=>$active->pluck('customer_id')->unique()->count(),
             'mrr_cents'=>(int)$active->where('productVersion.billing_cycle','monthly')->sum('price_cents'),
+            'portfolio_count'=>$inPortfolio->count(),'tutors_count'=>$inPortfolio->pluck('customer_id')->unique()->count(),'pets_count'=>$inPortfolio->pluck('pet_id')->unique()->count(),
+            'portfolio_mrr_cents'=>(int)$inPortfolio->where('productVersion.billing_cycle','monthly')->sum('price_cents'),
             'proposals_count'=>(clone $created)->count(),
             'pending_count'=>(clone $created)->whereNull('locked_at')->where('expires_at','>',now())->where('status','!=','cancelled')->count(),
             'cancelled_count'=>$this->during(clone $scoped,'cancelled_at',$bounds)->where('status','cancelled')->count(),
@@ -257,8 +262,8 @@ class DashboardService
             $planRows[$pid]['sales']++; $planRows[$pid]['sold_cents']+=$sale->price_cents;
             $channels[$sale->channel]=($channels[$sale->channel]??0)+1;
         }
-        foreach($active as $s) { $pid=$s->productVersion->product_id; $planRows[$pid]??=['name'=>$s->productVersion->product->name,'sales'=>0,'sold_cents'=>0,'active'=>0]; $planRows[$pid]['active']++; $planRows[$pid]['mrr_cents']=($planRows[$pid]['mrr_cents']??0)+($s->productVersion->billing_cycle==='monthly'?$s->price_cents:0); }
-        $insights=$this->portfolioInsights($filters,$active,$scoped,$invoices,$payments,$bounds,$sales);
+        foreach($inPortfolio as $s) { $pid=$s->productVersion->product_id; $planRows[$pid]??=['name'=>$s->productVersion->product->name,'sales'=>0,'sold_cents'=>0,'active'=>0]; $planRows[$pid]['active']++; $planRows[$pid]['mrr_cents']=($planRows[$pid]['mrr_cents']??0)+($s->productVersion->billing_cycle==='monthly'?$s->price_cents:0); }
+        $insights=$this->portfolioInsights($filters,$inPortfolio,$scoped,$invoices,$payments,$bounds,$sales);
         foreach($insights['plans'] as $pid=>$row) $planRows[$pid]=array_merge(['sales'=>0,'sold_cents'=>0,'active'=>0],$planRows[$pid]??[],$row);
         foreach($planRows as &$row)$row+=['received_cents'=>0,'cancelled'=>0,'month_expected_cents'=>0,'mrr_cents'=>0];unset($row);
         foreach($this->during(clone $payments,'paid_at',$bounds)->get(['paid_at','amount_cents']) as $p) { $key=$p->paid_at->timezone('America/Sao_Paulo')->format('Y-m'); if(isset($series[$key]))$series[$key]['received_cents']+=$p->amount_cents; }

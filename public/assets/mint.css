@@ -2336,7 +2336,7 @@ body.admin-body.theme-dash .dashboard-workspace .analytics-kpi .metric-value{gri
 body.admin-body .dashboard-workspace.dash-simple :is(h1,h2,h3){font-family:var(--font);letter-spacing:-.015em}
 body.admin-body .dashboard-workspace.dash-simple h1{font-weight:650}
 .dash-v2{display:grid;gap:18px;margin-bottom:18px}
-.dash-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.dash-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .dash-kpi{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;min-width:0;padding:18px 18px 54px;border-radius:14px;border:1px solid #e1e7ee;background:#fff;box-shadow:0 1px 2px rgba(20,38,75,.04)}
 .dash-kpi-top{display:flex;align-items:center;gap:10px;min-width:0}
 .dash-kpi-icon{display:inline-flex;flex:none;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;background:#eef3f9;color:var(--c-navy)}
@@ -2430,3 +2430,10 @@ body.theme-dash .dash-v2 .dash-panel h2{margin:0;font-family:var(--font);font-si
 .bx{flex-shrink:0;vertical-align:-.22em}
 /* Contrato antigo: o que a planilha da equipe diz que está somado ao plano */
 .contract-legacy-note{margin:4px 0 0;color:var(--text-2);font-size:13px}
+/* Visão geral: o que significa cada número */
+.dash-glossary{margin:14px 0 4px;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.dash-glossary>summary{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--primary-text);font-weight:500}
+.dash-glossary dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;margin:12px 0 2px}
+.dash-glossary dt{color:var(--text);font-weight:600;font-size:14px}
+.dash-glossary dd{margin:2px 0 0;color:var(--text-2);font-size:13.5px;line-height:1.5}
+@media(max-width:700px){.dash-glossary dl{grid-template-columns:minmax(0,1fr)}}
