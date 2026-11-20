@@ -256,7 +256,12 @@ class LeadAccessTest extends TestCase
         $list = fn (array $filters = []) => $this->actingAs($this->admin)->get(route('leads.index', $filters))->assertOk();
         $panel = fn (array $filters = []) => $this->actingAs($this->admin)->get(route('leads.dashboard', $filters))->assertOk();
 
-        $list()->assertSee('<small class="lead-traffic">Pago</small>', false)->assertSee('<small class="lead-traffic">Site · Pago</small>', false)->assertSee('<small class="lead-traffic">Site · Orgânico</small>', false);
+        // "Site" só aparece quando o site não soube a origem; quem veio de uma rede aparece pela rede.
+        $list()->assertSee('<small class="lead-traffic">Pago</small>', false)->assertDontSee('Site · Pago', false)
+            ->assertSee('<small class="lead-traffic">Orgânico</small>', false)->assertSee('<small class="lead-traffic">Site · Orgânico</small>', false);
+        $instagram = $this->lead(['name' => 'Insta Organico', 'external_id' => 't5', 'source' => 'site_whatsapp', 'extra' => ['plataforma' => 'instagram', 'trafego' => 'organico']]);
+        $this->assertSame(['Orgânico', 'Instagram'], [$instagram->trafficLabel(), $instagram->originGroup()]);
+        $instagram->delete();
         // Quem veio do Google para o site aparece nos dois filtros.
         $list(['entrada' => 'Site'])->assertSee('Google Pago')->assertSee('Google Organico')->assertSee('Site Direto')->assertDontSee('Do Anuncio');
         $list(['origem' => 'Google'])->assertSee('Google Pago')->assertSee('Google Organico')->assertSee('Site Direto')->assertDontSee('Do Anuncio');
