@@ -54,7 +54,7 @@ $tables=[['Pago ou orgânico','Tráfego',$traffic,''],['De onde veio','Origem',$
 @endif @endforeach
 @if($converted->isNotEmpty())<section class="card lead-span-2"><div class="card-heading"><div><h2>Quem converteu</h2><p>Leads finalizados no período e com quem estavam.</p></div></div>
 <div class="table-scroll"><table class="lead-rank lead-converted" data-no-stack><thead><tr><th>Cliente</th><th>Origem</th><th>Atendente</th><th>Em</th></tr></thead><tbody>
-@foreach($converted as $lead)<tr><td><strong>{{ $lead->name }}</strong></td><td>{{ $lead->originGroup() }}<small>{{ $lead->trafficLabel() }}</small></td><td>{{ $lead->handler?->name ?? '—' }}</td><td>{{ $lead->updated_at->timezone('America/Sao_Paulo')->format('d/m') }}</td></tr>@endforeach
+@foreach($converted as $lead)<tr><td><strong>{{ $lead->name }}</strong></td><td>{{ $lead->originGroup() }}<small>{{ $lead->traffic() }}</small></td><td>{{ $lead->handler?->name ?? '—' }}</td><td>{{ $lead->updated_at->timezone('America/Sao_Paulo')->format('d/m') }}</td></tr>@endforeach
 </tbody></table></div></section>@endif
 </div>
 </div>

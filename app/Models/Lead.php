@@ -113,13 +113,6 @@ class Lead extends DomainModel
         return $this->source !== 'site_whatsapp' || ($this->extra['trafego'] ?? null) === 'pago' ? 'Pago' : 'Orgânico';
     }
 
-    /** Texto ao lado do logo. "Site" só quando o site não soube de onde a pessoa veio; quem veio do Instagram para o site é Instagram (pedido de 19/11). */
-    public function trafficLabel(): string
-    {
-        $untracked = $this->source === 'site_whatsapp' && ($this->extra['plataforma'] ?? 'site') === 'site';
-        return ($untracked ? 'Site · ' : '').$this->traffic();
-    }
-
     /** Por onde a pessoa entrou. Quem veio do Google para o site tem as duas informações: entrada Site e origem Google. */
     public function entry(): string
     {
